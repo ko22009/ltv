@@ -4,8 +4,10 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.leanback.app.BrowseSupportFragment
@@ -36,11 +38,30 @@ private const val HISTORY = "ИСТОРИЯ"
 private const val SETTINGS = "НАСТРОЙКИ"
 private const val ADULT = "18+"
 
+/** Tag of the search orb that stays above the menu: the stock one, which hides with the headers, is left out. */
+private const val PINNED_ORB = "pinned_search_orb"
+
 /** A tile that asks for the parental code before the adult list opens. */
 private data class LockTile(val label: String, val ok: () -> Unit)
 
 /** A category tile of a service page, with the service it belongs to. */
 data class SourceCategory(val source: VideoSource, val category: ServiceCategory)
+
+/** One section of the settings, shown as its own card on the settings page. */
+data class SettingsSection(val title: String, val description: String)
+
+private val SETTINGS_SECTIONS = listOf(
+    SettingsSection("Списки", "Какие списки показывать слева"),
+    SettingsSection("Источники видео", "Сайты и торренты, откуда берётся видео"),
+    SettingsSection("Адреса источников", "TorrServe, JacRed, Jackett"),
+    SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),
+    SettingsSection("Торренты", "Минимум сидов, вид списка"),
+    SettingsSection("Каталог", "Язык описаний, размер карточек"),
+    SettingsSection("Сеть", "Обход блокировок и прокси"),
+    SettingsSection("Данные", "Кэш, история, сброс настроек"),
+    SettingsSection("Родительский контроль", "Код для списка 18+"),
+    SettingsSection("О приложении", "Версия"),
+)
 
 /** Opens the settings screen from the tile on the settings page. */
 object OpenSettings
@@ -82,6 +103,9 @@ class MainFragment : BrowseSupportFragment() {
                     .putExtra("alt", item.alt).putExtra("description", item.description)
                     .putExtra("episodeIndex", item.index)
             )
+            is SettingsSection -> startActivity(
+                Intent(requireContext(), SettingsActivity::class.java).putExtra("section", item.title)
+            )
             OpenSettings -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
     }
@@ -106,6 +130,56 @@ class MainFragment : BrowseSupportFragment() {
             .addClassPresenter(DividerRow::class.java, DividerPresenter())
             .addClassPresenter(SectionRow::class.java, SectionHeaderPresenter())
             .addClassPresenter(Row::class.java, IconHeaderPresenter())
+        pinSearchButton(view)
+    }
+
+    /**
+     * Search sits above the menu and stays in place: it does not scroll away with the list and does not disappear
+     * when a section is opened. The stock orb is hidden — it lives inside the headers and goes away with them.
+     */
+    private fun pinSearchButton(root: android.view.View) {
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        fun dp(value: Int) = (value * scale).toInt()
+        val parent = root as? ViewGroup ?: return
+        val orb = FrameLayout(requireContext()).apply {
+            tag = PINNED_ORB
+            isFocusable = true
+            isFocusableInTouchMode = true
+            isClickable = true
+            contentDescription = "Поиск"
+            elevation = dp(5).toFloat()
+            background = circle(0xFF2F7D57.toInt(), dp(32))
+            addView(ImageView(requireContext()).apply {
+                setImageDrawable(PathDrawable(MenuIcons.SEARCH).apply {
+                    setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+                })
+            }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER))
+            setOnClickListener { startActivity(Intent(requireContext(), SearchActivity::class.java)) }
+            setOnFocusChangeListener { view, focused ->
+                view.background = circle(if (focused) 0xFF3A9468.toInt() else 0xFF2F7D57.toInt(), dp(32))
+            }
+        }
+        parent.addView(orb, FrameLayout.LayoutParams(dp(64), dp(64), Gravity.TOP or Gravity.START).apply {
+            leftMargin = dp(32)
+            topMargin = dp(24)
+        })
+        root.postDelayed({ hideStockOrb(requireActivity().window.decorView) }, 400)
+        // the headers fragment recreates its orb whenever the menu is shown again: hide it on every layout pass
+        root.viewTreeObserver.addOnGlobalLayoutListener { hideStockOrb(requireActivity().window.decorView) }
+    }
+
+    private fun circle(color: Int, radius: Int) = android.graphics.drawable.GradientDrawable().apply {
+        shape = android.graphics.drawable.GradientDrawable.OVAL
+        setColor(color)
+        cornerRadius = radius.toFloat()
+    }
+
+    private fun hideStockOrb(view: android.view.View) {
+        if (view.javaClass.simpleName == "SearchOrbView" && view.tag != PINNED_ORB) {
+            view.visibility = android.view.View.GONE
+            return
+        }
+        if (view is ViewGroup) for (i in 0 until view.childCount) hideStockOrb(view.getChildAt(i))
     }
 
     /** Settings are applied when the screen comes back: lists appear and disappear without a restart. */
@@ -165,9 +239,9 @@ class MainFragment : BrowseSupportFragment() {
                 historyRows = rows
                 fillHistory(rows, ctx)
             }
-            SETTINGS -> rows.add(ListRow(HeaderItem("Настройки приложения"), ArrayObjectAdapter(SettingsTilePresenter()).apply {
-                add(OpenSettings)
-            }))
+            SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEach { chunk ->
+                rows.add(ListRow(ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }))
+            }
             else -> servicePage(rows, name, ctx) ?: Tmdb.visibleCategories(ctx).firstOrNull { it.title.uppercase() == name }?.let { category ->
                 Tmdb.rows.forEach { (title, sort) -> addRow(rows, title) { context -> Tmdb.load(context, category, sort) } }
             } ?: Unit
@@ -187,7 +261,8 @@ class MainFragment : BrowseSupportFragment() {
                 addAll(0, episodes)
             }))
         }
-        if (rows.size() == 0) rows.add(ListRow(HeaderItem("Закладки"), ArrayObjectAdapter(PlainTextPresenter()).apply {
+        // the page itself is already called "Закладки": the empty-state row goes without a second caption
+        if (rows.size() == 0) rows.add(ListRow(ArrayObjectAdapter(PlainTextPresenter()).apply {
             add("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или через ⋮ у серии")
         }))
     }
@@ -333,61 +408,46 @@ fun Title.toExtras() = android.os.Bundle().apply {
     putString("rating", rating)
 }
 
-/** A small rounded badge with a number, drawn over the poster of a card. */
-class BadgeDrawable(private val text: String, private val background: Int) : android.graphics.drawable.Drawable() {
+/** Rating over the poster: just large text with a shadow, no filled plate behind it. */
+class BadgeDrawable(private val text: String, color: Int) : android.graphics.drawable.Drawable() {
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.WHITE
-        textSize = 30f
+        this.color = color
+        textSize = 40f
         typeface = Typeface.DEFAULT_BOLD
         textAlign = android.graphics.Paint.Align.CENTER
+        setShadowLayer(5f, 0f, 1f, 0xCC000000.toInt())
     }
-    private val plate = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = background }
 
     override fun draw(canvas: android.graphics.Canvas) {
         val w = bounds.width().toFloat()
         val h = bounds.height().toFloat()
-        canvas.drawRoundRect(0f, 0f, w, h, h / 2, h / 2, plate)
         canvas.drawText(text, w / 2, h / 2 - (paint.descent() + paint.ascent()) / 2, paint)
     }
 
-    override fun setAlpha(alpha: Int) { paint.alpha = alpha; plate.alpha = alpha }
-    override fun setColorFilter(filter: android.graphics.ColorFilter?) { paint.colorFilter = filter; plate.colorFilter = filter }
-    override fun getIntrinsicWidth() = 64
-    override fun getIntrinsicHeight() = 36
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+    override fun setColorFilter(filter: android.graphics.ColorFilter?) { paint.colorFilter = filter }
+    override fun getIntrinsicWidth() = 132
+    override fun getIntrinsicHeight() = 52
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
 }
 
-class CardPresenter : Presenter() {    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val card = ImageCardView(parent.context)
-        card.isFocusable = true
-        card.setMainImageDimensions(240, 360)
-        return ViewHolder(card)
-    }
+class CardPresenter : Presenter() {
+    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
+        ViewHolder(TitleCard(parent.context, parent.resources.displayMetrics.widthPixels / 1280f))
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
+        val card = holder.view as TitleCard
         val title = item as Title
-        val card = holder.view as ImageCardView
-        card.titleText = title.name
-        card.contentText = listOf(title.year, title.rating).filter { it.isNotEmpty() }.joinToString("  ★ ")
-        // the rating on the poster itself, colored by value, as the LazyMedia cards show it
-        val rating = title.rating.toDoubleOrNull()
-        card.badgeImage = if (rating != null && rating > 0) {
-            BadgeDrawable("%.1f".format(rating), when {
-                rating >= 7.5 -> 0xFF1B5E20.toInt()
-                rating >= 6.0 -> 0xFF2F7D57.toInt()
-                else -> 0xFF6D4C41.toInt()
-            })
-        } else null
+        card.bind(title)
         val poster = title.poster
-        if (poster != null) Glide.with(card.context).load("https://image.tmdb.org/t/p/w342$poster").into(card.mainImageView)
+        if (poster != null) Glide.with(card.context).load("https://image.tmdb.org/t/p/w342$poster").into(card.poster)
         // no poster yet: an empty card, not the picture of a recycled one
-        else Glide.with(card.context).clear(card.mainImageView)
+        else Glide.with(card.context).clear(card.poster)
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {
-        (holder.view as ImageCardView).mainImage = null
-        (holder.view as ImageCardView).badgeImage = null
+        (holder.view as TitleCard).poster.setImageDrawable(null)
     }
 }
 
@@ -423,7 +483,8 @@ class PlainTextPresenter : Presenter() {
         val view = TextView(parent.context).apply {
             setTextColor(0xFFDCE8E0.toInt())
             textSize = 18f
-            setPadding((24 * scale).toInt(), (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
+            gravity = Gravity.START
+            setPadding((16 * scale).toInt(), (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
             isFocusable = false
             isClickable = false
         }
@@ -432,6 +493,45 @@ class PlainTextPresenter : Presenter() {
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         ((holder.view as TextView).text) = item as String
+    }
+
+    override fun onUnbindViewHolder(holder: ViewHolder) {}
+}
+
+/** One settings section as a compact card with a caption and a short explanation. */
+class SettingsSectionPresenter : Presenter() {
+    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
+        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        fun dp(v: Int) = (v * scale).toInt()
+        val tile = FrameLayout(parent.context)
+        tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(170))
+        tile.isFocusable = true
+        tile.isFocusableInTouchMode = true
+        val texts = android.widget.LinearLayout(parent.context)
+        texts.orientation = android.widget.LinearLayout.VERTICAL
+        texts.setPadding(dp(16), dp(14), dp(16), dp(14))
+        val title = TextView(parent.context).apply {
+            setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD; maxLines = 2
+        }
+        val description = TextView(parent.context).apply {
+            setTextColor(0xFFAFC4B6.toInt()); textSize = 13f; maxLines = 3; setPadding(0, dp(8), 0, 0)
+        }
+        texts.addView(title)
+        texts.addView(description)
+        tile.addView(texts, FrameLayout.LayoutParams(-1, -1))
+        tile.tag = Pair(title, description)
+        return ViewHolder(tile)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, item: Any) {
+        val section = item as SettingsSection
+        val tile = holder.view as FrameLayout
+        tile.setBackgroundColor(if (tile.isFocused) 0xFF2F7D57.toInt() else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF2F7D57.toInt() else 0x33000000) }
+        @Suppress("UNCHECKED_CAST")
+        val texts = tile.tag as Pair<TextView, TextView>
+        texts.first.text = section.title
+        texts.second.text = section.description
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
@@ -592,3 +692,4 @@ class SectionHeaderPresenter : RowHeaderPresenter(androidx.leanback.R.layout.lb_
         (viewHolder.view as? android.widget.TextView)?.setTextColor(0xFF6FA487.toInt())
     }
 }
+

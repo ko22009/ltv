@@ -1,15 +1,21 @@
 package ru.lazytv
 
+import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.graphics.PathParser
 import androidx.leanback.widget.Presenter
 import androidx.leanback.widget.Row
@@ -31,7 +37,7 @@ object MenuIcons {
     private const val LIST = "M3,5h18v2H3zM3,11h18v2H3zM3,17h18v2H3z"
     private const val HEART = "M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"
     private const val EXPLORE = "M12,10.9c-0.61,0 -1.1,0.49 -1.1,1.1s0.49,1.1 1.1,1.1c0.61,0 1.1,-0.49 1.1,-1.1s-0.49,-1.1 -1.1,-1.1zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM14.19,14.19L6,18l3.81,-8.19L18,6l-3.81,8.19z"
-    private const val SEARCH = "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"
+    const val SEARCH = "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"
     private const val ARTICLE = "M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z"
 
     /** The sort arrows of LazyMedia (ic_searchhistory_order), reused for the sort chip of the torrent list. */
@@ -99,25 +105,104 @@ class PathDrawable(data: String) : Drawable() {
     override fun getOpacity() = PixelFormat.TRANSLUCENT
 }
 
-/** Left menu entry: an icon and the title; the base class keeps the usual focus and selection look. */
+/**
+ * Left menu entry: an icon and the title. The row the user is on gets a green plate behind it and a white title,
+ * so it reads clearly against the muted rest of the menu — both when it is the selected page and when the D-pad
+ * just lands on it.
+ */
 class IconHeaderPresenter : RowHeaderPresenter() {
     override fun onCreateViewHolder(parent: ViewGroup): Presenter.ViewHolder {
         val base = super.onCreateViewHolder(parent) as ViewHolder
-        val title = base.view
-        val size = (parent.resources.displayMetrics.widthPixels / 1280f * 28).toInt()
+        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val size = (scale * 28).toInt()
         val icon = ImageView(parent.context)
         icon.scaleType = ImageView.ScaleType.FIT_CENTER
-        val container = LinearLayout(parent.context)
+        val container = HeaderRow(parent.context, scale)
         container.orientation = LinearLayout.HORIZONTAL
         container.gravity = Gravity.CENTER_VERTICAL
         container.addView(icon, LinearLayout.LayoutParams(size, size).apply { rightMargin = size / 2 })
-        container.addView(title)
+        container.addView(base.view)
+        container.title = findTitle(container)
+        container.restyle()
         return ViewHolder(container)
     }
 
     override fun onBindViewHolder(viewHolder: Presenter.ViewHolder, item: Any?) {
         super.onBindViewHolder(viewHolder, item)
         val name = (item as? Row)?.headerItem?.name ?: return
-        ((viewHolder.view as LinearLayout).getChildAt(0) as ImageView).setImageDrawable(MenuIcons.forName(name))
+        val container = viewHolder.view as HeaderRow
+        (container.getChildAt(0) as ImageView).setImageDrawable(MenuIcons.forName(name))
+        container.title = findTitle(container)
+        container.restyle()
+    }
+
+    private fun findTitle(view: ViewGroup): TextView? {
+        for (i in 0 until view.childCount) {
+            val child = view.getChildAt(i)
+            if (child is TextView) return child
+            if (child is ViewGroup) findTitle(child)?.let { return it }
+        }
+        return null
+    }
+
+    /** The row repaints itself as soon as the list selects it or the focus lands anywhere inside. */
+    private class HeaderRow(context: Context, private val scale: Float) : LinearLayout(context) {
+        var title: TextView? = null
+
+        init {
+            background = plate()
+            setPadding((6 * scale).toInt(), (4 * scale).toInt(), (18 * scale).toInt(), (4 * scale).toInt())
+        }
+
+        /** A bright plate under the focus and a calmer one under the selected page; nothing otherwise. */
+        private fun plate() = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), shape(0xFF2F7D57.toInt()))
+            addState(intArrayOf(android.R.attr.state_selected), shape(0xFF2A5540.toInt()))
+            addState(intArrayOf(), shape(Color.TRANSPARENT))
+        }
+
+        private fun shape(color: Int) = GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = 10f * scale
+        }
+
+        override fun setSelected(selected: Boolean) {
+            super.setSelected(selected)
+            restyle()
+        }
+
+        override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
+            super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+            restyle()
+        }
+
+        // the base presenter dims headers through alpha; the look is set by colours here, otherwise the chosen
+        // item never turns really white
+        override fun setAlpha(alpha: Float) {
+            super.setAlpha(1f)
+        }
+
+        override fun onAttachedToWindow() {
+            super.onAttachedToWindow()
+            if (title == null) title = findTitle(this)
+            restyle()
+        }
+
+        fun restyle() {
+            val active = isSelected || isFocused || hasFocus()
+            title?.setTextColor(if (active) Color.WHITE else 0xFF94AFA1.toInt())
+            title?.alpha = 1f
+            // the leanback header dims its own title view; the plate already tells the state
+            getChildAt(1)?.alpha = 1f
+        }
+
+        private fun findTitle(view: ViewGroup): TextView? {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                if (child is TextView) return child
+                if (child is ViewGroup) findTitle(child)?.let { return it }
+            }
+            return null
+        }
     }
 }

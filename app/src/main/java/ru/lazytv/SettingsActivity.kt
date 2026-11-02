@@ -15,7 +15,13 @@ import androidx.leanback.widget.GuidedAction
 class SettingsActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) GuidedStepSupportFragment.addAsRoot(this, SettingsScreen(), android.R.id.content)
+        if (savedInstanceState == null) {
+            val section = intent.getStringExtra("section").orEmpty()
+            val screen = SettingsScreen().apply {
+                arguments = Bundle().apply { putString("section", section) }
+            }
+            GuidedStepSupportFragment.addAsRoot(this, screen, android.R.id.content)
+        }
     }
 }
 
@@ -29,6 +35,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
     private val checkRows = HashMap<Long, String>()
     private val editRows = HashMap<Long, String>()
     private val buttons = HashMap<Long, () -> Unit>()
+    private val sectionIds = HashMap<String, Long>()
     private var nextId = 1L
 
     /** Request codes of the two file dialogs: a backup is written to the picked file, or read from it. */
@@ -42,6 +49,18 @@ class SettingsScreen : GuidedStepSupportFragment() {
     override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.post { focusFirstRow(view) }
+        val section = arguments?.getString("section").orEmpty()
+        if (section.isNotEmpty()) view.post { scrollToSection(view, section) }
+    }
+
+    /** Opened from a settings card: bring its section to the top and focus its first row. */
+    private fun scrollToSection(view: android.view.View, title: String) {
+        val actionId = sectionIds[title] ?: return
+        val position = findActionPositionById(actionId)
+        if (position < 0) return
+        val list = findList(view) ?: return
+        list.scrollToPosition(position)
+        list.postDelayed({ focusFirstRow(view) }, 150)
     }
 
     private fun focusFirstRow(view: android.view.View) {
@@ -66,7 +85,9 @@ class SettingsScreen : GuidedStepSupportFragment() {
     private fun newId() = nextId++
 
     private fun section(actions: MutableList<GuidedAction>, title: String) {
-        actions.add(GuidedAction.Builder(requireContext()).id(newId()).title(title.uppercase())
+        val id = newId()
+        sectionIds[title] = id
+        actions.add(GuidedAction.Builder(requireContext()).id(id).title(title.uppercase())
             .infoOnly(true).focusable(false).build())
     }
 
@@ -161,6 +182,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         editable(actions, "Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
         choice(actions, "Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
             Settings.MIN_SEEDS.map { it.toString() to if (it == 0) "Любое количество" else "От $it" })
+        check(actions, "Экспериментальный Searchtor", "Обычный запрос без обхода проверки; если сервер пустит — покажет раздачи", Settings.SEARCHTOR, false)
         editable(actions, "Серверы JacRed (пусто — из конфига)", Settings.JACRED_SERVERS, "")
         editable(actions, "Свой Jackett: адрес", Settings.JACKETT_URL, "")
         editable(actions, "Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
@@ -371,10 +393,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         }.start()
     }
 
-    private fun downloadTorrServe() {
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TorrServe.DOWNLOAD))) }
-            .onFailure { toast("Нет браузера, чтобы открыть страницу загрузки") }
-    }
+    private fun downloadTorrServe() = Links.open(requireActivity(), TorrServe.DOWNLOAD)
 
     private fun toast(message: String) = android.widget.Toast.makeText(requireContext(), message, android.widget.Toast.LENGTH_LONG).show()
 }
