@@ -40,7 +40,7 @@ object Recommendations {
                 .setChannelId(channelId)
                 .setType(if (title.tv) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
                 .setTitle(title.name)
-                .setDescription(listOf(title.year, if (minutes > 0) "$minutes мин" else "", genre, if (title.rating.isNotEmpty()) "★ ${title.rating}" else "")
+                .setDescription(listOf(title.year, formatRuntime(minutes), genre, if (title.rating.isNotEmpty()) "★ ${title.rating}" else "")
                     .filter { it.isNotEmpty() }.joinToString(" · "))
                 .setGenre(genre)
                 .setDurationMillis(minutes * 60_000)

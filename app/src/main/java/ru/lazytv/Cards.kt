@@ -120,6 +120,14 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private fun showYear() {
-        year.text = listOf(year0, if (runtime0 > 0) "$runtime0 мин" else "").filter { it.isNotEmpty() }.joinToString(" · ")
+        year.text = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(" · ")
     }
+}
+
+/** "2 ч 32 мин" reads faster than "152 мин"; empty when the runtime is unknown. */
+fun formatRuntime(minutes: Int): String = when {
+    minutes <= 0 -> ""
+    minutes < 60 -> "$minutes мин"
+    minutes % 60 == 0 -> "${minutes / 60} ч"
+    else -> "${minutes / 60} ч ${minutes % 60} мин"
 }

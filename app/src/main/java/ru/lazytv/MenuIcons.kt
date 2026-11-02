@@ -23,22 +23,8 @@ import androidx.leanback.widget.RowHeaderPresenter
 
 /** Icons of the left menu as 24x24 outline paths (Material icon shapes), drawn white. */
 object MenuIcons {
-    private const val DASHBOARD = "M3,13h8V3H3v10zM3,21h8v-6H3v6zM13,21h8V11h-8v10zM13,3v6h8V3h-8z"
-    private const val MOVIE = "M18,4l2,4h-3l-2,-4h-2l2,4h-3l-2,-4H8l2,4H7L5,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V4h-4z"
-    private const val TV = "M21,3H3c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h5v2h8v-2h5c1.1,0 1.99,-0.9 1.99,-2L23,5c0,-1.1 -0.9,-2 -2,-2zM21,17H3V5h18v12z"
-    private const val SMILE = "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM8.5,10a1.5,1.5 0,1 1,0 3,1.5 1.5,0 0,1 0,-3zM15.5,10a1.5,1.5 0,1 1,0 3,1.5 1.5,0 0,1 0,-3zM12,18c-2.2,0 -4,-1.3 -4.6,-3h9.2c-0.6,1.7 -2.4,3 -4.6,3z"
-    private const val WARNING = "M1,21h22L12,2 1,21zM13,18h-2v-2h2v2zM13,14h-2v-5h2v5z"
-    private const val LOCK = "M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10c0,-1.1 -0.9,-2 -2,-2zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2zM15.1,8H8.9V6c0,-1.71 1.39,-3.1 3.1,-3.1 1.71,0 3.1,1.39 3.1,3.1v2z"
-    /** The bookmarks and history icons of LazyMedia (ic_menu_bookmarks, ic_menu_history). */
-    private const val BOOKMARKS = "M2.53 19.65l1.34 0.56 0 -9.03 -2.43 5.86c-0.41 1.02 0.08 2.19 1.09 2.61zM22.03 15.95L17.07 3.98C16.76 3.23 16.03 2.77 15.26 2.75 15 2.75 14.73 2.79 14.47 2.9L7.1 5.95C6.35 6.26 5.89 6.98 5.87 7.75 5.86 8.02 5.91 8.29 6.02 8.55l4.96 11.97c0.31 0.76 1.05 1.22 1.83 1.23 0.26 0 0.52 -0.05 0.77 -0.15l7.36 -3.05c1.02 -0.42 1.51 -1.59 1.09 -2.6zM7.88 8.75c-0.55 0 -1 -0.45 -1 -1 0 -0.55 0.45 -1 1 -1 0.55 0 1 0.45 1 1 0 0.55 -0.45 1 -1 1zm-2 11c0 1.1 0.9 2 2 2l1.45 0 -3.45 -8.34 0 6.34z"
+    /** The history icon of LazyMedia (ic_menu_history), used by the search phrases. */
     const val HISTORY = "M13,3c-4.97,0 -9,4.03 -9,9L1,12l3.89,3.89 0.07,0.14L9,12L6,12c0,-3.87 3.13,-7 7,-7s7,3.13 7,7 -3.13,7 -7,7c-1.93,0 -3.68,-0.79 -4.94,-2.06l-1.42,1.42C8.27,19.99 10.51,21 13,21c4.97,0 9,-4.03 9,-9s-4.03,-9 -9,-9zM12,8v5l4.28,2.54 0.72,-1.21 -3.5,-2.08L13.5,8L12,8z"
-    private const val BOLT = "M11,21h-1l1,-7H7.5c-0.58,0 -0.57,-0.32 -0.38,-0.66 0.19,-0.34 0.05,-0.08 0.07,-0.12C8.48,10.94 10.42,7.54 13,3h1l-1,7h3.5c0.49,0 0.56,0.33 0.47,0.51l-0.07,0.15C12.96,17.55 11,21 11,21z"
-    private const val SETTINGS = "M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94 0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87C2.62,9.08 2.66,9.34 2.86,9.48l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61l-2.01,-1.58zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6 3.6,1.62 3.6,3.6 -1.62,3.6 -3.6,3.6z"
-    private const val LIST = "M3,5h18v2H3zM3,11h18v2H3zM3,17h18v2H3z"
-    private const val HEART = "M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"
-    private const val EXPLORE = "M12,10.9c-0.61,0 -1.1,0.49 -1.1,1.1s0.49,1.1 1.1,1.1c0.61,0 1.1,-0.49 1.1,-1.1s-0.49,-1.1 -1.1,-1.1zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM14.19,14.19L6,18l3.81,-8.19L18,6l-3.81,8.19z"
-    const val SEARCH = "M15.5,14h-0.79l-0.28,-0.27C15.41,12.59 16,11.11 16,9.5 16,5.91 13.09,3 9.5,3S3,5.91 3,9.5 5.91,16 9.5,16c1.61,0 3.09,-0.59 4.23,-1.57l0.27,0.28v0.79l5,4.99L20.49,19l-4.99,-5zM9.5,14C7.01,14 5,11.99 5,9.5S7.01,5 9.5,5 14,7.01 14,9.5 11.99,14 9.5,14z"
-    private const val ARTICLE = "M14,2H6c-1.1,0 -1.99,0.9 -1.99,2L4,20c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8l-6,-6zM16,18H8v-2h8v2zM16,14H8v-2h8v2zM13,9V3.5L18.5,9H13z"
 
     /** The sort arrows of LazyMedia (ic_searchhistory_order), reused for the sort chip of the torrent list. */
     const val MIC = "M12,14c1.66,0 2.99,-1.34 2.99,-3L15,5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v6c0,1.66 1.34,3 3,3zM17.3,11c0,3 -2.54,5.1 -5.3,5.1S6.7,14 6.7,11L5,11c0,3.41 2.72,6.23 6,6.72L11,21h2v-3.28c3.28,-0.48 6,-3.3 6,-6.72h-1.7z"
@@ -59,6 +45,24 @@ object MenuIcons {
     const val SORT ="M16.372881 17.689322l0 -7.9605091 -2.271186 0 0 7.9605091 -3.40678 0 4.542373 4.531017 4.542373 -4.531017 -3.40678 0zM8.4237288 1.779661L3.8813559 6.3106779l3.4067797 0 0 7.9605081 2.2711864 0 0 -7.9605081 3.40678 0L8.4237288 1.779661Z"
     const val DELETE = "M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"
 
+    // Menu icons: one outline style (2 px line, round ends) on a 24x24 grid, so they stay even at the small menu size.
+    private const val DASHBOARD = "M4,3h5a1,1 0 0 1 1,1v5a1,1 0 0 1 -1,1H4a1,1 0 0 1 -1,-1V4a1,1 0 0 1 1,-1z M15,3h5a1,1 0 0 1 1,1v5a1,1 0 0 1 -1,1h-5a1,1 0 0 1 -1,-1V4a1,1 0 0 1 1,-1z M15,14h5a1,1 0 0 1 1,1v5a1,1 0 0 1 -1,1h-5a1,1 0 0 1 -1,-1v-5a1,1 0 0 1 1,-1z M4,14h5a1,1 0 0 1 1,1v5a1,1 0 0 1 -1,1H4a1,1 0 0 1 -1,-1v-5a1,1 0 0 1 1,-1z"
+    private const val MOVIE = "M5,3h14a2,2 0 0 1 2,2v14a2,2 0 0 1 -2,2H5a2,2 0 0 1 -2,-2V5a2,2 0 0 1 2,-2z M7,3v18 M17,3v18 M3,12h18 M3,7.5h4 M3,16.5h4 M17,7.5h4 M17,16.5h4"
+    private const val TV = "M4,7h16a2,2 0 0 1 2,2v11a2,2 0 0 1 -2,2H4a2,2 0 0 1 -2,-2V9a2,2 0 0 1 2,-2z M17,2l-5,5 -5,-5"
+    private const val SMILE = "M12,2a10,10 0 1 0 0,20 10,10 0 1 0 0,-20z M8,14s1.5,2 4,2 4,-2 4,-2 M9,9.5h.01 M15,9.5h.01"
+    private const val WARNING = "M21.73,18l-8,-14a2,2 0 0 0 -3.48,0l-8,14A2,2 0 0 0 4,21h16a2,2 0 0 0 1.73,-3z M12,9v4 M12,17h.01"
+    private const val LOCK = "M5,11h14a2,2 0 0 1 2,2v7a2,2 0 0 1 -2,2H5a2,2 0 0 1 -2,-2v-7a2,2 0 0 1 2,-2z M7,11V7a5,5 0 0 1 10,0v4"
+    private const val BOLT = "M13,2L3,14h9l-1,8 10,-12h-9l1,-8z"
+    private const val HEART = "M19,14c1.49,-1.46 3,-3.21 3,-5.5A5.5,5.5 0 0 0 16.5,3c-1.76,0 -3,0.5 -4.5,2 -1.5,-1.5 -2.74,-2 -4.5,-2A5.5,5.5 0 0 0 2,8.5c0,2.3 1.5,4.05 3,5.5l7,7z"
+    private const val COMPASS = "M12,2a10,10 0 1 0 0,20 10,10 0 1 0 0,-20z M16.24,7.76l-2.12,6.36 -6.36,2.12 2.12,-6.36z"
+    private const val SEARCH_ICON = "M11,3a8,8 0 1 0 0,16 8,8 0 1 0 0,-16z M21,21l-4.35,-4.35"
+    private const val DOCUMENT = "M14,2H6a2,2 0 0 0 -2,2v16a2,2 0 0 0 2,2h12a2,2 0 0 0 2,-2V8z M14,2v6h6 M16,13H8 M16,17H8 M10,9H8"
+    private const val STAR_ICON = "M12,2l3.09,6.26L22,9.27l-5,4.87 1.18,6.88L12,17.77l-6.18,3.25L7,14.14 2,9.27l6.91,-1.01z"
+    private const val LIST = "M8,6h13 M8,12h13 M8,18h13 M3,6h.01 M3,12h.01 M3,18h.01"
+    private const val BOOKMARKS = "M6,3h12a1,1 0 0 1 1,1v17.5l-7,-4.5 -7,4.5V4a1,1 0 0 1 1,-1z M9.5,9h5"
+    private const val CLOCK = "M3,12a9,9 0 1 0 9,-9 9.75,9.75 0 0 0 -6.74,2.74L3,8 M3,3v5h5 M12,7v5l4,2"
+    private const val GEAR = "M12.22,2h-0.44a2,2 0 0 0 -2,2v0.18a2,2 0 0 1 -1,1.73l-0.43,0.25a2,2 0 0 1 -2,0l-0.15,-0.08a2,2 0 0 0 -2.73,0.73l-0.22,0.38a2,2 0 0 0 0.73,2.73l0.15,0.1a2,2 0 0 1 1,1.72v0.51a2,2 0 0 1 -1,1.74l-0.15,0.09a2,2 0 0 0 -0.73,2.73l0.22,0.38a2,2 0 0 0 2.73,0.73l0.15,-0.08a2,2 0 0 1 2,0l0.43,0.25a2,2 0 0 1 1,1.73V20a2,2 0 0 0 2,2h0.44a2,2 0 0 0 2,-2v-0.18a2,2 0 0 1 1,-1.73l0.43,-0.25a2,2 0 0 1 2,0l0.15,0.08a2,2 0 0 0 2.73,-0.73l0.22,-0.39a2,2 0 0 0 -0.73,-2.73l-0.15,-0.08a2,2 0 0 1 -1,-1.74v-0.5a2,2 0 0 1 1,-1.74l0.15,-0.09a2,2 0 0 0 0.73,-2.73l-0.22,-0.38a2,2 0 0 0 -2.73,-0.73l-0.15,0.08a2,2 0 0 1 -2,0l-0.43,-0.25a2,2 0 0 1 -1,-1.73V4a2,2 0 0 0 -2,-2z M12,15a3,3 0 1 0 0,-6 3,3 0 0 0 0,6z"
+
     private val byName = mapOf(
         "ОБЗОР" to DASHBOARD,
         "ФИЛЬМЫ" to MOVIE,
@@ -69,20 +73,46 @@ object MenuIcons {
         "БОЕВИКИ" to BOLT,
         "КОМЕДИИ" to SMILE,
         "ДРАМЫ" to MOVIE,
-        "ФАНТАСТИКА" to STAR,
+        "ФАНТАСТИКА" to STAR_ICON,
         "ТРИЛЛЕРЫ" to WARNING,
         "МЕЛОДРАМЫ" to HEART,
-        "ДЕТЕКТИВЫ" to SEARCH,
-        "ПРИКЛЮЧЕНИЯ" to EXPLORE,
-        "ФЭНТЕЗИ" to STAR,
-        "ДОКУМЕНТАЛЬНЫЕ" to ARTICLE,
+        "ДЕТЕКТИВЫ" to SEARCH_ICON,
+        "ПРИКЛЮЧЕНИЯ" to COMPASS,
+        "ФЭНТЕЗИ" to STAR_ICON,
+        "ДОКУМЕНТАЛЬНЫЕ" to DOCUMENT,
         "АНИМЕ" to SMILE,
         "ЗАКЛАДКИ" to BOOKMARKS,
-        "ИСТОРИЯ" to HISTORY,
-        "НАСТРОЙКИ" to SETTINGS,
+        "ИСТОРИЯ" to CLOCK,
+        "НАСТРОЙКИ" to GEAR,
     )
 
-    fun forName(name: String): Drawable = PathDrawable(byName[name] ?: LIST)
+    fun forName(name: String): Drawable = StrokeIcon(byName[name] ?: LIST)
+}
+
+/** Draws outline paths of a 24x24 grid with round line ends, scaled to its bounds. */
+class StrokeIcon(data: String) : Drawable() {
+    private val path: Path = PathParser.createPathFromPathData(data)
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+
+    override fun draw(canvas: Canvas) {
+        val scale = bounds.width() / 24f
+        canvas.save()
+        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+        canvas.scale(scale, scale)
+        canvas.drawPath(path, paint)
+        canvas.restore()
+    }
+
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+    override fun setColorFilter(filter: ColorFilter?) { paint.colorFilter = filter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity() = PixelFormat.TRANSLUCENT
 }
 
 /** Draws a 24x24 path scaled to its bounds. */
@@ -191,10 +221,27 @@ class IconHeaderPresenter : RowHeaderPresenter() {
             super.setScaleY(1f)
         }
 
+        // the focus zoom of the headers is applied to the wrapper that leanback puts around the row, where the
+        // overrides above do not reach: it is set back to 1 before every frame
+        private val noZoom = android.view.ViewTreeObserver.OnPreDrawListener {
+            var v: android.view.View? = this
+            repeat(2) {
+                if (v != null && (v!!.scaleX != 1f || v!!.scaleY != 1f)) { v!!.scaleX = 1f; v!!.scaleY = 1f }
+                v = v?.parent as? android.view.View
+            }
+            true
+        }
+
         override fun onAttachedToWindow() {
             super.onAttachedToWindow()
             if (title == null) title = findTitle(this)
+            viewTreeObserver.addOnPreDrawListener(noZoom)
             restyle()
+        }
+
+        override fun onDetachedFromWindow() {
+            viewTreeObserver.removeOnPreDrawListener(noZoom)
+            super.onDetachedFromWindow()
         }
 
         fun restyle() {

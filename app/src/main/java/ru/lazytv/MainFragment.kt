@@ -151,9 +151,9 @@ class MainFragment : BrowseSupportFragment() {
             elevation = dp(5).toFloat()
             background = circle(0xFF2F7D57.toInt(), dp(32))
             addView(ImageView(requireContext()).apply {
-                setImageDrawable(PathDrawable(MenuIcons.SEARCH).apply {
-                    setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
-                })
+                // the stock Leanback magnifier: the one the orb had before it was pinned, bolder than the Material path
+                setImageResource(androidx.leanback.R.drawable.lb_ic_in_app_search)
+                setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
             }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER))
             setOnClickListener { startActivity(Intent(requireContext(), SearchActivity::class.java)) }
             setOnFocusChangeListener { view, focused ->

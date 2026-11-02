@@ -169,7 +169,7 @@ class DetailsActivity : Activity() {
                 }
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
-                    "Длительность" to (d.runtime.takeIf { it > 0 }?.let { "$it мин" } ?: ""),
+                    "Длительность" to (formatRuntime(d.runtime)),
                     "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
                     "Следующая серия" to d.nextEpisode,
                     "Возраст" to d.age,
