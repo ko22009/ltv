@@ -124,6 +124,14 @@ class EpisodesActivity : Activity() {
                         geoButton.visibility = View.VISIBLE
                         return@onSuccess
                     }
+                    // a film is a single "Фильм" entry: a page with one row is only a stop, so the player opens at once
+                    // (unless the quality is to be asked, which needs this screen to stay behind the dialog)
+                    val film = episodes.singleOrNull()?.takeIf { it.title == "Фильм" }
+                    if (film != null && !(Settings.string(this, Settings.QUALITY, "best") == "ask" && film.streams.size > 1)) {
+                        play(episodes, 0)
+                        finish()
+                        return@onSuccess
+                    }
                     adapter = object : ArrayAdapter<Episode>(this, 0, episodes) {
                         override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(position, getItem(position)!!)
                     }
