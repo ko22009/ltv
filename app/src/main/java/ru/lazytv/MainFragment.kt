@@ -219,8 +219,8 @@ class MainFragment : BrowseSupportFragment() {
         headers.add(PageRow(HeaderItem(SETTINGS)))
     }
 
-    /** Rows of the pages: the focused card is only outlined and coloured, it is not scaled up. */
-    private fun rowPresenter(dimOthers: Boolean) = ListRowPresenter(FocusHighlight.ZOOM_FACTOR_NONE).apply {
+    /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
+    private fun rowPresenter(dimOthers: Boolean) = ListRowPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM).apply {
         selectEffectEnabled = dimOthers
     }
 

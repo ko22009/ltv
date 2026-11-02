@@ -80,7 +80,14 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         isFocusable = true
         isFocusableInTouchMode = true
         // the gap goes on the right: the first card then starts exactly under the row caption
-        layoutParams = LayoutParams(px(240f), LayoutParams.WRAP_CONTENT).apply { rightMargin = px(17f) }
+        // vertical room so the enlarged focused card does not touch the row caption above it
+        layoutParams = LayoutParams(px(240f), LayoutParams.WRAP_CONTENT).apply {
+            rightMargin = px(17f)
+            topMargin = px(12f)
+            bottomMargin = px(12f)
+        }
+        // a thin frame in the focus colour around the card, visible even when the poster fills the card
+        setPadding(px(3f), px(3f), px(3f), px(3f))
         addView(poster, LayoutParams(-1, px(300f)))
         addView(info, LayoutParams(-1, -2))
         background = StateListDrawable().apply {
