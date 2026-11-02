@@ -1,0 +1,88 @@
+package ru.lazytv
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** Bookmark folders. A title lives in one folder at a time. */
+enum class Folder(val key: String, val label: String) {
+    FAVORITES("favorites", "Избранное"),
+    LATER("later", "На потом"),
+    IN_PROGRESS("progress", "В процессе"),
+    DONE("done", "Просмотрено");
+
+    companion object {
+        fun of(key: String) = values().firstOrNull { it.key == key } ?: FAVORITES
+    }
+}
+
+private fun Title.toJson() = JSONObject().put("id", id).put("name", name).put("overview", overview)
+    .put("poster", poster ?: "").put("tv", tv).put("year", year).put("rating", rating)
+
+private fun JSONObject.toTitle() = Title(getLong("id"), getString("name"), optString("overview"),
+    optString("poster").ifEmpty { null }, optBoolean("tv"), optString("year"), optString("rating"))
+
+/**
+ * Bookmarks kept on the device in the same preferences as the settings. Records saved before the folders
+ * existed have no folder and count as favorites.
+ */
+object Favorites {
+    private const val KEY = "favorites"
+
+    private fun records(context: Context): List<Pair<Folder, Title>> {
+        val array = JSONArray(Settings.string(context, KEY, "[]"))
+        return (0 until array.length()).map { i ->
+            val o = array.getJSONObject(i)
+            Folder.of(o.optString("folder", Folder.FAVORITES.key)) to o.toTitle()
+        }
+    }
+
+    private fun save(context: Context, list: List<Pair<Folder, Title>>) {
+        val array = JSONArray()
+        list.forEach { (folder, title) -> array.put(title.toJson().put("folder", folder.key)) }
+        Settings.setString(context, KEY, array.toString())
+    }
+
+    private fun same(a: Title, b: Title) = a.id == b.id && a.tv == b.tv
+
+    fun inFolder(context: Context, folder: Folder): List<Title> = records(context).filter { it.first == folder }.map { it.second }
+
+    fun folderOf(context: Context, title: Title): Folder? = records(context).firstOrNull { same(it.second, title) }?.first
+
+    /** Puts the title into the folder (it leaves its previous one); null removes it from the bookmarks. */
+    fun set(context: Context, title: Title, folder: Folder?) {
+        val list = records(context).filter { !same(it.second, title) }.toMutableList()
+        if (folder != null) list.add(0, folder to title)
+        save(context, list)
+    }
+}
+
+/** Titles the user started watching, the latest first. Kept on the device, at most [LIMIT]. */
+object History {
+    private const val KEY = "history"
+    private const val LIMIT = 100
+
+    fun all(context: Context): List<Title> {
+        val array = JSONArray(Settings.string(context, KEY, "[]"))
+        return (0 until array.length()).map { array.getJSONObject(it).toTitle() }
+    }
+
+    fun add(context: Context, title: Title) {
+        save(context, (listOf(title) + all(context).filter { !(it.id == title.id && it.tv == title.tv) }).take(LIMIT))
+    }
+
+    /** Fills in the poster of a record that was saved before the card knew it: the row is drawn again after that. */
+    fun setPoster(context: Context, id: Long, tv: Boolean, poster: String) {
+        val list = all(context)
+        if (list.none { it.id == id && it.tv == tv && it.poster == null }) return
+        save(context, list.map { if (it.id == id && it.tv == tv && it.poster == null) it.copy(poster = poster) else it })
+    }
+
+    fun clear(context: Context) = Settings.setString(context, KEY, "[]")
+
+    private fun save(context: Context, list: List<Title>) {
+        val array = JSONArray()
+        list.forEach { array.put(it.toJson()) }
+        Settings.setString(context, KEY, array.toString())
+    }
+}

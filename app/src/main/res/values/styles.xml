@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.LazyTV" parent="@style/Theme.Leanback">
+        <item name="android:windowBackground">#0C140F</item>
+    </style>
+    <style name="Theme.LazyTV.Guided" parent="@style/Theme.Leanback.GuidedStep">
+        <item name="android:windowBackground">#101A14</item>
+    </style>
+</resources>

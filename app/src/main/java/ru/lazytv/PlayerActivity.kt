@@ -1,0 +1,449 @@
+package ru.lazytv
+
+import android.app.Activity
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.View
+import android.view.WindowManager
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+
+/** Opens a stream in the player chosen in the settings: the built-in ExoPlayer (default) or the system's choice. */
+fun openPlayer(
+    activity: Activity, url: String, name: String, meta: String = "",
+    playlist: String = "", index: Int = 0,
+) {
+    if (Settings.string(activity, Settings.PLAYER, "internal") == "external") {
+        runCatching {
+            activity.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*"))
+        }.onFailure { Toast.makeText(activity, "Нет внешнего плеера", Toast.LENGTH_LONG).show() }
+    } else {
+        activity.startActivity(
+            android.content.Intent(activity, PlayerActivity::class.java).putExtra("url", url).putExtra("name", name)
+                .putExtra("meta", meta).putExtra("playlist", playlist).putExtra("index", index)
+        )
+    }
+}
+
+/** One item of the auto-next queue: the stream, its title, the source/quality line and a short episode caption. */
+data class PlayItem(val url: String, val title: String, val meta: String, val label: String = "")
+
+/**
+ * Built-in player with its own control row (title, audio/subtitle track pick, aspect ratio) instead of ExoPlayer's
+ * bare default — the LazyMedia Deluxe screen it follows shows the same: title line, source/quality line, round
+ * buttons. The position is remembered per address and restored when the setting is on.
+ */
+class PlayerActivity : Activity() {
+    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private fun dp(value: Int) = (value * scale).toInt()
+
+    private var player: ExoPlayer? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var url: String
+    private lateinit var view: PlayerView
+    private lateinit var overlay: View
+    private lateinit var playPause: ImageView
+    private lateinit var seek: SeekBar
+    private lateinit var position: TextView
+    private lateinit var duration: TextView
+    private lateinit var titleView: TextView
+    private lateinit var metaView: TextView
+    private var queue: List<PlayItem> = emptyList()
+    private var queueIndex = 0
+    private lateinit var episodeButtons: LinearLayout
+    private val episodeViews = mutableListOf<TextView>()
+    private var resize = AspectRatioFrameLayout.RESIZE_MODE_FIT
+    private var userSeeking = false
+    /** True while the screen is closing: ExoPlayer's own "release timed out" is not a playback error then. */
+    private var releasing = false
+
+    private val saver = object : Runnable {
+        override fun run() {
+            save()
+            handler.postDelayed(this, 10_000)
+        }
+    }
+
+    private val ticker = object : Runnable {
+        override fun run() {
+            val exo = player
+            if (exo != null && !userSeeking) {
+                val dur = exo.duration
+                if (dur > 0 && dur != C.TIME_UNSET) {
+                    seek.max = (dur / 1000).toInt()
+                    seek.progress = (exo.currentPosition / 1000).toInt()
+                    duration.text = stamp(dur)
+                }
+                position.text = stamp(exo.currentPosition)
+                playPause.setImageDrawable(PathDrawable(if (exo.isPlaying) MenuIcons.PAUSE else MenuIcons.PLAY).apply {
+                    setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+                })
+            }
+            handler.postDelayed(this, 500)
+        }
+    }
+
+    private val hider = Runnable { setControlsVisible(false) }
+
+    private fun stamp(ms: Long): String {
+        val total = (ms / 1000).coerceAtLeast(0)
+        val h = total / 3600; val m = (total % 3600) / 60; val s = total % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        url = intent.getStringExtra("url").orEmpty()
+        val name = intent.getStringExtra("name").orEmpty()
+        val meta = intent.getStringExtra("meta").orEmpty()
+        queue = parseQueue(intent.getStringExtra("playlist").orEmpty())
+        queueIndex = intent.getIntExtra("index", 0).coerceIn(0, maxOf(queue.size - 1, 0))
+        if (queue.isNotEmpty()) url = queue[queueIndex].url
+
+        val root = FrameLayout(this)
+        root.setBackgroundColor(Color.BLACK)
+        view = PlayerView(this)
+        view.useController = false
+        android.util.Log.i("LazyTV", "open stream on " + Uri.parse(url).host)
+        // otherwise the full-screen video surface sits in the D-pad focus search too and steals it from the buttons
+        view.isFocusable = false
+        view.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        view.setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+        root.addView(view, FrameLayout.LayoutParams(-1, -1))
+
+        overlay = buildOverlay(name, meta)
+        root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        setContentView(root)
+
+        val exo = ExoPlayer.Builder(this).build()
+        view.player = exo
+        exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+        if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
+            val saved = getSharedPreferences("positions", 0).getLong(url, 0)
+            if (saved > 0) exo.seekTo(saved)
+        }
+        exo.addListener(object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                android.util.Log.w("LazyTV", "player error: " + error.errorCodeName, error)
+                if (releasing || isFinishing) return
+                Toast.makeText(this@PlayerActivity, "Ошибка воспроизведения: " + error.errorCodeName, Toast.LENGTH_LONG).show()
+            }
+
+            override fun onPlaybackStateChanged(state: Int) {
+                android.util.Log.i("LazyTV", "player state " + state)
+                if (state == Player.STATE_ENDED) advance()
+            }
+        })
+        exo.prepare()
+        exo.playWhenReady = true
+        player = exo
+        handler.postDelayed(saver, 10_000)
+        handler.post(ticker)
+        showControls()
+    }
+
+    // --- the control row -------------------------------------------------------------------------
+
+    private fun parseQueue(json: String): List<PlayItem> {
+        if (json.isBlank()) return emptyList()
+        return runCatching {
+            val array = org.json.JSONArray(json)
+            (0 until array.length()).map { i ->
+                val o = array.getJSONObject(i)
+                PlayItem(o.getString("u"), o.optString("t"), o.optString("m"), o.optString("e"))
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    /** The next episode of the queue when the setting is on; the player is reused, only the media item changes. */
+    private fun advance() {
+        if (releasing || !Settings.bool(this, Settings.AUTO_NEXT) || queueIndex + 1 >= queue.size) return
+        switchTo(queueIndex + 1, toast = true)
+    }
+
+    /** Switches to another episode of the queue (also used by the episode buttons in the control row). */
+    private fun switchTo(index: Int, toast: Boolean) {
+        if (releasing) return
+        val exo = player ?: return
+        val item = queue.getOrNull(index) ?: return
+        if (index == queueIndex) return
+        save()
+        queueIndex = index
+        url = item.url
+        titleView.text = item.title
+        metaView.text = item.meta
+        seek.progress = 0
+        position.text = "0:00"
+        duration.text = "0:00"
+        exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+        exo.prepare()
+        exo.playWhenReady = true
+        updateEpisodeButtons()
+        resetHideTimer()
+        if (toast) Toast.makeText(this, "Далее: ${item.label.ifEmpty { item.title }}", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(this).apply {
+        text = value
+        setTextColor(color)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, size * scale)
+        if (bold) typeface = Typeface.DEFAULT_BOLD
+    }
+
+    private fun round(icon: String, big: Boolean = false, action: () -> Unit) = ImageView(this).apply {
+        setImageDrawable(PathDrawable(icon).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+        val pad = dp(if (big) 14 else 10)
+        setPadding(pad, pad, pad, pad)
+        isFocusable = true
+        isClickable = true
+        background = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF2F7D57.toInt()); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(), GradientDrawable().apply { setColor(0x55000000); shape = GradientDrawable.OVAL })
+        }
+        setOnClickListener { resetHideTimer(); action() }
+    }
+
+    private fun buildOverlay(name: String, meta: String): View {
+        val overlay = FrameLayout(this)
+
+        val top = LinearLayout(this)
+        top.orientation = LinearLayout.VERTICAL
+        top.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
+        top.setPadding(dp(48), dp(28), dp(48), dp(60))
+        titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 24f, Color.WHITE, true)
+        metaView = label(queue.getOrNull(queueIndex)?.meta ?: meta, 15f, 0xFFAFC4B6.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+        if (titleView.text.isNotEmpty()) top.addView(titleView)
+        if (metaView.text.isNotEmpty()) top.addView(metaView)
+        overlay.addView(top, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
+
+        val bottom = LinearLayout(this)
+        bottom.orientation = LinearLayout.VERTICAL
+        bottom.background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
+        bottom.setPadding(dp(48), dp(60), dp(48), dp(28))
+
+        val seekRow = LinearLayout(this)
+        seekRow.gravity = Gravity.CENTER_VERTICAL
+        position = label("0:00", 14f, 0xFFDCE8E0.toInt())
+        duration = label("0:00", 14f, 0xFFDCE8E0.toInt())
+        seek = SeekBar(this)
+        seek.isFocusable = false
+        seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF2F7D57.toInt())
+        seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFF6FA487.toInt())
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar, value: Int, byUser: Boolean) {}
+            override fun onStartTrackingTouch(sb: SeekBar) { userSeeking = true }
+            override fun onStopTrackingTouch(sb: SeekBar) { userSeeking = false; player?.seekTo(sb.progress * 1000L) }
+        })
+        seekRow.addView(position)
+        seekRow.addView(seek, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(12); rightMargin = dp(12) })
+        seekRow.addView(duration)
+        bottom.addView(seekRow)
+
+        val buttons = LinearLayout(this)
+        buttons.gravity = Gravity.CENTER_VERTICAL
+        buttons.setPadding(0, dp(14), 0, 0)
+        buttons.addView(round(MenuIcons.REPLAY10) { player?.let { it.seekTo((it.currentPosition - 10_000).coerceAtLeast(0)) } },
+            LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(18) })
+        playPause = round(MenuIcons.PAUSE, true) { togglePlay() }
+        buttons.addView(playPause, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(18) })
+        buttons.addView(round(MenuIcons.FORWARD10) { player?.let { it.seekTo(it.currentPosition + 10_000) } },
+            LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(32) })
+        buttons.addView(round(MenuIcons.ASPECT) { cycleAspect() }, LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+        buttons.addView(round(MenuIcons.AUDIO_TRACK) { trackDialog(C.TRACK_TYPE_AUDIO, "Звуковая дорожка") },
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+        buttons.addView(round(MenuIcons.SUBTITLES) { trackDialog(C.TRACK_TYPE_TEXT, "Субтитры") }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        bottom.addView(buttons)
+
+        // the episode strip of a series: the current episode is highlighted, the others switch the player
+        if (queue.size > 1) {
+            episodeButtons = LinearLayout(this)
+            episodeButtons.orientation = LinearLayout.HORIZONTAL
+            episodeViews.clear()
+            queue.forEachIndexed { index, item ->
+                val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
+                val button = label(caption, 15f, 0xFFDCE8E0.toInt()).apply {
+                    gravity = Gravity.CENTER
+                    setPadding(dp(18), 0, dp(18), 0)
+                    isFocusable = true
+                    isClickable = true
+                    setOnClickListener { switchTo(index, toast = false) }
+                }
+                episodeViews.add(button)
+                episodeButtons.addView(button, LinearLayout.LayoutParams(-2, dp(46)).apply { rightMargin = dp(10) })
+            }
+            updateEpisodeButtons()
+            val scroll = android.widget.HorizontalScrollView(this)
+            scroll.isHorizontalScrollBarEnabled = false
+            scroll.addView(episodeButtons)
+            bottom.addView(scroll, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(8) })
+        }
+
+        overlay.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+        return overlay
+    }
+
+    /** Repaints the episode strip: red for the current episode, green while focused. */
+    private fun updateEpisodeButtons() {
+        episodeViews.forEachIndexed { index, view ->
+            val active = index == queueIndex
+            view.setTextColor(if (active) Color.WHITE else 0xFFDCE8E0.toInt())
+            view.background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
+                    setColor(0xFF2F7D57.toInt()); cornerRadius = dp(3).toFloat()
+                })
+                addState(intArrayOf(), GradientDrawable().apply {
+                    setColor(if (active) 0xFFE57373.toInt() else 0x55000000)
+                    cornerRadius = dp(3).toFloat()
+                })
+            }
+        }
+    }
+
+    private fun togglePlay() {
+        val exo = player ?: return
+        exo.playWhenReady = !exo.playWhenReady
+    }
+
+    private fun cycleAspect() {
+        resize = when (resize) {
+            AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+            else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
+        view.resizeMode = resize
+        Toast.makeText(this, when (resize) {
+            AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Растянуть по высоте"
+            AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Растянуть на весь экран"
+            else -> "Исходные пропорции"
+        }, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Everything the format actually reports: language, channel layout, codec, bitrate — not just a placeholder name. */
+    private fun trackLabel(format: androidx.media3.common.Format, index: Int, type: Int): String {
+        val parts = mutableListOf<String>()
+        // a label that just spells out the language in English ("English") duplicates the Russian name added below
+        val englishLangName = format.language?.let { runCatching { java.util.Locale(it).displayLanguage }.getOrNull() }
+        format.label?.takeUnless { it.equals(englishLangName, true) }?.let { parts.add(it) }
+        format.language?.let { lang ->
+            val name = runCatching { java.util.Locale(lang).getDisplayLanguage(java.util.Locale("ru")) }.getOrNull()
+            parts.add(if (!name.isNullOrBlank() && !name.equals(lang, true)) name.replaceFirstChar { it.uppercase() } else lang.uppercase())
+        }
+        if (format.channelCount != androidx.media3.common.Format.NO_VALUE) {
+            parts.add(when (format.channelCount) {
+                1 -> "моно"; 2 -> "стерео"; 6 -> "5.1"; 8 -> "7.1"
+                else -> "${format.channelCount} кан."
+            })
+        }
+        codecName(format.sampleMimeType)?.let { parts.add(it) }
+        if (format.bitrate != androidx.media3.common.Format.NO_VALUE && format.bitrate > 0) parts.add("${format.bitrate / 1000} кбит/с")
+        return parts.joinToString(" · ").ifEmpty { if (type == C.TRACK_TYPE_TEXT) "Субтитры ${index + 1}" else "Дорожка ${index + 1}" }
+    }
+
+    private fun codecName(mime: String?): String? = when (mime) {
+        "audio/mp4a-latm" -> "AAC"; "audio/ac3" -> "AC-3"; "audio/eac3" -> "E-AC-3"; "audio/opus" -> "Opus"
+        "audio/mpeg" -> "MP3"; "audio/vnd.dts" -> "DTS"; "audio/vnd.dts.hd" -> "DTS-HD"; "audio/flac" -> "FLAC"
+        "text/vtt" -> "WebVTT"; "application/x-subrip" -> "SRT"; "text/x-ssa" -> "SSA/ASS"
+        "application/cea-608" -> "CEA-608"; "application/cea-708" -> "CEA-708"
+        else -> null
+    }
+
+    /** Audio or subtitle tracks found in the stream, picked by hand; "Выключить" clears a text-track override. */
+    private fun trackDialog(type: Int, title: String) {
+        val exo = player ?: return
+        val groups = exo.currentTracks.groups.filter { it.type == type }
+        if (groups.isEmpty()) {
+            Toast.makeText(this, if (type == C.TRACK_TYPE_TEXT) "В потоке нет субтитров" else "В потоке одна звуковая дорожка", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val entries = mutableListOf<String>()
+        val picks = mutableListOf<Pair<androidx.media3.common.TrackGroup, Int>?>()
+        if (type == C.TRACK_TYPE_TEXT) { entries.add("Выключить"); picks.add(null) }
+        var index = 0
+        groups.forEach { group ->
+            for (i in 0 until group.length) {
+                entries.add(trackLabel(group.getTrackFormat(i), index, type))
+                picks.add(group.mediaTrackGroup to i)
+                index++
+            }
+        }
+        android.app.AlertDialog.Builder(this).setTitle(title).setItems(entries.toTypedArray()) { _, which ->
+            val pick = picks[which]
+            val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
+            if (pick != null) builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
+            else builder.setTrackTypeDisabled(type, true)
+            exo.trackSelectionParameters = builder.build()
+        }.show()
+    }
+
+    // --- show/hide ---------------------------------------------------------------------------------
+
+    private fun setControlsVisible(visible: Boolean) {
+        overlay.visibility = if (visible) View.VISIBLE else View.GONE
+        if (visible) { resetHideTimer(); playPause.requestFocus() } else handler.removeCallbacks(hider)
+    }
+
+    private fun showControls() = setControlsVisible(true)
+
+    private fun resetHideTimer() {
+        handler.removeCallbacks(hider)
+        handler.postDelayed(hider, 4000)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (overlay.visibility != View.VISIBLE && event.keyCode != KeyEvent.KEYCODE_BACK) {
+                showControls()
+                return true
+            }
+            if (overlay.visibility == View.VISIBLE) {
+                resetHideTimer()
+                // down from the round buttons goes straight to the episode strip
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentFocus is ImageView && episodeViews.isNotEmpty()) {
+                    (episodeViews.getOrNull(queueIndex) ?: episodeViews.first()).requestFocus()
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun save() {
+        val exo = player ?: return
+        if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
+            getSharedPreferences("positions", 0).edit().putLong(url, exo.currentPosition).apply()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        save()
+        releasing = true
+        handler.removeCallbacksAndMessages(null)
+        player?.release()
+        player = null
+        finish()
+    }
+}

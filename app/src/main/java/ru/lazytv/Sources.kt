@@ -1,0 +1,457 @@
+package ru.lazytv
+
+import android.content.Context
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+
+/** A title found on a video site: what the "ВИДЕО" row of the card shows. */
+data class Variant(
+    val source: String, val sourceId: String, val title: String, val note: String, val ref: String,
+    /** The original (usually English) title: used for matching and shown as a second title line. */
+    val alt: String = "",
+    /** The site's own description, when it has one; shown apart from the titles. */
+    val description: String = "",
+)
+
+/** One playable item of a variant (an episode or the whole film) with streams per quality, best first. */
+data class Episode(val title: String, val streams: List<Pair<String, String>>)
+
+/** A category of a video service page (its own catalog section: genre, type, "new", "popular"). */
+data class ServiceCategory(val id: String, val title: String, val color: Int, val query: String = "")
+
+/** A title in a service catalog: what the service page draws as a card; [variant] opens its episodes. */
+data class ServiceItem(val title: String, val note: String, val poster: String?, val variant: Variant)
+
+/** A video site. Each source answers a title search and lists the playable items of a found variant. */
+interface VideoSource {
+    val id: String
+    val name: String
+    fun search(title: String, original: String, year: String): List<Variant>
+    fun episodes(variant: Variant): List<Episode>
+
+    /** Catalog sections shown on the service page; empty when the site has no browsable catalog. */
+    val categories: List<ServiceCategory> get() = emptyList()
+    fun browse(category: ServiceCategory): List<ServiceItem> = emptyList()
+}
+
+object Sources {
+    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube)
+
+    fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
+
+    /** Sources that have a browsable catalog (the ВИДЕОСЕРВИСЫ section of the menu). */
+    fun catalogSources(context: Context): List<VideoSource> =
+        all.filter { it.categories.isNotEmpty() && Settings.bool(context, Settings.service(it.id)) }
+
+    /** Sources the user left switched on in the settings (a change applies at once). */
+    fun enabled(context: Context) = all.filter { Settings.bool(context, Settings.service(it.id)) }
+
+    /** Searches every enabled source at once; a source that fails or finds nothing simply adds no tiles. */
+    fun search(context: Context, title: String, original: String, year: String): List<Variant> {
+        val list = enabled(context)
+        if (list.isEmpty()) return emptyList()
+        val pool = java.util.concurrent.Executors.newCachedThreadPool()
+        return try {
+            val tasks = list.map { source ->
+                java.util.concurrent.Callable { runCatching { source.search(title, original, year) }.getOrDefault(emptyList()) }
+            }
+            // one slow site must not hold the card: whatever did not answer in 20 seconds is skipped
+            val combined = pool.invokeAll(tasks, 20, java.util.concurrent.TimeUnit.SECONDS)
+                .flatMap { future -> runCatching { future.get() }.getOrDefault(emptyList()) }
+            // each source ranks its own answers; the combined list has to be ranked across sources again
+            relevant(combined, listOf(title, original), year)
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    /**
+     * [search] with a six-hour cache of found variants (the setting can switch it off): opening the same card
+     * again does not hit every site once more. The cache lives in its own preferences, so it is not a setting.
+     */
+    fun searchCached(context: Context, title: String, original: String, year: String): List<Variant> {
+        if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year)
+        val key = cacheKey(context, title, original, year)
+        val prefs = context.getSharedPreferences("cache", 0)
+        val raw = prefs.getString(key, null)
+        if (raw != null) {
+            runCatching { variantFromJson(org.json.JSONObject(raw)) }.getOrNull()?.let { (time, list) ->
+                if (System.currentTimeMillis() - time < 6 * 60 * 60 * 1000L) return list
+            }
+        }
+        val found = search(context, title, original, year)
+        if (found.isNotEmpty()) {
+            val json = org.json.JSONObject().put("t", System.currentTimeMillis()).put("v", org.json.JSONArray().apply {
+                found.forEach { put(variantToJson(it)) }
+            })
+            prefs.edit().putString(key, json.toString()).apply()
+            pruneVariantCache(prefs)
+        }
+        return found
+    }
+
+    /**
+     * The variant cache is a convenience, not an archive: drop entries of older cache versions, entries older
+     * than a day and the oldest beyond 80 titles, so the preferences file cannot grow on the TV forever.
+     */
+    private fun pruneVariantCache(prefs: android.content.SharedPreferences) {
+        val now = System.currentTimeMillis()
+        val keys = prefs.all.keys.filter { it.startsWith("variants") }
+        if (keys.isEmpty()) return
+        fun timeOf(key: String): Long = runCatching {
+            org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
+        }.getOrDefault(0L)
+        val edit = prefs.edit()
+        keys.filter { !it.startsWith("variants6_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants6_") }.associateWith { timeOf(it) }
+        current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
+        val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
+        if (alive.size > 80) {
+            alive.entries.sortedBy { it.value }.take(alive.size - 80).forEach { edit.remove(it.key) }
+        }
+        edit.apply()
+    }
+
+    private fun cacheKey(context: Context, title: String, original: String, year: String): String {
+        val raw = enabled(context).joinToString(",") { it.id } + "|" + title + "|" + original + "|" + year
+        val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
+        return "variants6_" + digest.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
+        .put("t", v.title).put("n", v.note).put("r", v.ref).put("a", v.alt).put("d", v.description)
+
+    private fun variantFromJson(o: JSONObject) = o.getLong("t") to (0 until o.getJSONArray("v").length()).map { i ->
+        val v = o.getJSONArray("v").getJSONObject(i)
+        Variant(v.getString("s"), v.getString("i"), v.getString("t"), v.optString("n"), v.getString("r"),
+            v.optString("a"), v.optString("d"))
+    }
+
+    /**
+     * Keeps variants that contain at least 60% of the words of one wanted title (one shared word like "fall" is not
+     * enough for a longer title), best match first (same year wins a tie).
+     */
+    fun relevant(found: List<Variant>, wanted: List<String>, year: String): List<Variant> {
+        fun words(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 }.toSet()
+        val titles = wanted.map { words(it) }.filter { it.isNotEmpty() }
+        // a Russian query must not match only the English original of an unrelated Russian title:
+        // "Интерстеллар" must not offer "Я злой лорд…" just because its English name carries "Interstellar"
+        val cyrillicQuery = wanted.any { s -> s.any { it.code in 0x0400..0x04FF } }
+        fun cyrillic(s: String) = s.any { it.code in 0x0400..0x04FF }
+        return found.map { v ->
+            val titleWords = words(v.title)
+            val allWords = words(v.title + " " + v.alt)
+            fun hits(where: Set<String>) = titles.maxOfOrNull { t ->
+                val count = t.count { it in where }
+                if (count * 5 >= t.size * 3) count else 0
+            } ?: 0
+            val total = hits(allWords)
+            val inTitle = hits(titleWords)
+            Triple(v, total, inTitle)
+        }
+            .filter { it.second > 0 && !(cyrillicQuery && it.third == 0 && cyrillic(it.first.title)) }
+            // a hit in the shown title is worth more than a hit only in the original name: for "Интерстеллар"
+            // the series "I am the Villainous Lord of the Interstellar Nation" must not come before the film
+            .sortedWith(compareByDescending<Triple<Variant, Int, Int>> { it.second }
+                .thenByDescending { it.third }
+                .thenByDescending { it.first.note.startsWith(year) })
+            .map { it.first }
+    }
+
+    fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =
+        getBytes(address).toString(charset)
+
+    /** POST with a JSON body, the same timeouts and UA as [get]; answers of the open APIs are JSON too. */
+    fun postJson(address: String, body: String): String {
+        val c = URL(address).openConnection() as HttpURLConnection
+        c.requestMethod = "POST"
+        c.doOutput = true
+        c.connectTimeout = 15000
+        c.readTimeout = 25000
+        c.setRequestProperty("Content-Type", "application/json")
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
+        c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+        return c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+    }
+
+    /** Binary answer (a .torrent file, for example) with the same timeouts and UA as [get]. */
+    fun getBytes(address: String): ByteArray {
+        val c = URL(address).openConnection() as HttpURLConnection
+        c.connectTimeout = 15000
+        c.readTimeout = 25000
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
+        return c.inputStream.use { it.readBytes() }
+    }
+
+    fun encode(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+
+    /**
+     * GET on a site through its addresses ([RemoteConfig]): the built-in one, the one from the addresses file or the
+     * one typed by hand are tried in turn, and the answer carries the address that actually worked.
+     */
+    fun getAny(id: String, path: (String) -> String): Fetched<String> =
+        RemoteConfig.attempt(id) { base -> get(path(base)) }
+}
+
+/** Anilibria through its public API: anime releases with HLS streams per episode. */
+object Anilibria : VideoSource {
+    override val id = "anilibria"
+    override val name = "ANILIBRIA"
+
+    override fun search(title: String, original: String, year: String): List<Variant> {
+        val seen = LinkedHashSet<Int>()
+        val found = ArrayList<Variant>()
+        for (query in listOf(title, original).filter { it.isNotBlank() }) {
+            val answer = Sources.getAny(id) { base -> "$base/api/v1/app/search/releases?query=${Sources.encode(query)}" }
+            val array = org.json.JSONArray(answer.value)
+            for (i in 0 until array.length()) {
+                val r = array.getJSONObject(i)
+                if (!seen.add(r.getInt("id"))) continue
+                val names = r.getJSONObject("name")
+                found += Variant(
+                    name, id, names.optString("main"),
+                    r.optInt("year").toString().takeIf { it != "0" }.orEmpty(),
+                    r.getInt("id").toString(), names.optString("english"),
+                )
+            }
+        }
+        return Sources.relevant(found, listOf(title, original), year)
+    }
+
+    override fun episodes(variant: Variant): List<Episode> {
+        val release = JSONObject(Sources.getAny(id) { base -> "$base/api/v1/anime/releases/${variant.ref}" }.value)
+        val array = release.getJSONArray("episodes")
+        return (0 until array.length()).mapNotNull { i ->
+            val e = array.getJSONObject(i)
+            val streams = listOf("1080", "720", "480").mapNotNull { q ->
+                e.optString("hls_$q").takeIf { it.isNotEmpty() && it != "null" }?.let { "${q}p" to it }
+            }
+            if (streams.isEmpty()) return@mapNotNull null
+            val ordinal = e.optInt("ordinal", i + 1)
+            val name = e.optString("name").takeIf { it.isNotEmpty() && it != "null" }
+            ordinal to Episode("Серия $ordinal" + (name?.let { " • $it" } ?: ""), streams)
+        }.sortedBy { it.first }.map { it.second }
+    }
+
+    private fun filter(name: String, value: String) = "f%5B${name}%5D%5B%5D=$value"
+
+    /** The catalog sections of the site: its sorting options, types and the most seen genres. */
+    override val categories: List<ServiceCategory>
+        get() = listOf(
+            ServiceCategory("new", "Новинки", 0xFF2F7D57.toInt(), "f%5Bsorting%5D=FRESH_AT_DESC"),
+            ServiceCategory("top", "Популярное", 0xFF1B5E20.toInt(), "f%5Bsorting%5D=RATING_DESC"),
+            ServiceCategory("films", "Фильмы", 0xFF0555A0.toInt(), filter("types", "MOVIE")),
+            ServiceCategory("tv", "Сериалы", 0xFF673AB7.toInt(), filter("types", "TV")),
+            ServiceCategory("action", "Экшен", 0xFFB71C1C.toInt(), filter("genres", "14")),
+            ServiceCategory("comedy", "Комедия", 0xFFF9A825.toInt(), filter("genres", "1")),
+            ServiceCategory("romance", "Романтика", 0xFFAD1457.toInt(), filter("genres", "11")),
+            ServiceCategory("fantasy", "Фэнтези", 0xFF6A1B9A.toInt(), filter("genres", "29")),
+            ServiceCategory("drama", "Драма", 0xFF4E342E.toInt(), filter("genres", "8")),
+            ServiceCategory("adventure", "Приключения", 0xFF2F7D57.toInt(), filter("genres", "27")),
+            ServiceCategory("scifi", "Фантастика", 0xFF1565C0.toInt(), filter("genres", "22")),
+            ServiceCategory("detective", "Детектив", 0xFF455A64.toInt(), filter("genres", "25")),
+            ServiceCategory("horror", "Ужасы", 0xFF8E1B1B.toInt(), filter("genres", "13")),
+            ServiceCategory("school", "Школа", 0xFF26A9C0.toInt(), filter("genres", "7")),
+            ServiceCategory("mecha", "Меха", 0xFF37474F.toInt(), filter("genres", "2")),
+            ServiceCategory("isekai", "Исекай", 0xFF00695C.toInt(), filter("genres", "34")),
+        )
+
+    override fun browse(category: ServiceCategory): List<ServiceItem> {
+        val answer = Sources.getAny(id) { base -> "$base/api/v1/anime/catalog/releases?page=1&limit=30&${category.query}" }
+        val json = JSONObject(answer.value)
+        val data = json.getJSONArray("data")
+        return (0 until data.length()).mapNotNull { i ->
+            val r = data.getJSONObject(i)
+            val names = r.optJSONObject("name") ?: return@mapNotNull null
+            val title = names.optString("main").ifEmpty { return@mapNotNull null }
+            val poster = r.optJSONObject("poster")?.optString("src").orEmpty()
+            val type = r.optJSONObject("type")?.optString("description").orEmpty()
+            val rating = r.optJSONObject("rating")?.optDouble("average", 0.0) ?: 0.0
+            val note = listOf(r.optInt("year").toString(), type, if (rating > 0) "★ %.1f".format(rating) else "")
+                .filter { it.isNotEmpty() && it != "0" }.joinToString(" • ")
+            val ref = r.getInt("id").toString()
+            ServiceItem(
+                title, note, if (poster.isEmpty()) null else answer.base + poster,
+                Variant(this.name, id, title, note, ref),
+            )
+        }
+    }
+}
+
+/** Makes text of an HTML fragment readable: drops tags, turns <br> into a space and decodes the usual entities. */
+fun htmlText(html: String): String = html
+    .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), " ")
+    .replace(Regex("<[^>]*>"), " ")
+    .replace("&nbsp;", " ").replace("&quot;", "\"").replace("&#039;", "'").replace("&#39;", "'")
+    .replace("&laquo;", "«").replace("&raquo;", "»").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    .replace(Regex("\\s+"), " ").trim()
+
+/**
+ * Seasonvar through the open site: search by name, then the page's own playlist of direct MP4 links.
+ * Seasons are flattened into one list; the standard translation is used, trailers are skipped.
+ * The playlist stores each address Base64-encoded with a "//ololo=" marker in the middle (the site's own scheme).
+ */
+object Seasonvar : VideoSource {
+    override val id = "seasonvar"
+    override val name = "SEASONVAR"
+
+    override fun search(title: String, original: String, year: String): List<Variant> {
+        val seen = HashSet<String>()
+        val found = ArrayList<Variant>()
+        for (query in listOf(title, original).filter { it.isNotBlank() }) {
+            val answer = runCatching { Sources.getAny(id) { base -> "$base/search?q=${Sources.encode(query)}" } }.getOrNull() ?: continue
+            for ((variant, _) in parseList(answer.value, answer.base)) {
+                if (seen.add(variant.ref)) found += variant
+            }
+        }
+        return Sources.relevant(found, listOf(title, original), year)
+    }
+
+    /** Rows of a search/selection page: the variant and its poster (absolute or null). */
+    private fun parseList(html: String, base: String): List<Pair<Variant, String?>> {
+        val block = Regex("<div class=\"pgs-search-wrap\">(.*?)<div class=\"pgs-search-info\">(.*?)</div>", RegexOption.DOT_MATCHES_ALL)
+        return block.findAll(html).mapNotNull { m ->
+            val href = Regex("<a href=\"([^\"]+)\"").find(m.groupValues[1])?.groupValues?.get(1) ?: return@mapNotNull null
+            val info = m.groupValues[2]
+            val links = Regex("<a href=\"[^\"]+\">(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(info)
+                .map { htmlText(it.groupValues[1]) }.filter { it.isNotEmpty() }.toList()
+            val name = links.firstOrNull() ?: return@mapNotNull null
+            val originalName = links.getOrNull(1).orEmpty()
+            val description = Regex("<p>(.*?)</p>", RegexOption.DOT_MATCHES_ALL).find(info)?.groupValues?.get(1)
+                ?.let { htmlText(it) }.orEmpty()
+            val poster = Regex("<img src=\"([^\"]+)\"").find(m.groupValues[1])?.groupValues?.get(1)
+                ?.let { if (it.startsWith("//")) "https:$it" else it }
+            Variant(
+                this.name, "seasonvar", name, originalName,
+                if (href.startsWith("http")) href else base + href, originalName, description,
+            ) to poster
+        }.toList()
+    }
+
+    override val categories: List<ServiceCategory>
+        get() = listOf(
+            ServiceCategory("top", "Лучшие сериалы", 0xFF2F7D57.toInt(), "/?mode=top"),
+            ServiceCategory("soon", "Скоро", 0xFF6A1B9A.toInt(), "/?mode=soon"),
+        )
+
+    override fun browse(category: ServiceCategory): List<ServiceItem> {
+        val answer = Sources.getAny(id) { base -> base + category.query }
+        return parseList(answer.value, answer.base).map { (variant, poster) -> ServiceItem(variant.title, variant.note, poster, variant) }
+    }
+
+    override fun episodes(variant: Variant): List<Episode> {
+        // the pages found earlier carry absolute addresses: the site's own origin is the one that answered then
+        val base = Regex("^(https?://[^/]+)").find(variant.ref)?.groupValues?.get(1) ?: RemoteConfig.base(id)
+        val first = Sources.get(variant.ref)
+        // a season page carries the season switch: follow every season, otherwise the page itself is the only one
+        val seasonsBlock = Regex("<div class=\"pgs-seaslist\">(.*?)</div>", RegexOption.DOT_MATCHES_ALL).find(first)?.groupValues?.get(1)
+        val seasons = seasonsBlock?.let { block ->
+            Regex("<a[^>]+href=\"([^\"]+)\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(block).map {
+                (if (it.groupValues[1].startsWith("http")) it.groupValues[1] else base + it.groupValues[1]) to
+                    htmlText(it.groupValues[2]).ifEmpty { "Сезон" }
+            }.toList()
+        }.orEmpty().ifEmpty { listOf(variant.ref to "") }
+
+        val result = ArrayList<Episode>()
+        var blocked = false
+        seasons.forEachIndexed { seasonIndex, (url, seasonName) ->
+            val html = if (url == variant.ref) first else runCatching { Sources.get(url) }.getOrNull() ?: return@forEachIndexed
+            // the site itself says the season is closed for this country; no attempts to go around it
+            if (html.contains("заблокирован для вашей страны") || html.contains("По просьбе правообладателя")) {
+                blocked = true
+                return@forEachIndexed
+            }
+            val playlist = firstPlaylist(html, base) ?: return@forEachIndexed
+            val episodes = runCatching { org.json.JSONArray(Sources.get(playlist)) }.getOrNull() ?: return@forEachIndexed
+            val seasonLabel = Regex("\\d+\\s*сезон\\S*", RegexOption.IGNORE_CASE).find(seasonName)?.value
+                ?: "Сезон ${seasonIndex + 1}"
+            val prefix = if (seasons.size > 1) "$seasonLabel • " else ""
+            for (i in 0 until episodes.length()) {
+                val e = episodes.getJSONObject(i)
+                val raw = e.optString("file")
+                if (raw.isEmpty()) continue
+                val address = runCatching { streamUrl(raw) }.getOrNull() ?: continue
+                val caption = htmlText(e.optString("title")).ifEmpty { "Серия ${e.optInt("id", i + 1)}" }
+                result += Episode(prefix + caption, listOf((if (address.contains(".m3u8")) "HLS" else "SD/HD") to address))
+            }
+        }
+        if (result.isEmpty() && blocked) throw IllegalStateException("Сезон недоступен в вашем регионе: показ ограничил правообладатель")
+        return result
+    }
+
+    /** The first translation of the page: `var pl = {'0': "/playls2/…plist.txt"};` plus the optional `pl[n] = …` lines. */
+    private fun firstPlaylist(html: String, base: String): String? {
+        val main = Regex("var pl = \\{(.*?)\\};", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1).orEmpty()
+        val all = Regex("['\"]?(\\d+)['\"]?\\s*:\\s*\"([^\"]+)\"").findAll(main).map { it.groupValues[1].toInt() to it.groupValues[2] } +
+            Regex("pl\\[(\\d+)]\\s*=\\s*\"([^\"]+)\"").findAll(html).map { it.groupValues[1].toInt() to it.groupValues[2] }
+        val chosen = all.firstOrNull { it.first == 0 }?.second ?: all.firstOrNull()?.second ?: return null
+        return when {
+            chosen.startsWith("http") -> chosen
+            chosen.startsWith("//") -> "https:$chosen"
+            else -> base + chosen
+        }
+    }
+
+    /** `#2<base64 with a //ololo= marker>` -> the direct address. */
+    private fun streamUrl(raw: String): String {
+        var text = if (raw.startsWith("#2")) raw.substring(2) else raw
+        Regex("//([^=/]+)=").find(text)?.let { text = text.replace("//${it.groupValues[1]}=", "") }
+        val decoded = String(android.util.Base64.decode(text, android.util.Base64.DEFAULT))
+        return if (decoded.startsWith("//")) "https:$decoded" else decoded
+    }
+}
+
+/**
+ * Rutube (the "Rumba" of HD AlfaBox) through its public API: the search gives long videos (full films),
+ * the play options give an HLS address the API itself signs. Clips, paid videos and short trailers are skipped.
+ */
+object Rutube : VideoSource {
+    override val id = "rutube"
+    override val name = "RUTUBE"
+
+    override fun search(title: String, original: String, year: String): List<Variant> {
+        val seen = HashSet<String>()
+        // one movie is often uploaded several times: keep one card per title, year and length
+        val unique = LinkedHashMap<String, Variant>()
+        for (query in listOf(title, original).filter { it.isNotBlank() }) {
+            val json = runCatching {
+                JSONObject(Sources.getAny(id) { base -> "$base/api/search/video/?query=${Sources.encode(query)}" }.value)
+            }.getOrNull() ?: continue
+            val results = json.optJSONArray("results") ?: continue
+            for (i in 0 until results.length()) {
+                val o = results.getJSONObject(i)
+                val id = o.optString("id")
+                if (id.isEmpty() || o.optBoolean("is_paid") || !seen.add(id)) continue
+                // a full film lasts about two hours; trailers and clips are not variants of the title
+                val duration = o.optInt("duration")
+                if (duration < 2400) continue
+                val category = o.optJSONObject("category")?.optString("name").orEmpty()
+                if (category.isNotEmpty() && category != "Фильмы" && category != "Сериалы") continue
+                val name = o.optString("title")
+                if (name.isEmpty()) continue
+                val minutes = duration / 60
+                val author = o.optJSONObject("author")?.optString("name").orEmpty()
+                val note = listOf("Фильм", "$minutes мин", author).filter { it.isNotEmpty() }.joinToString(" • ")
+                val yearInName = Regex("\\b(19|20)\\d{2}\\b").find(name)?.value.orEmpty()
+                val key = normalizedTitle(name) + "|" + yearInName + "|" + (duration / 600)
+                if (!unique.containsKey(key)) unique[key] = Variant(this.name, "rutube", name, note, id)
+            }
+        }
+        return Sources.relevant(unique.values.toList(), listOf(title, original), year)
+    }
+
+    private fun normalizedTitle(s: String): String = s.lowercase()
+        .replace(Regex("\\b(4k|8k|uhd|hdr|fullhd|fhd|hd|1080p?|720p?|480p?|bluray|bdrip|webrip|web-dl|webdl|remux|hevc|x265|x264|aac|dts|дубляж|многоголосый|полный фильм)\\b"), " ")
+        .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    override fun episodes(variant: Variant): List<Episode> {
+        val json = JSONObject(Sources.getAny(id) { base -> "$base/api/play/options/${variant.ref}/?no_404=true" }.value)
+        val hls = json.optJSONObject("video_balancer")?.optString("m3u8").orEmpty()
+        if (!hls.startsWith("http")) return emptyList()
+        return listOf(Episode("Фильм", listOf("HLS" to hls)))
+    }
+}

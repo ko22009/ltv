@@ -1,0 +1,67 @@
+package ru.lazytv
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.tvprovider.media.tv.PreviewChannel
+import androidx.tvprovider.media.tv.PreviewChannelHelper
+import androidx.tvprovider.media.tv.PreviewProgram
+import androidx.tvprovider.media.tv.TvContractCompat
+import org.json.JSONArray
+
+/**
+ * The "Популярное" row on the Android TV home screen: one preview channel with the popular films of the
+ * catalog. Channels are a system feature (API 26+); on launchers that no longer draw them the call simply
+ * leaves the channel in the TV provider and the app keeps working.
+ */
+object Recommendations {
+    private const val CHANNEL = "Популярное"
+    private const val KEY_IDS = "recommendation_ids"
+    private const val KEY_CHANNEL = "recommendation_channel"
+    private const val LIMIT = 10
+
+    fun refresh(context: Context) {
+        if (!Settings.bool(context, Settings.RECOMMENDATIONS)) return
+        val helper = PreviewChannelHelper(context)
+        val channelId = channel(context, helper) ?: return
+        val titles = Tmdb.loadCollection(context, Tmdb.Collection("Популярное", false, "popular")).take(LIMIT)
+        // replace the previous programs instead of piling them up on every launch
+        val old = runCatching { JSONArray(Settings.string(context, KEY_IDS, "[]")) }.getOrDefault(JSONArray())
+        for (i in 0 until old.length()) runCatching { helper.deletePreviewProgram(old.getLong(i)) }
+        val ids = JSONArray()
+        titles.forEachIndexed { index, title ->
+            if (title.poster == null) return@forEachIndexed
+            val program = PreviewProgram.Builder()
+                .setChannelId(channelId)
+                .setType(if (title.tv) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
+                .setTitle(title.name)
+                .setDescription(listOf(title.year, title.rating).filter { it.isNotEmpty() }.joinToString("  ★ "))
+                .setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w500${title.poster}"))
+                .setIntentUri(Uri.parse(Intent(context, DetailsActivity::class.java).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
+                .setWeight(LIMIT - index)
+                .build()
+            runCatching { helper.publishPreviewProgram(program) }.getOrNull()?.takeIf { it > 0 }?.let { ids.put(it) }
+        }
+        Settings.setString(context, KEY_IDS, ids.toString())
+    }
+
+    private fun channel(context: Context, helper: PreviewChannelHelper): Long? {
+        val saved = Settings.string(context, KEY_CHANNEL, "").toLongOrNull()
+        if (saved != null && runCatching { helper.getPreviewChannel(saved) }.getOrNull() != null) return saved
+        val logo = BitmapFactory.decodeResource(context.resources, R.drawable.banner)
+        val published = runCatching {
+            helper.publishDefaultChannel(
+                PreviewChannel.Builder()
+                    .setDisplayName(CHANNEL)
+                    .setDescription("Фильмы из каталога LazyTV")
+                    .setLogo(logo)
+                    .setAppLinkIntentUri(Uri.parse(Intent(context, MainActivity::class.java).toUri(Intent.URI_INTENT_SCHEME)))
+                    .build()
+            )
+        }.getOrNull() ?: return null
+        if (published <= 0) return null
+        Settings.setString(context, KEY_CHANNEL, published.toString())
+        return published
+    }
+}

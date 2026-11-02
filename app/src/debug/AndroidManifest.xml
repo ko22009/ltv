@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <!-- debug builds only: lets adb start the player and the screens with any extras -->
+        <activity android:name="ru.lazytv.PlayerActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.TorrentsActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.DetailsActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.ServiceActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.SettingsActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.EpisodesActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <activity android:name="ru.lazytv.PersonActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+    </application>
+</manifest>
