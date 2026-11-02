@@ -459,10 +459,7 @@ class TorrentsActivity : Activity() {
             .show()
     }
 
-    private fun downloadTorrServe() {
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TorrServe.DOWNLOAD))) }
-            .onFailure { Toast.makeText(this, "Нет браузера, чтобы открыть страницу загрузки", Toast.LENGTH_LONG).show() }
-    }
+    private fun downloadTorrServe() = Links.open(this, TorrServe.DOWNLOAD)
 
     /** Polls TorrServe until the buffer is filled (or a minute passes), showing peers, speed and buffer, then plays. */
     private fun preload(hash: String, file: TorrentFile, name: String, source: String, view: PreloadView) {
