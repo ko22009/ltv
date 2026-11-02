@@ -32,6 +32,8 @@ object Settings {
     /** Own Jackett: base address (for example http://192.168.1.10:9117) and its API key. */
     const val JACKETT_URL = "jackett_url"
     const val JACKETT_KEY = "jackett_key"
+    /** Experimental Searchtor source: plain GET, off by default. */
+    const val SEARCHTOR = "searchtor"
     const val PARENTAL_PIN = "parental_pin"
     const val AUTO_NEXT = "auto_next"
     const val CACHE_SOURCES = "cache_sources"

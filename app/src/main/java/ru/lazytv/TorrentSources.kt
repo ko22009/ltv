@@ -3,6 +3,8 @@ package ru.lazytv
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
 
 /** Torrent sources besides rutor. They index original (mostly English) titles, so they are asked with the original name. */
@@ -44,6 +46,7 @@ object ExtraTorrents {
         if (name.isNotBlank()) jobs.add("TorrentKino" to { torrentKino(name) })
         if (name.isNotBlank() || original.isNotBlank()) jobs.add("Jackett" to { jackett(context, name.ifBlank { original }, original) })
         if (query.isNotBlank()) jobs.add("Bitsearch" to { related(bitsearch(query)) })
+        if (query.isNotBlank() && Settings.bool(context, Settings.SEARCHTOR)) jobs.add("Searchtor" to { related(searchtor(query)) })
         // NNM-Club titles carry both names; a Japanese or Chinese original cannot be searched, so the Russian name goes then
         val latin = Regex("[A-Za-z\\p{IsCyrillic}]").containsMatchIn(original)
         val phrase = if (latin) original else name
@@ -304,6 +307,52 @@ object ExtraTorrents {
                 .find(body)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             Torrent(title, sizeText, seeds, leeches, magnetLink, "Bitsearch")
         }
+    }
+
+    /**
+     * Experimental Searchtor: a plain GET of /r/<phrase>, at most a few redirects, no challenge solving and no
+     * special headers. If Cloudflare answers with a page, the usual magnet links are taken from it; if it answers
+     * with a redirect loop or a challenge, the source simply adds nothing.
+     */
+    private fun searchtor(query: String): List<Torrent> {
+        var current = "https://searchtor.to/r/" + Sources.encode(query)
+        var html: String? = null
+        for (i in 0 until 4) {
+            val connection = URL(current).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 7000
+            connection.readTimeout = 7000
+            val code = runCatching { connection.responseCode }.getOrElse { connection.disconnect(); return emptyList() }
+            if (code in 300..399) {
+                val location = connection.getHeaderField("Location") ?: run { connection.disconnect(); return emptyList() }
+                val next = URL(URL(current), location).toString()
+                connection.disconnect()
+                if (next == current) return emptyList()
+                current = next
+                continue
+            }
+            if (code in 200..299) {
+                html = runCatching { connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) } }
+                    .getOrElse { connection.disconnect(); return emptyList() }
+                connection.disconnect()
+                break
+            }
+            connection.disconnect()
+            return emptyList()
+        }
+        val page = html ?: return emptyList()
+        val magnetLink = Regex("magnet:\\?xt=urn:btih:([0-9A-Za-z]{32,40})[^\"'<>\\s]*")
+        return magnetLink.findAll(page).mapNotNull { match ->
+            val before = page.substring(maxOf(0, match.range.first - 800), match.range.first)
+            val title = Regex("<a[^>]*>([^<]{4,})</a>").findAll(before).lastOrNull()
+                ?.groupValues?.get(1)?.let { htmlText(it) }.orEmpty()
+            if (title.isEmpty()) return@mapNotNull null
+            val size = Regex("([0-9]+(?:[.,][0-9]+)?\\s*(?:TB|GB|MB|KB|ТБ|ГБ|МБ|КБ))", RegexOption.IGNORE_CASE)
+                .find(before)?.value.orEmpty()
+            val seeds = Regex("(?:seeders?|сид[а-я]*)[^0-9]{0,20}(\\d+)", RegexOption.IGNORE_CASE)
+                .find(before)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            Torrent(title, size, seeds, 0, match.value.replace("&amp;", "&"), "Searchtor")
+        }.distinctBy { it.magnet }.toList()
     }
 
     /** The magnet link of a row: ready for most sources, taken from the topic page for NNM-Club, from a .torrent file for Jackett. */

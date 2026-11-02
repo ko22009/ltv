@@ -32,6 +32,7 @@ dependencies {
     implementation("androidx.leanback:leanback:1.0.0")
     implementation("androidx.tvprovider:tvprovider:1.0.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.media3:media3-exoplayer:1.3.1")
