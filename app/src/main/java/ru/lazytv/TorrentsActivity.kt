@@ -235,7 +235,8 @@ class TorrentsActivity : Activity() {
         options.removeAllViews()
         chip(chips, "Все (${visible.size})", source == null) { select(null) }
         groups.forEach { (group, items) -> chip(chips, "$group (${items.size})", source == group) { select(group) } }
-        if (saved.isNotEmpty()) chip(chips, "Избранное (${saved.size})", source == FAVORITES, MenuIcons.STAR) { select(FAVORITES) }
+        if (saved.isNotEmpty()) chip(chips, "Избранное (${saved.size})", source == FAVORITES,
+            if (source == FAVORITES) MenuIcons.STAR else MenuIcons.STAR_BORDER) { select(FAVORITES) }
         chip(options, sort.label, false, MenuIcons.SORT) {
             Settings.setString(this, Settings.TORRENT_SORT, sort.next().key)
             select(source, 0)

@@ -103,9 +103,16 @@ class DetailsActivity : Activity() {
         bar.addView(button(MenuIcons.PLAY, "Смотреть") { variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name) })
         val title = titleFrom(intent.extras!!)
         lateinit var favorite: TextView
+        // filled bookmark: the title is saved in a folder; outline: it is not
+        fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
+            .apply { setBounds(0, 0, dp(22), dp(22)) }
         favorite = button(MenuIcons.BOOKMARK, bookmarkLabel(title)) {
-            chooseFolder(title) { favorite.text = bookmarkLabel(title).uppercase() }
+            chooseFolder(title) {
+                favorite.text = bookmarkLabel(title).uppercase()
+                favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
+            }
         }
+        favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
         bar.addView(favorite)
         bar.addView(button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) })
         bar.addView(button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) })

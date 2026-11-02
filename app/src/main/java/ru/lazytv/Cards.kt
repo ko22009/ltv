@@ -86,17 +86,20 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        // a thin frame in the focus colour around the card, visible even when the poster fills the card
-        setPadding(px(3f), px(3f), px(3f), px(3f))
         addView(poster, LayoutParams(-1, px(300f)))
         addView(info, LayoutParams(-1, -2))
-        background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(0xFF2F7D57.toInt())
-                cornerRadius = px(4f).toFloat()
-            })
-            addState(intArrayOf(), GradientDrawable().apply { setColor(Color.TRANSPARENT) })
+        // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
+        background = GradientDrawable().apply {
+            setColor(0xFF12201A.toInt())
+            cornerRadius = px(4f).toFloat()
         }
+        clipToOutline = true
+    }
+
+    // the focused card lifts off the row and casts a shadow instead of wearing a frame
+    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).setDuration(150).start()
     }
 
     fun bind(title: Title) {
