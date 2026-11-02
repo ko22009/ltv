@@ -32,12 +32,21 @@ object Recommendations {
         val ids = JSONArray()
         titles.forEachIndexed { index, title ->
             if (title.poster == null) return@forEachIndexed
+            // the list has no runtime and only genre ids: the card details give both, a miss just leaves them out
+            val details = runCatching { Tmdb.detailsCached(context, title.id, title.tv) }.getOrNull()
+            val genre = details?.genres?.take(2)?.joinToString(", ").orEmpty().ifEmpty { title.genre }
+            val minutes = details?.runtime ?: 0
             val program = PreviewProgram.Builder()
                 .setChannelId(channelId)
                 .setType(if (title.tv) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
                 .setTitle(title.name)
-                .setDescription(listOf(title.year, title.rating).filter { it.isNotEmpty() }.joinToString("  ★ "))
-                .setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w500${title.poster}"))
+                .setDescription(listOf(title.year, if (minutes > 0) "$minutes мин" else "", genre, if (title.rating.isNotEmpty()) "★ ${title.rating}" else "")
+                    .filter { it.isNotEmpty() }.joinToString(" · "))
+                .setGenre(genre)
+                .setDurationMillis(minutes * 60_000)
+                .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3)
+                // w500 was upscaled by the launcher and looked soft; w780 is sharp on a 4K screen too
+                .setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
                 .setIntentUri(Uri.parse(Intent(context, DetailsActivity::class.java).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
                 .setWeight(LIMIT - index)
                 .build()

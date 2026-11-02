@@ -13,6 +13,8 @@ data class Title(
     val tv: Boolean,
     val year: String = "",
     val rating: String = "",
+    /** Up to two genre names taken from the list answer; empty when the list carries none. */
+    val genre: String = "",
 )
 
 /** A list or a service category: what to ask TMDB for. */
@@ -117,7 +119,23 @@ object Tmdb {
             item.getLong("id"), name, item.optString("overview"),
             item.optString("poster_path").ifEmpty { null }, tv,
             date.take(4), "%.1f".format(item.optDouble("vote_average", 0.0)),
+            genreText(item.optJSONArray("genre_ids")),
         )
+    }
+
+    /** Short Russian names of TMDB genre ids (films and series use different ids for a few genres). */
+    private val genreNames = mapOf(
+        28 to "Боевик", 12 to "Приключения", 16 to "Мультфильм", 35 to "Комедия", 80 to "Криминал",
+        99 to "Документальный", 18 to "Драма", 10751 to "Семейный", 14 to "Фэнтези", 36 to "История",
+        27 to "Ужасы", 10402 to "Музыка", 9648 to "Детектив", 10749 to "Мелодрама", 878 to "Фантастика",
+        10770 to "Телефильм", 53 to "Триллер", 10752 to "Военный", 37 to "Вестерн",
+        10759 to "Боевик и приключения", 10762 to "Детский", 10764 to "Реалити", 10765 to "Фантастика",
+        10766 to "Мыльная опера", 10767 to "Ток-шоу", 10768 to "Политика",
+    )
+
+    private fun genreText(ids: org.json.JSONArray?): String {
+        if (ids == null) return ""
+        return (0 until ids.length()).mapNotNull { genreNames[ids.optInt(it)] }.take(2).joinToString(", ")
     }
 
     /** Movies and series matching the typed or spoken words (people are skipped). */

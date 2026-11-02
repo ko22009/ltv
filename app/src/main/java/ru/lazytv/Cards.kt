@@ -36,7 +36,21 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     private val year = TextView(context).apply {
         setTextColor(0xFF9FB3A9.toInt())
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+        maxLines = 1
     }
+
+    private val genre = TextView(context).apply {
+        setTextColor(0xFF9FB3A9.toInt())
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+        maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
+    }
+
+    private var year0 = ""
+    private var runtime0 = 0
+    /** Id of the title the card shows now: a late runtime answer for a recycled card is dropped. */
+    var shownId = -1L
+        private set
 
     /** Same size as the year, at the right edge of its line; hidden when TMDB has no rating. */
     private val rating = TextView(context).apply {
@@ -52,6 +66,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF39423D.toInt())
         setPadding(px(12f), px(8f), px(12f), px(10f))
         addView(name, LayoutParams(-1, -2))
+        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(4f) })
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -64,7 +79,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         orientation = VERTICAL
         isFocusable = true
         isFocusableInTouchMode = true
-        layoutParams = LayoutParams(px(240f), LayoutParams.WRAP_CONTENT).apply { leftMargin = px(17f) }
+        // the gap goes on the right: the first card then starts exactly under the row caption
+        layoutParams = LayoutParams(px(240f), LayoutParams.WRAP_CONTENT).apply { rightMargin = px(17f) }
         addView(poster, LayoutParams(-1, px(300f)))
         addView(info, LayoutParams(-1, -2))
         background = StateListDrawable().apply {
@@ -78,7 +94,12 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     fun bind(title: Title) {
         name.text = title.name
-        year.text = title.year
+        shownId = title.id
+        year0 = title.year
+        runtime0 = 0
+        genre.text = title.genre
+        genre.visibility = if (title.genre.isEmpty()) View.GONE else View.VISIBLE
+        showYear()
         val value = title.rating.toDoubleOrNull()
         if (value != null && value > 0) {
             rating.text = "★ %.1f".format(value)
@@ -89,5 +110,16 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             })
             rating.visibility = View.VISIBLE
         } else rating.visibility = View.GONE
+    }
+
+    /** The list answer has no runtime: it arrives later from the card details and is added to the year line. */
+    fun setRuntime(id: Long, minutes: Int) {
+        if (id != shownId || minutes <= 0) return
+        runtime0 = minutes
+        showYear()
+    }
+
+    private fun showYear() {
+        year.text = listOf(year0, if (runtime0 > 0) "$runtime0 мин" else "").filter { it.isNotEmpty() }.joinToString(" · ")
     }
 }

@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.app.RowsSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.FocusHighlight
 import androidx.leanback.widget.HeaderItem
 import androidx.leanback.widget.ImageCardView
 import androidx.leanback.widget.ListRow
@@ -160,7 +161,7 @@ class MainFragment : BrowseSupportFragment() {
             }
         }
         parent.addView(orb, FrameLayout.LayoutParams(dp(64), dp(64), Gravity.TOP or Gravity.START).apply {
-            leftMargin = dp(32)
+            leftMargin = dp(56)
             topMargin = dp(24)
         })
         root.postDelayed({ hideStockOrb(requireActivity().window.decorView) }, 400)
@@ -218,8 +219,14 @@ class MainFragment : BrowseSupportFragment() {
         headers.add(PageRow(HeaderItem(SETTINGS)))
     }
 
+    /** Rows of the pages: the focused card is only outlined and coloured, it is not scaled up. */
+    private fun rowPresenter(dimOthers: Boolean) = ListRowPresenter(FocusHighlight.ZOOM_FACTOR_NONE).apply {
+        selectEffectEnabled = dimOthers
+    }
+
     private fun pageFor(name: String): ArrayObjectAdapter = pages.getOrPut(name) {
-        val rows = ArrayObjectAdapter(ListRowPresenter())
+        // settings tiles keep one background in every row: no dimming of the rows under the focused one
+        val rows = ArrayObjectAdapter(rowPresenter(dimOthers = name != SETTINGS))
         val ctx = requireContext()
         when (name) {
             OVERVIEW -> {
@@ -350,7 +357,7 @@ class MainFragment : BrowseSupportFragment() {
             if (name == ADULT && pin.isNotEmpty() && !adultUnlocked) {
                 // the list stays closed until the code is typed; the page draws a single lock tile
                 val tile = ArrayObjectAdapter(SettingsTilePresenter()).apply { add(LockTile("18+ • Введите код") { unlockAdult(page, name) }) }
-                page.adapter = ArrayObjectAdapter(ListRowPresenter()).apply { add(ListRow(HeaderItem("Родительский контроль"), tile)) }
+                page.adapter = ArrayObjectAdapter(rowPresenter(dimOthers = true)).apply { add(ListRow(HeaderItem("Родительский контроль"), tile)) }
                 page.onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
                     if (item is LockTile) item.ok()
                 }
@@ -433,6 +440,11 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
 }
 
 class CardPresenter : Presenter() {
+    private companion object {
+        /** Runtimes are not in the lists: a few threads fetch them for the cards that are on the screen. */
+        val runtimePool: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
         ViewHolder(TitleCard(parent.context, parent.resources.displayMetrics.widthPixels / 1280f))
 
@@ -440,8 +452,14 @@ class CardPresenter : Presenter() {
         val card = holder.view as TitleCard
         val title = item as Title
         card.bind(title)
+        val appContext = card.context.applicationContext
+        runtimePool.execute {
+            val minutes = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).runtime }.getOrDefault(0)
+            if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }
+        }
         val poster = title.poster
-        if (poster != null) Glide.with(card.context).load("https://image.tmdb.org/t/p/w342$poster").into(card.poster)
+        // w500 stays sharp at the card's size on a 1080p screen; w342 was upscaled and looked soft
+        if (poster != null) Glide.with(card.context).load("https://image.tmdb.org/t/p/w500$poster").into(card.poster)
         // no poster yet: an empty card, not the picture of a recycled one
         else Glide.with(card.context).clear(card.poster)
     }

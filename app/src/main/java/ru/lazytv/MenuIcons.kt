@@ -182,6 +182,15 @@ class IconHeaderPresenter : RowHeaderPresenter() {
             super.setAlpha(1f)
         }
 
+        // the same for the zoom of a focused header: the plate and the colour are enough
+        override fun setScaleX(scaleX: Float) {
+            super.setScaleX(1f)
+        }
+
+        override fun setScaleY(scaleY: Float) {
+            super.setScaleY(1f)
+        }
+
         override fun onAttachedToWindow() {
             super.onAttachedToWindow()
             if (title == null) title = findTitle(this)
