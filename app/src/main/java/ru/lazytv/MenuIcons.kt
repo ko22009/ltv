@@ -93,16 +93,27 @@ object MenuIcons {
 /** Draws a Material Symbols path (viewBox 0 -960 960 960) scaled to its bounds. */
 class SymbolIcon(data: String) : Drawable() {
     private val path: Path = PathParser.createPathFromPathData(data)
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+    private var cache: android.graphics.Bitmap? = null
 
-    override fun draw(canvas: Canvas) {
-        val scale = bounds.width() / 960f
-        canvas.save()
-        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+    // The hardware renderer drew these filled paths with stair-stepped edges at this tiny scale, so the icon is
+    // painted once into a bitmap by the software canvas (always smooth) and the bitmap is what gets drawn.
+    private fun render(w: Int, h: Int): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val scale = w / 960f
         canvas.scale(scale, scale)
         canvas.translate(0f, 960f)
-        canvas.drawPath(path, paint)
-        canvas.restore()
+        canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() })
+        return bitmap
+    }
+
+    override fun draw(canvas: Canvas) {
+        val w = bounds.width()
+        val h = bounds.height()
+        if (w <= 0 || h <= 0) return
+        val bitmap = cache?.takeIf { it.width == w && it.height == h } ?: render(w, h).also { cache = it }
+        canvas.drawBitmap(bitmap, bounds.left.toFloat(), bounds.top.toFloat(), paint)
     }
 
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
