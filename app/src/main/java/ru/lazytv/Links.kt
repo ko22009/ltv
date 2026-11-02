@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.util.TypedValue
+import android.view.Gravity
 import android.widget.TextView
 
 /**
@@ -29,17 +30,30 @@ object Links {
     private fun showAddress(activity: Activity, url: String) {
         val scale = activity.resources.displayMetrics.widthPixels / 1280f
         fun px(value: Int) = (value * scale).toInt()
-        val link = TextView(activity).apply {
-            text = url
-            setTextColor(0xFFDCE8E0.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
-            setTextIsSelectable(true)
-            setPadding(px(24), px(12), px(24), 0)
+        // the text is laid out by hand: the stock dialog message centres itself, and the lines then start anywhere
+        val box = android.widget.LinearLayout(activity).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = Gravity.START
+            setPadding(px(24), 0, px(24), 0)
+            addView(TextView(activity).apply {
+                text = "Браузера на этом устройстве нет. Откройте ссылку на телефоне или компьютере и поставьте TorrServe оттуда."
+                setTextColor(0xFFDCE8E0.toInt())
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
+                gravity = Gravity.START
+                setLineSpacing(0f, 1.15f)
+            })
+            addView(TextView(activity).apply {
+                text = url
+                setTextColor(0xFFDCE8E0.toInt())
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
+                gravity = Gravity.START
+                setTextIsSelectable(true)
+                setPadding(0, px(14), 0, 0)
+            })
         }
         AlertDialog.Builder(activity)
             .setTitle("Ссылка для загрузки")
-            .setMessage("Браузера на этом устройстве нет. Откройте ссылку на телефоне или компьютере и поставьте TorrServe оттуда.")
-            .setView(link)
+            .setView(box)
             .setPositiveButton("Понятно", null)
             .show()
     }
