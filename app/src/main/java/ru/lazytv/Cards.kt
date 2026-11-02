@@ -25,6 +25,19 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF12201A.toInt())
     }
 
+    /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
+    private val badge = ImageView(context).apply {
+        setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
+            setColorFilter(0xFFB9F6CA.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+        })
+        setPadding(px(4f), px(4f), px(4f), px(4f))
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(0xE60C140F.toInt())
+        }
+        visibility = View.GONE
+    }
+
     private val name = TextView(context).apply {
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
@@ -86,7 +99,13 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        addView(poster, LayoutParams(-1, px(300f)))
+        addView(android.widget.FrameLayout(context).apply {
+            addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
+                topMargin = px(10f)
+                rightMargin = px(10f)
+            })
+        }, LayoutParams(-1, px(300f)))
         addView(info, LayoutParams(-1, -2))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
@@ -101,25 +120,33 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** Called when the card gets the focus; the list uses it to warm up the card screen of this title. */
     var onFocused: (() -> Unit)? = null
 
-    private fun restAlpha() = if (watched) 0.4f else 1f
+    private fun restAlpha() = if (watched) 0.3f else 1f
 
     // a watched card stays dimmed under the cursor, only a little brighter than at rest
-    private fun focusAlpha() = if (watched) 0.7f else 1f
+    private fun focusAlpha() = if (watched) 0.6f else 1f
+
+    // the poster and the text plate are dimmed, the card itself and the tick badge are not
+    private fun dim(value: Float, animated: Boolean) {
+        for (part in listOf<View>(poster, info)) {
+            if (animated) part.animate().alpha(value).setDuration(150).start() else part.alpha = value
+        }
+    }
 
     // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one stays dimmed,
     // just a little brighter, so the cursor is still visible on it
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (gainFocus) onFocused?.invoke()
-        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).alpha(if (gainFocus) focusAlpha() else restAlpha())
-            .setDuration(150).start()
+        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).setDuration(150).start()
+        dim(if (gainFocus) focusAlpha() else restAlpha(), true)
     }
 
     fun bind(title: Title) {
         name.text = title.name
         shownId = title.id
         watched = Watched.has(context, title)
-        alpha = if (isFocused) focusAlpha() else restAlpha()
+        dim(if (isFocused) focusAlpha() else restAlpha(), false)
+        badge.visibility = if (watched) View.VISIBLE else View.GONE
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
