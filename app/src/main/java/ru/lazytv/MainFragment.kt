@@ -77,6 +77,7 @@ class MainFragment : BrowseSupportFragment() {
     private var favoritesRows: ArrayObjectAdapter? = null
     private var historyRows: ArrayObjectAdapter? = null
     private var episodeRevision = ""
+    private var watchedMarks = ""
 
     private val onClick = OnItemViewClickedListener { _, item, _, _ ->
         when (item) {
@@ -162,7 +163,8 @@ class MainFragment : BrowseSupportFragment() {
         }
         parent.addView(orb, FrameLayout.LayoutParams(dp(64), dp(64), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(56)
-            topMargin = dp(24)
+            // the orb's centre sits on the line of the page title on the right (ОБЗОР, ФИЛЬМЫ ...)
+            topMargin = dp(45)
         })
         root.postDelayed({ hideStockOrb(requireActivity().window.decorView) }, 400)
         // the headers fragment recreates its orb whenever the menu is shown again: hide it on every layout pass
@@ -195,6 +197,17 @@ class MainFragment : BrowseSupportFragment() {
             historyRows?.let { fillHistory(it, ctx) }
         }
         if (shown != Settings.snapshot(ctx)) showHeaders()
+        // a title marked watched on its card: the cards of every opened page are drawn again, dimmed or not
+        val marks = Watched.revision(ctx)
+        if (marks != watchedMarks) {
+            watchedMarks = marks
+            pages.values.forEach { rows ->
+                for (i in 0 until rows.size()) {
+                    val cards = (rows.get(i) as? ListRow)?.adapter as? ArrayObjectAdapter ?: continue
+                    cards.notifyArrayItemRangeChanged(0, cards.size())
+                }
+            }
+        }
     }
 
     private fun showHeaders() {
@@ -456,6 +469,16 @@ class CardPresenter : Presenter() {
         runtimePool.execute {
             val minutes = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).runtime }.getOrDefault(0)
             if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }
+        }
+        // the chosen title is about to be opened: its wide backdrop is loaded into the cache now, so the card
+        // screen does not wait for it (the details are cached by the call above or this one)
+        card.onFocused = {
+            runtimePool.execute {
+                val backdrop = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).backdrop }.getOrDefault("")
+                if (backdrop.isNotEmpty()) card.post {
+                    Glide.with(appContext).load("https://image.tmdb.org/t/p/w780$backdrop").preload()
+                }
+            }
         }
         val poster = title.poster
         // w500 stays sharp at the card's size on a 1080p screen; w342 was upscaled and looked soft

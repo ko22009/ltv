@@ -96,15 +96,27 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         clipToOutline = true
     }
 
-    // the focused card lifts off the row and casts a shadow instead of wearing a frame
+    private var watched = false
+
+    /** Called when the card gets the focus; the list uses it to warm up the card screen of this title. */
+    var onFocused: (() -> Unit)? = null
+
+    private fun restAlpha() = if (watched) 0.4f else 1f
+
+    // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one is dimmed
+    // in the list and lights up only while it is chosen
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).setDuration(150).start()
+        if (gainFocus) onFocused?.invoke()
+        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).alpha(if (gainFocus) 1f else restAlpha())
+            .setDuration(150).start()
     }
 
     fun bind(title: Title) {
         name.text = title.name
         shownId = title.id
+        watched = Watched.has(context, title)
+        alpha = if (isFocused) 1f else restAlpha()
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre

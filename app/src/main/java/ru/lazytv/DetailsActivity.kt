@@ -17,7 +17,12 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 
 /**
  * Card of a title in the LazyMedia layout (design/lmd-card.png): green banner, poster on the left,
@@ -79,11 +84,10 @@ class DetailsActivity : Activity() {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC101A14.toInt(), 0xF2101A14.toInt()))
         }, FrameLayout.LayoutParams(-1, -1))
         banner.addView(View(this).apply { background = DotsDrawable(0x33A7D6BC) }, FrameLayout.LayoutParams(-1, -1))
-        // the poster is shown as a soft cover at once; the real wide backdrop replaces it when TMDB answers
-        posterPath?.let {
-            Glide.with(this).load("https://image.tmdb.org/t/p/w500$it").into(backdrop)
-            backdrop.alpha = 0.45f
-        }
+        // the poster is not borrowed as a stand-in: until the wide backdrop is there, a spinner turns on the band
+        backdrop.alpha = 0f
+        bannerSpinner = Spinner(this, dp(44))
+        banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
         val appName = ImageView(this).apply {
@@ -114,6 +118,17 @@ class DetailsActivity : Activity() {
         }
         favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
         bar.addView(favorite)
+        // "watched": filled while marked; the lists show a marked title dimmed so it does not draw the eye
+        lateinit var seen: TextView
+        fun seenIcon() = PathDrawable(if (Watched.has(this, title)) MenuIcons.CHECK else MenuIcons.CHECK_BORDER)
+            .apply { setBounds(0, 0, dp(22), dp(22)) }
+        seen = button(MenuIcons.CHECK_BORDER, "Просмотрено") {
+            Watched.set(this, title, !Watched.has(this, title))
+            seen.setCompoundDrawables(seenIcon(), null, null, null)
+            toast(if (Watched.has(this, title)) "Отмечено просмотренным" else "Отметка снята")
+        }
+        seen.setCompoundDrawables(seenIcon(), null, null, null)
+        bar.addView(seen)
         bar.addView(button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) })
         bar.addView(button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) })
         root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
@@ -161,19 +176,30 @@ class DetailsActivity : Activity() {
             originalTitle = d?.originalTitle.orEmpty()
             // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
             variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)
-            if (d == null) return@Thread
+            if (d == null) {
+                runOnUiThread { bannerSpinner.visibility = View.GONE }
+                return@Thread
+            }
             runOnUiThread {
                 if (posterPath == null && d.poster.isNotEmpty()) {
                     posterPath = d.poster
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    backdrop.alpha = 1f
-                    Glide.with(this).load("https://image.tmdb.org/t/p/w780${d.backdrop}").into(backdrop)
-                } else if (posterPath != null) {
-                    Glide.with(this).load("https://image.tmdb.org/t/p/w500$posterPath").into(backdrop)
-                    backdrop.alpha = 0.45f
-                }
+                    Glide.with(this).load("https://image.tmdb.org/t/p/w780${d.backdrop}")
+                        .listener(object : RequestListener<Drawable> {
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                                bannerSpinner.visibility = View.GONE
+                                return false
+                            }
+
+                            override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                                bannerSpinner.visibility = View.GONE
+                                backdrop.animate().alpha(1f).setDuration(250).start()
+                                return false
+                            }
+                        }).into(backdrop)
+                } else bannerSpinner.visibility = View.GONE
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
                     "Длительность" to (formatRuntime(d.runtime)),
@@ -212,6 +238,7 @@ class DetailsActivity : Activity() {
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
     private lateinit var backdrop: ImageView
+    private lateinit var bannerSpinner: Spinner
 
     /** Cast of the film: a caption and a row of names; picking a name opens the actor page. */
     private fun castRow(people: List<Tmdb.Person>): View {
