@@ -122,8 +122,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     private fun restAlpha() = if (watched) 0.3f else 1f
 
-    // a watched card stays dimmed under the cursor, only a little brighter than at rest
-    private fun focusAlpha() = if (watched) 0.6f else 1f
+    // a watched card is just as dim under the cursor as at rest: the lift and the shadow show the focus
+    private fun focusAlpha() = restAlpha()
 
     // the poster and the text plate are dimmed, the card itself and the tick badge are not
     private fun dim(value: Float, animated: Boolean) {
@@ -132,8 +132,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
     }
 
-    // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one stays dimmed,
-    // just a little brighter, so the cursor is still visible on it
+    // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one stays as dim as at rest,
+    // and only the lift tells where the cursor is
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (gainFocus) onFocused?.invoke()
