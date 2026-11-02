@@ -103,12 +103,15 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     private fun restAlpha() = if (watched) 0.4f else 1f
 
-    // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one is dimmed
-    // in the list and lights up only while it is chosen
+    // a watched card stays dimmed under the cursor, only a little brighter than at rest
+    private fun focusAlpha() = if (watched) 0.7f else 1f
+
+    // the focused card lifts off the row and casts a shadow instead of wearing a frame; a watched one stays dimmed,
+    // just a little brighter, so the cursor is still visible on it
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (gainFocus) onFocused?.invoke()
-        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).alpha(if (gainFocus) 1f else restAlpha())
+        animate().translationZ(if (gainFocus) px(24f).toFloat() else 0f).alpha(if (gainFocus) focusAlpha() else restAlpha())
             .setDuration(150).start()
     }
 
@@ -116,7 +119,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         name.text = title.name
         shownId = title.id
         watched = Watched.has(context, title)
-        alpha = if (isFocused) 1f else restAlpha()
+        alpha = if (isFocused) focusAlpha() else restAlpha()
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
