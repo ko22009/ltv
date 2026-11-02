@@ -99,12 +99,27 @@ class DetailsActivity : Activity() {
             topMargin = dp(24); rightMargin = dp(64)
         })
 
+        // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
+        val back = ImageView(this).apply {
+            setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = focusShape(scale, 0x66000000, circle = true)
+            isFocusable = true
+            isClickable = true
+            contentDescription = "Назад"
+            setOnClickListener { finish() }
+        }
+        root.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
+            topMargin = dp(32); leftMargin = dp(64)
+        })
+
         val bar = LinearLayout(this)
         bar.setBackgroundColor(0xFF1B2E23.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(389), 0, 0, 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
-        bar.addView(button(MenuIcons.PLAY, "Смотреть") { variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name) })
+        watchButton = button(MenuIcons.PLAY, "Смотреть") { variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name) }
+        bar.addView(watchButton)
         val title = titleFrom(intent.extras!!)
         lateinit var favorite: TextView
         // filled bookmark: the title is saved in a folder; outline: it is not
@@ -279,13 +294,32 @@ class DetailsActivity : Activity() {
     }
 
     /** Starting to watch (a site variant or a torrent) puts the title into the history. */
+    private lateinit var watchButton: TextView
+    private var opening = false
+
+    /**
+     * The release is asked for its videos first: a film with one video starts in the player straight from this card,
+     * and only a release with several (a series) opens the episode page. No empty page flashes in between.
+     */
     private fun openVariant(v: Variant) {
+        if (opening) return
+        opening = true
         History.add(this, historyTitle())
-        startActivity(
-            Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
-                .putExtra("title", v.title).putExtra("note", v.note).putExtra("ref", v.ref)
-                .putExtra("alt", v.alt).putExtra("description", v.description)
-        )
+        val caption = watchButton.text
+        watchButton.text = "ЗАГРУЖАЕМ…"
+        Thread {
+            val episodes = runCatching { Sources.all.first { it.id == v.sourceId }.episodes(v) }.getOrNull()
+            runOnUiThread {
+                opening = false
+                watchButton.text = caption
+                if (episodes != null && episodes.size == 1) playEpisode(this, v, episodes, 0)
+                else startActivity(
+                    Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
+                        .putExtra("title", v.title).putExtra("note", v.note).putExtra("ref", v.ref)
+                        .putExtra("alt", v.alt).putExtra("description", v.description)
+                )
+            }
+        }.start()
     }
 
     private fun openTorrents(name: String) {

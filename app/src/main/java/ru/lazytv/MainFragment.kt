@@ -82,6 +82,7 @@ class MainFragment : BrowseSupportFragment() {
     private val onClick = OnItemViewClickedListener { _, item, _, _ ->
         when (item) {
             is Title -> startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(item.toExtras()))
+            is MoreTile -> startActivity(item.toIntent(requireContext()))
             is Torrent -> startActivity(
                 Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", item.title)
                     .putExtra("magnet", item.magnet).putExtra("size", item.size).putExtra("seeds", item.seeds)
@@ -247,8 +248,8 @@ class MainFragment : BrowseSupportFragment() {
                 if (favTorrents.isNotEmpty()) {
                     rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
                 }
-                Tmdb.overview.forEach { collection ->
-                    addRow(rows, collection.title) { context -> Tmdb.loadCollection(context, collection) }
+                Tmdb.overview.forEachIndexed { index, collection ->
+                    addRow(rows, collection.title, MoreTile(collection.title, collection = index)) { context -> Tmdb.loadCollection(context, collection) }
                 }
             }
             FAVORITES -> {
@@ -263,7 +264,9 @@ class MainFragment : BrowseSupportFragment() {
                 rows.add(ListRow(ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }))
             }
             else -> servicePage(rows, name, ctx) ?: Tmdb.visibleCategories(ctx).firstOrNull { it.title.uppercase() == name }?.let { category ->
-                Tmdb.rows.forEach { (title, sort) -> addRow(rows, title) { context -> Tmdb.load(context, category, sort) } }
+                Tmdb.rows.forEach { (title, sort) ->
+                    addRow(rows, title, MoreTile("${category.title}: $title", category = category.id, sort = sort)) { context -> Tmdb.load(context, category, sort) }
+                }
             } ?: Unit
         }
         rows
@@ -323,16 +326,19 @@ class MainFragment : BrowseSupportFragment() {
         }
     }
 
-    private fun addRow(rows: ArrayObjectAdapter, title: String, load: (android.content.Context) -> List<Title>) =
-        addCards(rows, title, CardPresenter()) { load(it) }
-
-    private fun addCards(rows: ArrayObjectAdapter, title: String, presenter: Presenter, load: (android.content.Context) -> List<Any>) {
-        val cards = ArrayObjectAdapter(presenter)
-        rows.add(ListRow(HeaderItem(title), cards))
+    /** A row of title cards; the "show all" tile closes it, and it opens the whole list as a page. */
+    private fun addRow(rows: ArrayObjectAdapter, title: String, more: MoreTile, load: (android.content.Context) -> List<Title>) {
+        val presenters = ClassPresenterSelector()
+            .addClassPresenter(Title::class.java, CardPresenter())
+            .addClassPresenter(MoreTile::class.java, MoreTilePresenter())
+        val cards = ArrayObjectAdapter(presenters)
+        val row = ListRow(HeaderItem(title), cards)
+        rows.add(row)
         val ctx = requireContext().applicationContext
         lifecycleScope.launch {
             val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
-            cards.addAll(0, loaded)
+            // the tile goes first and takes the cursor when a row is entered
+            cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
         }
     }
 
@@ -452,19 +458,28 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
     override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
 }
 
-class CardPresenter : Presenter() {
+class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
     private companion object {
         /** Runtimes are not in the lists: a few threads fetch them for the cards that are on the screen. */
         val runtimePool: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
-        ViewHolder(TitleCard(parent.context, parent.resources.displayMetrics.widthPixels / 1280f))
+        ViewHolder(TitleCard(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val card = holder.view as TitleCard
         val title = item as Title
         card.bind(title)
+        // long press on OK marks the film watched (or takes the mark back)
+        card.setOnLongClickListener {
+            when (card.toggleWatched()) {
+                true -> android.widget.Toast.makeText(card.context, "Отмечено просмотренным", android.widget.Toast.LENGTH_SHORT).show()
+                false -> android.widget.Toast.makeText(card.context, "Отметка снята", android.widget.Toast.LENGTH_SHORT).show()
+                null -> Unit
+            }
+            true
+        }
         val appContext = card.context.applicationContext
         runtimePool.execute {
             val minutes = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).runtime }.getOrDefault(0)

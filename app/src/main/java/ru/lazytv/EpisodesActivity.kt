@@ -124,14 +124,6 @@ class EpisodesActivity : Activity() {
                         geoButton.visibility = View.VISIBLE
                         return@onSuccess
                     }
-                    // a film is a single "Фильм" entry: a page with one row is only a stop, so the player opens at once
-                    // (unless the quality is to be asked, which needs this screen to stay behind the dialog)
-                    val film = episodes.singleOrNull()?.takeIf { it.title == "Фильм" }
-                    if (film != null && !(Settings.string(this, Settings.QUALITY, "best") == "ask" && film.streams.size > 1)) {
-                        play(episodes, 0)
-                        finish()
-                        return@onSuccess
-                    }
                     adapter = object : ArrayAdapter<Episode>(this, 0, episodes) {
                         override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(position, getItem(position)!!)
                     }
@@ -236,52 +228,9 @@ class EpisodesActivity : Activity() {
         updateActions()
     }
 
-    /** A short caption for the player's episode strip: "1 серия SD/HD AniDub" becomes "1 серия". */
-    private fun shortEpisode(title: String): String {
-        val first = title.substringBefore(" • ").trim()
-        return first.replace(Regex("\\s*SD/HD.*$", RegexOption.IGNORE_CASE), "").trim().ifEmpty { first }
-    }
-
-    /** The quality from the settings is used without asking; "ask" shows the picker. Long press on OK always shows it. */
     private fun play(episodes: List<Episode>, index: Int, choose: Boolean = false) {
-        // opening an episode marks it watched even before the player starts; the button can remove the mark
-        EpisodeState.setWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title), true)
+        playEpisode(this, variant, episodes, index, choose)
         adapter?.notifyDataSetChanged()
-        val episode = episodes[index]
-        val wanted = Settings.string(this, Settings.QUALITY, "best")
-        if ((choose || wanted == "ask") && episode.streams.size > 1) {
-            android.app.AlertDialog.Builder(this).setTitle("Качество • ${episode.title}")
-                .setItems(episode.streams.map { it.first }.toTypedArray()) { _, which ->
-                    start(episodes, index, episode.streams[which].first)
-                }
-                .show()
-            return
-        }
-        start(episodes, index, null)
-    }
-
-    /** The stream of an episode for a quality limit; [exact] (the user's pick) wins when that quality exists. */
-    private fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> {
-        exact?.let { name -> episode.streams.firstOrNull { it.first == name }?.let { return it } }
-        val limit = wanted.toIntOrNull()
-        return if (limit == null) episode.streams.first()
-        else episode.streams.firstOrNull { (it.first.removeSuffix("p").toIntOrNull() ?: 0) <= limit } ?: episode.streams.last()
-    }
-
-    /** Starts the player with the whole list as a queue, so the next series can start by itself. */
-    private fun start(episodes: List<Episode>, index: Int, exact: String?) {
-        val wanted = Settings.string(this, Settings.QUALITY, "best")
-        val queue = org.json.JSONArray()
-        episodes.forEach { episode ->
-            val stream = streamFor(episode, wanted, exact)
-            queue.put(org.json.JSONObject().put("u", stream.second).put("t", "${variant.title} • ${episode.title}")
-                .put("m", "${variant.source} • ${stream.first}").put("e", shortEpisode(episode.title)))
-        }
-        val current = streamFor(episodes[index], wanted, exact)
-        openPlayer(
-            this, current.second, "${variant.title} • ${episodes[index].title}", "${variant.source} • ${current.first}",
-            queue.toString(), index,
-        )
     }
 }
 

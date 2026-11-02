@@ -141,12 +141,28 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         dim(if (gainFocus) focusAlpha() else restAlpha(), true)
     }
 
-    fun bind(title: Title) {
-        name.text = title.name
-        shownId = title.id
+    private var shown: Title? = null
+
+    /** Long press on OK: the watched mark of the shown title is switched, the card redraws at once. */
+    fun toggleWatched(): Boolean? {
+        val title = shown ?: return null
+        val now = !Watched.has(context, title)
+        Watched.set(context, title, now)
+        applyWatched(title)
+        return now
+    }
+
+    private fun applyWatched(title: Title) {
         watched = Watched.has(context, title)
         dim(if (isFocused) focusAlpha() else restAlpha(), false)
         badge.visibility = if (watched) View.VISIBLE else View.GONE
+    }
+
+    fun bind(title: Title) {
+        name.text = title.name
+        shownId = title.id
+        shown = title
+        applyWatched(title)
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
