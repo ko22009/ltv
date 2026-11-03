@@ -136,6 +136,11 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         grid.clipToPadding = false
         grid.clipChildren = false
         grid.setItemSpacing(px(6))
+        // leanback 1.0 keeps the cursor inside the grid at its first row: up from there is sent to the buttons by hand
+        grid.setOnKeyInterceptListener { event ->
+            val up = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP && event.action == android.view.KeyEvent.ACTION_DOWN
+            if (up && grid.selectedPosition < COLUMNS && filterChip.isShown) filterChip.requestFocus() else false
+        }
         grid.adapter = bridge
         grid.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {
             override fun onChildViewHolderSelected(
