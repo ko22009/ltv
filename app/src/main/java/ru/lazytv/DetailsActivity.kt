@@ -204,7 +204,7 @@ class DetailsActivity : Activity() {
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    Glide.with(this).load("https://image.tmdb.org/t/p/w780${d.backdrop}")
+                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                                 bannerSpinner.visibility = View.GONE

@@ -570,7 +570,7 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
             if (card.isFocused && card.shownId == title.id) runtimePool.execute {
                 val backdrop = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).backdrop }.getOrDefault("")
                 if (backdrop.isNotEmpty()) card.post {
-                    Glide.with(appContext).load("https://image.tmdb.org/t/p/w780$backdrop").preload()
+                    Glide.with(appContext).load("https://image.tmdb.org/t/p/original$backdrop").preload()
                 }
             }
         }
