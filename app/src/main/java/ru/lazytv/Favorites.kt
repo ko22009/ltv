@@ -47,6 +47,9 @@ object Favorites {
 
     fun inFolder(context: Context, folder: Folder): List<Title> = records(context).filter { it.first == folder }.map { it.second }
 
+    /** Everything in the bookmarks, whatever folder a record was saved in before the folders were dropped. */
+    fun all(context: Context): List<Title> = records(context).map { it.second }
+
     fun folderOf(context: Context, title: Title): Folder? = records(context).firstOrNull { same(it.second, title) }?.first
 
     /** Puts the title into the folder (it leaves its previous one); null removes it from the bookmarks. */

@@ -412,10 +412,9 @@ class MainFragment : BrowseSupportFragment() {
 
     private fun fillFavorites(rows: ArrayObjectAdapter, ctx: android.content.Context) {
         rows.clear()
-        Folder.values().forEach { folder ->
-            val saved = Favorites.inFolder(ctx, folder)
-            if (saved.isNotEmpty()) rows.add(ListRow(HeaderItem(folder.label), ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }))
-        }
+        // the bookmarks are one list: the folders are not chosen any more, the old ones are bookmarks too
+        val saved = Favorites.all(ctx)
+        if (saved.isNotEmpty()) rows.add(ListRow(ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }))
         val episodes = EpisodeState.favorites(ctx)
         if (episodes.isNotEmpty()) {
             rows.add(ListRow(HeaderItem("Избранные серии"), ArrayObjectAdapter(FavoriteEpisodePresenter()).apply {
