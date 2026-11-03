@@ -396,7 +396,10 @@ class MainFragment : BrowseSupportFragment() {
         val presenters = ClassPresenterSelector()
             .addClassPresenter(Title::class.java, CardPresenter())
             .addClassPresenter(MoreTile::class.java, MoreTilePresenter())
+            .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter())
         val cards = ArrayObjectAdapter(presenters)
+        // grey cards hold the place until the titles come
+        repeat(SKELETONS) { cards.add(SkeletonCard) }
         val row = ListRow(HeaderItem(title), cards)
         rows.add(row)
         val ctx = requireContext().applicationContext
@@ -404,8 +407,9 @@ class MainFragment : BrowseSupportFragment() {
         pendingLoads[row] = {
             lifecycleScope.launch {
                 val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
+                cards.clear()
                 // the tile goes first and takes the cursor when a row is entered
-                cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
+                cards.addAll(0,if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
                 if (loaded.isNotEmpty()) pagers[row] = RowPager(more, cards)
             }
         }
@@ -424,13 +428,25 @@ class MainFragment : BrowseSupportFragment() {
             }))
             return Unit
         }
+        // every category gets its row at once with grey cards; a category the site has nothing for drops its row
+        val pending = source.categories.map { category ->
+            val presenters = ClassPresenterSelector()
+                .addClassPresenter(ServiceItem::class.java, ServiceCardPresenter())
+                .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(raw = true))
+            val cards = ArrayObjectAdapter(presenters)
+            repeat(SKELETONS) { cards.add(SkeletonCard) }
+            val row = ListRow(HeaderItem(category.title), cards)
+            rows.add(row)
+            Triple(category, cards, row)
+        }
         lifecycleScope.launch {
-            source.categories.forEach { category ->
+            pending.forEach { (category, cards, row) ->
                 val items = withContext(Dispatchers.IO) { runCatching { source.browse(category) }.getOrDefault(emptyList()) }
-                if (items.isEmpty()) return@forEach
-                val cards = ArrayObjectAdapter(ServiceCardPresenter())
-                cards.addAll(0, items)
-                rows.add(ListRow(HeaderItem(category.title), cards))
+                if (items.isEmpty()) rows.remove(row)
+                else {
+                    cards.clear()
+                    cards.addAll(0, items)
+                }
             }
         }
         return Unit
@@ -497,6 +513,21 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
     override fun getIntrinsicHeight() = 52
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+}
+
+private const val SKELETONS = 7
+
+/** [cardScale] is the one of the matching [CardPresenter]; with [raw] the card is in plain pixels, like [ServiceCardPresenter]. */
+class SkeletonPresenter(private val cardScale: Float = 1f, private val raw: Boolean = false) : Presenter() {
+    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
+        ViewHolder(
+            if (raw) SkeletonCardView(parent.context, 1f, 360f, 70f)
+            else SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale),
+        )
+
+    override fun onBindViewHolder(holder: ViewHolder, item: Any) {}
+
+    override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
 class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
@@ -781,8 +812,8 @@ class PageNotePresenter : RowPresenter() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
             setPadding(start, 0, 0, 0)
             isFocusable = false
-            // leanback aligns the first row far below the grid top; for a lone line of text pull it up to the title
-            translationY = -90f * scale
+            // the row sits a little low under the title; more than ~25 would push the text above the list's top edge, where it is clipped
+            translationY = -20f * scale
         }
         return RowPresenter.ViewHolder(view)
     }

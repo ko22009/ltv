@@ -56,10 +56,15 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
     private lateinit var filterChip: LinearLayout
     private lateinit var sortChip: LinearLayout
     private lateinit var grid: VerticalGridView
-    private lateinit var spinner: LoadingView
     private lateinit var message: TextView
 
-    private val cards = ArrayObjectAdapter(CardPresenter(CARD_SCALE))
+    private val cards = ArrayObjectAdapter(
+        androidx.leanback.widget.ClassPresenterSelector()
+            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE))
+            .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(CARD_SCALE)),
+    )
+    /** Grey cards stand in the grid until the first page comes. */
+    private var skeletons = false
     /** The filter and sort the list was built with: compared on return to know when it has to be asked again. */
     private var signature = ""
     private var nextPage = 1
@@ -143,11 +148,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         // the remote goes from the buttons straight down to the cards
         for (chip in listOf(filterChip, sortChip)) chip.nextFocusDownId = grid.id
 
-        spinner = LoadingView(requireContext(), scale, "Загружаем…")
-        val body = FrameLayout(requireContext())
-        body.addView(grid, FrameLayout.LayoutParams(-1, -1))
-        body.addView(spinner, FrameLayout.LayoutParams(-1, -1))
-        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
+        page.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
 
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
@@ -217,7 +218,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         busy = false
         finished = false
         message.visibility = View.GONE
-        spinner.visibility = View.VISIBLE
+        repeat(COLUMNS * 2) { cards.add(SkeletonCard) }
+        skeletons = true
         loadNext()
     }
 
@@ -232,7 +234,10 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             val result = withContext(Dispatchers.IO) { runCatching { more.loadPage(appContext, page) } }
             if (!isActive || !isAdded) return@launch
             busy = false
-            spinner.visibility = View.GONE
+            if (skeletons) {
+                cards.clear()
+                skeletons = false
+            }
             result.onSuccess { loaded ->
                 // titles already shown are not added twice when TMDB repeats one on the next page
                 val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }

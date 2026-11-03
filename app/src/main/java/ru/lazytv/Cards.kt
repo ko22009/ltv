@@ -13,6 +13,45 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
+/** Stand-in for a card of a row that is still loading: it keeps the row's height, so nothing jumps when the real cards come. */
+object SkeletonCard
+
+/** Grey card of the size of [TitleCard] that slowly pulses; it takes no focus. */
+class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = 300f, infoHeight: Float = 82f) : LinearLayout(context) {
+    private val pulse = android.animation.ObjectAnimator.ofFloat(this, ALPHA, 0.45f, 1f).apply {
+        duration = 800
+        repeatCount = android.animation.ValueAnimator.INFINITE
+        repeatMode = android.animation.ValueAnimator.REVERSE
+    }
+
+    init {
+        orientation = VERTICAL
+        isFocusable = false
+        layoutParams = LayoutParams((240 * scale).toInt(), LayoutParams.WRAP_CONTENT).apply {
+            rightMargin = (17 * scale).toInt()
+            topMargin = (12 * scale).toInt()
+            bottomMargin = (12 * scale).toInt()
+        }
+        background = GradientDrawable().apply {
+            setColor(0xFF1A2A22.toInt())
+            cornerRadius = 4 * scale
+        }
+        // the same heights as the poster and the text plate of a real card
+        addView(View(context), LayoutParams(-1, (posterHeight * scale).toInt()))
+        addView(View(context).apply { setBackgroundColor(0xFF24352C.toInt()) }, LayoutParams(-1, (infoHeight * scale).toInt()))
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        pulse.start()
+    }
+
+    override fun onDetachedFromWindow() {
+        pulse.cancel()
+        super.onDetachedFromWindow()
+    }
+}
+
 /**
  * Card of a title in a list: the poster, then the name, and under it the year with the rating on the right.
  * The rating is no bigger than the year — the poster stays the main thing on the screen.
