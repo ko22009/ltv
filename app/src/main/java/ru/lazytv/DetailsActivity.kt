@@ -42,6 +42,9 @@ class DetailsActivity : Activity() {
             if (bold) typeface = Typeface.DEFAULT_BOLD
         }
 
+    /** When the screen was made: the second OK of a double press on the card must not press the first button of the bar. */
+    private val openedAt = android.os.SystemClock.elapsedRealtime()
+
     /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
     private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
         text = label.uppercase()
@@ -59,7 +62,10 @@ class DetailsActivity : Activity() {
                 cornerRadius = dp(2).toFloat()
             })
         }
-        setOnClickListener { action() }
+        setOnClickListener {
+            // a quick double press on the card lands here: the first moments ignore clicks, so the video does not start by itself
+            if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
+        }
         layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(12) }
     }
 
