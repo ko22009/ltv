@@ -137,7 +137,6 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         val gridWidth = resources.displayMetrics.widthPixels - px(92) - px(48)
         val pitch = (gridWidth - (COLUMNS - 1) * px(6)) / COLUMNS + px(6)
         val barCut = (gridWidth - (COLUMNS - 1) * pitch - (240 * CARD_SCALE * scale).toInt()).coerceAtLeast(0)
-        page.addView(searchBar, LinearLayout.LayoutParams(-1, -2).apply { rightMargin = barCut })
 
         // history
         historyBlock = LinearLayout(requireContext())
@@ -160,7 +159,13 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         historyScroll.isHorizontalScrollBarEnabled = false
         historyScroll.addView(history, FrameLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         historyBlock.addView(historyScroll, LinearLayout.LayoutParams(-1, -2))
-        page.addView(historyBlock)
+        // the bar and the history share one column of the width of the cards' row: both are cut at the last card,
+        // otherwise the phrases run past it into the free part of the grid cell
+        val top = LinearLayout(requireContext())
+        top.orientation = LinearLayout.VERTICAL
+        top.addView(searchBar, LinearLayout.LayoutParams(-1, -2))
+        top.addView(historyBlock)
+        page.addView(top, LinearLayout.LayoutParams(-1, -2).apply { rightMargin = barCut })
 
         recentHeader = LinearLayout(requireContext())
         recentHeader.gravity = Gravity.CENTER_VERTICAL
