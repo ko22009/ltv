@@ -92,6 +92,8 @@ class DetailsActivity : Activity() {
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44))
+        // the details are already known (prefetched in the list): the frame comes from the cache, no spinner needed
+        if (titleFrom(intent.extras!!).let { Tmdb.isCached(it.id, it.tv) }) bannerSpinner.visibility = View.GONE
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
@@ -216,7 +218,7 @@ class DetailsActivity : Activity() {
         title: Title, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout,
     ) {
         Thread {
-            val d = runCatching { Tmdb.details(applicationContext, title.id, title.tv) }.getOrNull()
+            val d = runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
             originalTitle = d?.originalTitle.orEmpty()
             // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
             variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)

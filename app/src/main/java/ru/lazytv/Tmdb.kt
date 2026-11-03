@@ -173,6 +173,10 @@ object Tmdb {
     private val detailPending = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.FutureTask<Details>>()
     private const val DETAIL_TTL_MS = 15 * 60 * 1000L
 
+    /** True when the details are already in the memory cache: the card opens without waiting for the network. */
+    fun isCached(id: Long, tv: Boolean): Boolean =
+        detailCache["$tv:$id"]?.let { System.currentTimeMillis() - it.first < DETAIL_TTL_MS } ?: false
+
     /**
      * Card details with a short memory cache: when the user only moves through the lists, the card is prefetched
      * on focus, so opening it does not wait for the network a second time.
