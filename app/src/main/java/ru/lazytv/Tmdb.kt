@@ -74,7 +74,7 @@ object Tmdb {
     fun loadCollection(context: Context, collection: Collection, page: Int = 1): List<Title> {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val kind = if (collection.tv) "tv" else "movie"
-        return parse(download("$BASE/$kind/${collection.path}?api_key=${BuildConfig.TMDB_KEY}&language=$language${collection.extra}&page=$page"), collection.tv)
+        return parse(download(context, "$BASE/$kind/${collection.path}?api_key=${BuildConfig.TMDB_KEY}&language=$language${collection.extra}&page=$page"), collection.tv)
     }
 
     fun listKey(category: Category) = "list_${category.id}"
@@ -92,7 +92,7 @@ object Tmdb {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val url = "$BASE/discover/$kind?api_key=${BuildConfig.TMDB_KEY}&language=$language" +
             "&sort_by=$sortKey${category.query}$extra&page=$page"
-        return parse(download(url), category.tv)
+        return parse(download(context, url), category.tv)
     }
 
     private fun parse(json: String, tv: Boolean): List<Title> {
@@ -131,7 +131,7 @@ object Tmdb {
     fun search(context: Context, query: String): List<Title> {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-        val results = JSONObject(download("$BASE/search/multi?api_key=${BuildConfig.TMDB_KEY}&language=$language&include_adult=false&query=$encoded"))
+        val results = JSONObject(download(context, "$BASE/search/multi?api_key=${BuildConfig.TMDB_KEY}&language=$language&include_adult=false&query=$encoded"))
             .getJSONArray("results")
         return (0 until results.length()).mapNotNull { i ->
             val item = results.getJSONObject(i)
@@ -194,7 +194,7 @@ object Tmdb {
         val kind = if (tv) "tv" else "movie"
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val extra = if (tv) "credits,content_ratings" else "credits,release_dates"
-        val o = JSONObject(download("$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra"))
+        val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra"))
         fun names(key: String): List<String> {
             val a = o.optJSONArray(key) ?: return emptyList()
             return (0 until a.length()).map { a.getJSONObject(it).optString("name") }.filter { it.isNotEmpty() }
@@ -274,7 +274,7 @@ object Tmdb {
 
     fun person(context: Context, id: Long): PersonPage {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
-        val o = JSONObject(download("$BASE/person/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=combined_credits"))
+        val o = JSONObject(download(context, "$BASE/person/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=combined_credits"))
         val cast = o.optJSONObject("combined_credits")?.optJSONArray("cast")
         val credits = if (cast == null) emptyList() else (0 until cast.length()).mapNotNull { i ->
             val c = cast.getJSONObject(i)
@@ -298,7 +298,7 @@ object Tmdb {
     fun trailerKey(context: Context, id: Long, tv: Boolean): String? {
         val kind = if (tv) "tv" else "movie"
         for (language in listOf(Settings.string(context, Settings.LANGUAGE, "ru-RU"), "en-US").distinct()) {
-            val results = JSONObject(download("$BASE/$kind/$id/videos?api_key=${BuildConfig.TMDB_KEY}&language=$language"))
+            val results = JSONObject(download(context, "$BASE/$kind/$id/videos?api_key=${BuildConfig.TMDB_KEY}&language=$language"))
                 .getJSONArray("results")
             for (i in 0 until results.length()) {
                 val video = results.getJSONObject(i)
@@ -310,10 +310,30 @@ object Tmdb {
         return null
     }
 
-    private fun download(address: String): String {
+    /**
+     * Debug builds keep the answers on the device: while working on the screens the same pages are opened again and
+     * again, and every opening used to spend a TMDB request. The cache lives half a day; release builds ask every time.
+     */
+    private fun download(context: Context, address: String): String {
+        if (BuildConfig.DEBUG) {
+            val file = cacheFile(context, address)
+            if (file.isFile && System.currentTimeMillis() - file.lastModified() < DEBUG_CACHE_MS) return file.readText()
+        }
         val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 15000
         connection.readTimeout = 20000
-        return connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        val body = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        if (BuildConfig.DEBUG) runCatching {
+            cacheFile(context, address).apply { parentFile?.mkdirs(); writeText(body) }
+        }
+        return body
     }
+
+    private fun cacheFile(context: Context, address: String): java.io.File {
+        val hash = java.security.MessageDigest.getInstance("SHA-1").digest(address.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        return java.io.File(java.io.File(context.cacheDir, "tmdb"), hash)
+    }
+
+    private const val DEBUG_CACHE_MS = 12 * 60 * 60 * 1000L
 }
