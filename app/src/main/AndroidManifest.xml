@@ -26,7 +26,7 @@
         <activity android:name=".PersonActivity" android:exported="false" />
         <activity android:name=".TorrentsActivity" android:exported="false" />
         <activity android:name=".TitlesGridActivity" android:exported="false" />
-        <activity android:name=".FiltersActivity" android:exported="false" />
+        <activity android:name=".FiltersActivity" android:exported="false" android:theme="@style/Theme.LazyTV.Filters" />
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="landscape" android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 </manifest>

@@ -41,10 +41,15 @@ class FiltersActivity : Activity() {
         category = Tmdb.categories.first { it.id == intent.getStringExtra("category") }
         filter = CatalogFilter.load(this, category.id)
         val root = FrameLayout(this)
-        root.background = calmBackground()
+        // the window is translucent: the list stays behind, dimmed, and the filters lie over it as a panel
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(36), px(64), px(24))
+        page.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(0xFF101A14.toInt())
+            cornerRadius = px(12).toFloat()
+        }
+        root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { setMargins(px(40), px(40), px(40), px(40)) })
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
             setPadding(px(12), px(12), px(12), px(12))
