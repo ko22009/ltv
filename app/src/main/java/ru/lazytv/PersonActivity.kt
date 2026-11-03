@@ -74,10 +74,16 @@ class PersonActivity : Activity() {
         block.setPadding(px(64), px(36), px(64), px(24))
         val top = LinearLayout(this)
         top.orientation = LinearLayout.HORIZONTAL
-        val photo = ImageView(this)
-        photo.scaleType = ImageView.ScaleType.CENTER_CROP
-        photo.setBackgroundColor(0xFF12201A.toInt())
-        photo.showPoster(person.photo, null, "w342", R.drawable.no_photo)
+        // initials on a calm green plate sit under the photo: they show while it loads and for a person who has none
+        val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
+        val photo = android.widget.FrameLayout(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF2F5A44.toInt(), 0xFF1B3327.toInt()))
+            addView(label(initials, 64f, 0xFFB9F6CA.toInt()).apply { gravity = Gravity.CENTER },
+                android.widget.FrameLayout.LayoutParams(-1, -1))
+            val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+            addView(image, android.widget.FrameLayout.LayoutParams(-1, -1))
+            if (!person.photo.isNullOrEmpty()) Glide.with(this@PersonActivity).load("https://image.tmdb.org/t/p/w342${person.photo}").into(image)
+        }
         top.addView(photo, LinearLayout.LayoutParams(px(220), px(300)).apply { rightMargin = px(28) })
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
