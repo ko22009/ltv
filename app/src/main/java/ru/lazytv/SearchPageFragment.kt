@@ -145,7 +145,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         // the caption with its "clear" button beside it, as the viewing history below has its own buttons
         val historyHeader = LinearLayout(requireContext())
         historyHeader.gravity = Gravity.CENTER_VERTICAL
-        historyHeader.setPadding(0, px(18), 0, px(4))
+        historyHeader.setPadding(0, px(18), 0, px(12))
         historyHeader.addView(label("История поиска", 22f), LinearLayout.LayoutParams(-2, -2))
         clearHistory = button(MenuIcons.DELETE, "Очистить") {
             Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
