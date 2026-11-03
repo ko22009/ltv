@@ -330,10 +330,10 @@ class DetailsActivity : Activity() {
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 // the empty circle stays while the photo loads and for an actor who has none
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFF2A3A31.toInt()) }
+                // the round outline of the background cuts the photo and the stub into a circle
+                clipToOutline = true
             }
-            if (person.photo.isNotEmpty()) {
-                Glide.with(this).load("https://image.tmdb.org/t/p/w185${person.photo}").circleCrop().into(photo)
-            }
+            photo.showPoster(person.photo, null, "w185", R.drawable.no_photo)
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             card.addView(text(person.name, 14f).apply {
                 gravity = Gravity.CENTER; maxLines = 2; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(6), 0, 0)

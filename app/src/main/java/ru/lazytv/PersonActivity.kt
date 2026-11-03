@@ -117,8 +117,12 @@ class PersonActivity : Activity() {
         val poster = ImageView(this)
         poster.scaleType = ImageView.ScaleType.CENTER_CROP
         poster.setBackgroundColor(0xFF12201A.toInt())
-        poster.showPoster(credit.title.poster, null, "w185")
-        card.addView(poster, LinearLayout.LayoutParams(px(64), px(94)).apply { rightMargin = px(18) })
+        val spinner = Spinner(this, px(26))
+        poster.showPoster(credit.title.poster, spinner, "w185")
+        card.addView(android.widget.FrameLayout(this).apply {
+            addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(spinner, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        }, LinearLayout.LayoutParams(px(64), px(94)).apply { rightMargin = px(18) })
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
         texts.gravity = Gravity.CENTER_VERTICAL

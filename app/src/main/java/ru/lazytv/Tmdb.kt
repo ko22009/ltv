@@ -112,12 +112,12 @@ object Tmdb {
     }
 
     private fun toTitle(item: JSONObject, tv: Boolean): Title? {
-        val name = item.optString("title").ifEmpty { item.optString("name") }
-        val date = item.optString("release_date").ifEmpty { item.optString("first_air_date") }
+        val name = item.str("title").ifEmpty { item.str("name") }
+        val date = item.str("release_date").ifEmpty { item.str("first_air_date") }
         return if (name.isEmpty()) null
         else Title(
-            item.getLong("id"), name, item.optString("overview"),
-            item.optString("poster_path").ifEmpty { null }, tv,
+            item.getLong("id"), name, item.str("overview"),
+            item.str("poster_path").ifEmpty { null }, tv,
             date.take(4), "%.1f".format(item.optDouble("vote_average", 0.0)),
             genreText(item.optJSONArray("genre_ids")),
         )
@@ -146,7 +146,7 @@ object Tmdb {
             .getJSONArray("results")
         return (0 until results.length()).mapNotNull { i ->
             val item = results.getJSONObject(i)
-            when (item.optString("media_type")) {
+            when (item.str("media_type")) {
                 "movie" -> toTitle(item, false)
                 "tv" -> toTitle(item, true)
                 else -> null
@@ -212,14 +212,14 @@ object Tmdb {
         val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra"))
         fun names(key: String): List<String> {
             val a = o.optJSONArray(key) ?: return emptyList()
-            return (0 until a.length()).map { a.getJSONObject(it).optString("name") }.filter { it.isNotEmpty() }
+            return (0 until a.length()).map { a.getJSONObject(it).str("name") }.filter { it.isNotEmpty() }
         }
         val credits = o.optJSONObject("credits")
         val castPeople = credits?.optJSONArray("cast")?.let { a ->
             (0 until minOf(a.length(), 20)).mapNotNull { i ->
                 val p = a.getJSONObject(i)
-                val name = p.optString("name")
-                if (name.isEmpty()) null else Person(p.optLong("id"), name, p.optString("profile_path"), p.optString("character"))
+                val name = p.str("name")
+                if (name.isEmpty()) null else Person(p.optLong("id"), name, p.str("profile_path"), p.str("character"))
             }
         } ?: emptyList()
         val cast = castPeople.map { it.name }
@@ -228,7 +228,7 @@ object Tmdb {
         if (crew != null) {
             for (i in 0 until crew.length()) {
                 val member = crew.getJSONObject(i)
-                if (member.optString("job") == "Director") { director = member.optString("name"); break }
+                if (member.str("job") == "Director") { director = member.str("name"); break }
             }
         }
         if (director.isEmpty()) director = names("created_by").joinToString(", ")
@@ -237,16 +237,16 @@ object Tmdb {
             val a = o.optJSONObject("content_ratings")?.optJSONArray("results")
             if (a != null) for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
-                if (r.optString("iso_3166_1") == "RU" || (age.isEmpty() && r.optString("iso_3166_1") == "US")) age = r.optString("rating")
+                if (r.str("iso_3166_1") == "RU" || (age.isEmpty() && r.str("iso_3166_1") == "US")) age = r.str("rating")
             }
         } else {
             val a = o.optJSONObject("release_dates")?.optJSONArray("results")
             if (a != null) for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
-                if (r.optString("iso_3166_1") == "RU") {
+                if (r.str("iso_3166_1") == "RU") {
                     val list = r.optJSONArray("release_dates")
                     if (list != null) for (j in 0 until list.length()) {
-                        val c = list.getJSONObject(j).optString("certification")
+                        val c = list.getJSONObject(j).str("certification")
                         if (c.isNotEmpty()) { age = c; break }
                     }
                 }
@@ -256,8 +256,8 @@ object Tmdb {
         // TMDB names the countries in English whatever the language is: take the name from the country code instead
         val countries = o.optJSONArray("production_countries")?.let { a ->
             (0 until a.length()).map { a.getJSONObject(it) }.map { c ->
-                java.util.Locale("", c.optString("iso_3166_1")).getDisplayCountry(java.util.Locale.forLanguageTag(language))
-                    .ifEmpty { c.optString("name") }
+                java.util.Locale("", c.str("iso_3166_1")).getDisplayCountry(java.util.Locale.forLanguageTag(language))
+                    .ifEmpty { c.str("name") }
             }
         } ?: emptyList()
         val next = o.optJSONObject("next_episode_to_air")
@@ -266,15 +266,15 @@ object Tmdb {
             val episode = next.optInt("episode_number")
             listOf(
                 if (season > 0 && episode > 0) "S${season}E$episode" else "",
-                next.optString("name"), next.optString("air_date"),
+                next.str("name"), next.str("air_date"),
             ).filter { it.isNotEmpty() }.joinToString(" • ")
         }
         return Details(
-            o.optString("original_title").ifEmpty { o.optString("original_name") }, o.optString("tagline"),
+            o.str("original_title").ifEmpty { o.str("original_name") }, o.str("tagline"),
             names("genres"), countries, runtime, age,
-            o.optString("release_date").ifEmpty { o.optString("first_air_date") }, director, cast,
-            o.optInt("number_of_seasons"), o.optString("backdrop_path"), nextEpisode, castPeople,
-            o.optString("poster_path"),
+            o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
+            o.optInt("number_of_seasons"), o.str("backdrop_path"), nextEpisode, castPeople,
+            o.str("poster_path"),
         )
     }
 
@@ -293,19 +293,19 @@ object Tmdb {
         val cast = o.optJSONObject("combined_credits")?.optJSONArray("cast")
         val credits = if (cast == null) emptyList() else (0 until cast.length()).mapNotNull { i ->
             val c = cast.getJSONObject(i)
-            val tv = c.optString("media_type") == "tv"
-            val name = c.optString("title").ifEmpty { c.optString("name") }
+            val tv = c.str("media_type") == "tv"
+            val name = c.str("title").ifEmpty { c.str("name") }
             if (name.isEmpty()) return@mapNotNull null
-            val date = c.optString("release_date").ifEmpty { c.optString("first_air_date") }
+            val date = c.str("release_date").ifEmpty { c.str("first_air_date") }
             val title = Title(
-                c.optLong("id"), name, c.optString("overview"), c.optString("poster_path").takeIf { it.isNotEmpty() }, tv,
+                c.optLong("id"), name, c.str("overview"), c.str("poster_path").takeIf { it.isNotEmpty() }, tv,
                 date.take(4), "%.1f".format(c.optDouble("vote_average", 0.0)),
             )
-            Credit(title, c.optString("character")) to c.optDouble("popularity", 0.0)
+            Credit(title, c.str("character")) to c.optDouble("popularity", 0.0)
         }.sortedByDescending { it.second }.take(40).map { it.first }
         return PersonPage(
-            o.optString("name"), o.optString("biography"), o.optString("birthday"), o.optString("place_of_birth"),
-            o.optString("profile_path").takeIf { it.isNotEmpty() }, credits,
+            o.str("name"), o.str("biography"), o.str("birthday"), o.str("place_of_birth"),
+            o.str("profile_path").takeIf { it.isNotEmpty() }, credits,
         )
     }
 
@@ -317,7 +317,7 @@ object Tmdb {
                 .getJSONArray("results")
             for (i in 0 until results.length()) {
                 val video = results.getJSONObject(i)
-                if (video.optString("site") == "YouTube" && video.optString("type") == "Trailer") {
+                if (video.str("site") == "YouTube" && video.str("type") == "Trailer") {
                     return video.getString("key")
                 }
             }
@@ -366,3 +366,6 @@ object Tmdb {
 
     private const val CACHE_MS = 12 * 60 * 60 * 1000L
 }
+
+/** TMDB sends `null` for missing fields: `optString` would turn it into the text "null" (a "null" poster path, "null • null"). */
+private fun JSONObject.str(name: String): String = if (isNull(name)) "" else optString(name)
