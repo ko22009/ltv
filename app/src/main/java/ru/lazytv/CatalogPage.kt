@@ -107,9 +107,12 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         // a catalogue without its own sort and filters shows only the list
         if (!CatalogFilter.supports(category.id)) buttons.visibility = View.GONE
-        // the buttons sit at the right edge of the header, the title keeps the left one
+        // the buttons sit at the right edge of the cards, not the page: the last card of a row ends before the page's edge
+        val gridWidth = resources.displayMetrics.widthPixels - px(92) - px(48)
+        val pitch = (gridWidth - (COLUMNS - 1) * px(6)) / COLUMNS + px(6)
+        val barCut = (gridWidth - (COLUMNS - 1) * pitch - (240 * CARD_SCALE * scale).toInt()).coerceAtLeast(0)
         header.addView(View(requireContext()), LinearLayout.LayoutParams(0, 1, 1f))
-        header.addView(buttons)
+        header.addView(buttons, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = barCut })
 
         message = TextView(requireContext()).apply {
             setTextColor(0xFFAFC4B6.toInt())
