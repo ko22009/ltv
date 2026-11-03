@@ -104,20 +104,18 @@ class DetailsActivity : Activity() {
             topMargin = dp(24); rightMargin = dp(64)
         })
 
-        // the back stands on the frame: a soft dark circle (a blur, no rim) keeps the arrow readable on any still
+        // the back stands on the frame: a crisp translucent dark circle keeps the arrow readable on any still
         fun softDisc(fill: Int) = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
-            gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
-            setGradientRadius(dp(28).toFloat())
-            colors = intArrayOf(fill, fill, 0x00000000)
+            setColor(fill)
         }
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(dp(10), dp(10), dp(10), dp(10))
             background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF2F7D57.toInt()))
-                addState(intArrayOf(), softDisc(0xCC000000.toInt()))
+                addState(intArrayOf(), softDisc(0x99000000.toInt()))
             }
             isFocusable = true
             isClickable = true
