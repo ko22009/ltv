@@ -244,7 +244,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         busy = false
         finished = false
         message.visibility = View.GONE
-        repeat(COLUMNS * 2) { cards.add(SkeletonCard) }
+        repeat(COLUMNS * 4) { cards.add(SkeletonCard) }
         skeletons = true
         loadNext()
     }
