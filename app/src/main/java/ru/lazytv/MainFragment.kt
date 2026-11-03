@@ -178,19 +178,34 @@ class MainFragment : BrowseSupportFragment() {
             val first = menu.getChildAt(0)
             val second = menu.getChildAt(1)
             if (first != null && second != null) {
-                if (Math.abs(second.top - first.bottom - gap) > 2 && spacingTries < 4) {
+                if (Math.abs(second.top - first.bottom - gap) > 2 && spacingTries < 30) {
                     spacingTries++
                     menu.verticalSpacing = gap + 1
                     menu.verticalSpacing = gap
+                    // the positions already laid out are not moved by the new value alone: the items are laid out again
+                    menu.adapter?.notifyDataSetChanged()
                 } else if (Math.abs(second.top - first.bottom - gap) <= 2) spacingTries = 0
             }
         }
+        // Leanback may lay the menu out with its own gap after the first passes: the gap is checked again a little later
+        for (delay in listOf(600L, 1500L)) view.postDelayed({
+            spacingTries = 0
+            headersSupportFragment?.verticalGridView?.requestLayout()
+        }, delay)
         setSelectedPosition(0, false)
         setBrowseTransitionListener(object : BrowseTransitionListener() {
             override fun onHeadersTransitionStart(withHeaders: Boolean) {
+                // Leanback lays the menu out with its own gap again when it opens: the check of the gap starts over
+                spacingTries = 0
+                headersSupportFragment?.verticalGridView?.requestLayout()
                 if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction { rail?.visibility = View.GONE }?.start()
                 else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(200)?.start() }
                 shiftPage(withHeaders)
+            }
+
+            override fun onHeadersTransitionStop(withHeaders: Boolean) {
+                spacingTries = 0
+                headersSupportFragment?.verticalGridView?.requestLayout()
             }
         })
     }

@@ -49,6 +49,8 @@ class TitlesGridActivity : Activity() {
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(36), px(64), px(16))
+        // the focused card grows past the page padding at the sides: the page must not cut it there
+        page.clipToPadding = false
         // the way back for a remote with no Back key or a mouse, same round button as on the title card
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
