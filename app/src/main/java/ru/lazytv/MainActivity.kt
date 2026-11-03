@@ -14,9 +14,13 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction().replace(android.R.id.content, MainFragment()).commit()
             // the install script passes this after an update: come back to the screen the user was on (docs/workflow.md)
-            if (intent?.getBooleanExtra(RESTORE, false) == true) {
+            val restore = intent?.getBooleanExtra(RESTORE, false) == true
+            val menu = MainFragment().apply {
+                if (restore) arguments = Bundle().apply { putBoolean(MainFragment.RESTORE, true) }
+            }
+            supportFragmentManager.beginTransaction().replace(android.R.id.content, menu).commit()
+            if (restore) {
                 intent?.removeExtra(RESTORE)
                 LastScreen.restore(this)
             }

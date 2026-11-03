@@ -72,6 +72,8 @@ class MainFragment : BrowseSupportFragment() {
     /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
     private var rail: LinearLayout? = null
     private var currentPage = OVERVIEW
+    /** The page the menu must open after an update; empty when the menu starts as usual (docs/workflow.md). */
+    private var pageToRestore = ""
     private var searchPage: SearchPageFragment? = null
 
     fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -103,6 +105,8 @@ class MainFragment : BrowseSupportFragment() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
+        // the saved page is read before the overview opens and is saved over it (docs/workflow.md)
+        if (arguments?.getBoolean(RESTORE, false) == true) pageToRestore = LastScreen.page(requireContext())
         // no page title in the corner: the rows start at the top edge and would run under it
         title = ""
         headersState = HEADERS_ENABLED
@@ -211,6 +215,21 @@ class MainFragment : BrowseSupportFragment() {
                 headersSupportFragment?.verticalGridView?.requestLayout()
             }
         })
+        // after an update the menu comes back to the page the user was on instead of the overview (docs/workflow.md)
+        if (arguments?.getBoolean(RESTORE, false) == true) view.post { restorePage() }
+    }
+
+    /** Selects the page saved before the update; unknown pages stay on the overview. */
+    private fun restorePage() {
+        val name = pageToRestore
+        // from now on the page is saved as it is chosen again
+        pageToRestore = ""
+        if (name.isEmpty() || name == OVERVIEW) {
+            LastScreen.rememberPage(requireContext(), currentPage)
+            return
+        }
+        val index = (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == name }
+        if (index > 0) setSelectedPosition(index, false)
     }
 
     /**
@@ -280,6 +299,7 @@ class MainFragment : BrowseSupportFragment() {
     override fun onResume() {
         super.onResume()
         val ctx = requireContext()
+        if (pageToRestore.isEmpty()) LastScreen.rememberPage(ctx, currentPage)
         val revision = EpisodeState.revision(ctx)
         if (revision != episodeRevision) {
             episodeRevision = revision
@@ -422,11 +442,10 @@ class MainFragment : BrowseSupportFragment() {
     private inner class PageFactory : FragmentFactory<Fragment>() {
         override fun createFragment(row: Any?): Fragment {
             val name = (row as Row).headerItem.name
-            if (name == SEARCH_HEADER) {
-                currentPage = name
-                return SearchPageFragment().also { searchPage = it }
-            }
             currentPage = name
+            // the page is remembered for the install script: after an update the menu opens on it (docs/workflow.md)
+            if (pageToRestore.isEmpty()) LastScreen.rememberPage(requireContext(), name)
+            if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
             // films and series are one long grid with lazy loading, not rows of collections with a "Результаты" tile
             val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
             if (category != null) return CatalogPageFragment().apply {
@@ -445,6 +464,11 @@ class MainFragment : BrowseSupportFragment() {
             page.onItemViewSelectedListener = androidx.leanback.widget.OnItemViewSelectedListener { _, item, _, row -> if (row is ListRow) loadMoreOf(row, item) }
             return page
         }
+    }
+
+    companion object {
+        /** Fragment argument: open the menu page the user was on before the update (docs/workflow.md). */
+        const val RESTORE = "restore"
     }
 }
 
