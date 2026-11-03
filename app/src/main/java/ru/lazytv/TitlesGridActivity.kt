@@ -48,7 +48,7 @@ class TitlesGridActivity : Activity() {
         root.background = calmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(16))
+        page.setPadding(px(52), px(36), px(52), px(16))
         // the way back for a remote with no Back key or a mouse, same round button as on the title card
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
@@ -61,6 +61,7 @@ class TitlesGridActivity : Activity() {
         }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
+        header.setPadding(px(12), 0, 0, 0)
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
         header.addView(label(more.title, 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
         page.addView(header)
@@ -78,10 +79,13 @@ class TitlesGridActivity : Activity() {
                 }
             }
         })
+        // the focused card grows a little, as on the catalogue and the search, so it is clear at once which one is chosen
+        androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
         grid = VerticalGridView(this)
         grid.setNumColumns(COLUMNS)
         // cards scrolled up are cut at the padding edge, under the header, and do not run over its button and title
-        grid.setPadding(0, px(12), 0, px(16))
+        // the side padding is the room for the enlarged focused card: the grid cuts what leaves it
+        grid.setPadding(px(12), px(12), px(12), px(16))
         grid.clipToPadding = true
         grid.setItemSpacing(px(6))
         grid.adapter = bridge
