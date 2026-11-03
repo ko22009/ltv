@@ -128,25 +128,17 @@ class PersonActivity : Activity() {
         if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, 0xFFDCE8E0.toInt()).apply {
             setLineSpacing(0f, 1.2f)
             setPadding(0, px(if (facts.isEmpty()) 0 else 8), 0, 0)
-            maxLines = 5
+            maxLines = if (person.biography.length > 400) 4 else 5
             ellipsize = android.text.TextUtils.TruncateAt.END
-            // a long biography is cut by the band: OK on it opens the whole text
-            if (person.biography.length > 400) {
-                isFocusable = true
-                isClickable = true
-                background = android.graphics.drawable.StateListDrawable().apply {
-                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(0x552F7D57); cornerRadius = px(4).toFloat()
-                    })
-                }
-                setPadding(px(8), px(if (facts.isEmpty()) 8 else 16), px(8), px(8))
-                setOnClickListener {
-                    android.app.AlertDialog.Builder(this@PersonActivity)
-                        .setTitle(person.name).setMessage(person.biography)
-                        .setPositiveButton("Закрыть", null).show()
-                }
-            }
         })
+        // a long biography is cut by the band: the button in the middle opens the whole text
+        if (person.biography.length > 400) texts.addView(chipButton(this, scale, "Читать далее").apply {
+            setOnClickListener {
+                android.app.AlertDialog.Builder(this@PersonActivity)
+                    .setTitle(person.name).setMessage(person.biography)
+                    .setPositiveButton("Закрыть", null).show()
+            }
+        }, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = px(8) })
         band.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
         return band
     }
