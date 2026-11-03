@@ -62,6 +62,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         it.isScalingEnabled = true
     }
 
+    private lateinit var loader: LoadingView
     private val scale get() = resources.displayMetrics.widthPixels / 1280f
     private fun px(value: Int) = (value * scale).toInt()
     private val ui = Handler(Looper.getMainLooper())
@@ -172,7 +173,12 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                 showingRecent && grid.selectedPosition in 0 until COLUMNS && recentActions.childCount > 0
             ) recentActions.getChildAt(0).requestFocus() else false
         }
-        page.addView(grid, titleGridParams(scale))
+        loader = LoadingView(requireContext(), scale, "")
+        loader.visibility = View.GONE
+        val body = FrameLayout(requireContext())
+        body.addView(grid, FrameLayout.LayoutParams(-1, -1))
+        body.addView(loader, FrameLayout.LayoutParams(-1, -1))
+        page.addView(body, titleGridParams(scale))
         showHistory()
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
@@ -245,12 +251,15 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         editing = false
         picked.clear()
         recentHeader.visibility = View.GONE
-        message.text = "Ищем…"
-        message.visibility = View.VISIBLE
+        // the old cards go away and a spinner stands in the middle of the page until the answer comes
+        message.visibility = View.GONE
+        setCards(emptyList())
+        loader.visibility = View.VISIBLE
         Thread {
             val found = runCatching { Tmdb.search(requireContext().applicationContext, phrase) }
             activity?.runOnUiThread {
                 if (!isAdded || input.text.toString().trim() != phrase) return@runOnUiThread
+                loader.visibility = View.GONE
                 val titles = found.getOrDefault(emptyList())
                 phraseShown = phrase
                 setCards(listOf<Any>(MoreTile("Искать торренты")) + titles)
@@ -264,6 +273,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
 
     private fun showRecent() {
         if (input.text.toString().trim().length >= 2) return
+        loader.visibility = View.GONE
         recent = History.all(requireContext())
         showingRecent = recent.isNotEmpty()
         if (!showingRecent) {

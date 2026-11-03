@@ -56,6 +56,8 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
         label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         label.setPadding(0, (16 * scale).toInt(), 0, 0)
         addView(label)
+        // a spinner alone: no empty caption line that would push it off the centre
+        if (caption.isEmpty()) label.visibility = GONE
     }
 
     fun caption(value: String) { label.text = value }
