@@ -59,11 +59,13 @@ class FiltersActivity : Activity() {
         header.gravity = Gravity.CENTER_VERTICAL
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
         header.addView(heading)
+        // the reset stands at the right of the header, not at the very bottom of the page
+        header.addView(android.view.View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        reset = chipButton(this, scale, "Сбросить").apply { setOnClickListener { resetAction() } }
+        header.addView(reset, LinearLayout.LayoutParams(-2, -2))
         page.addView(header)
         body = FrameLayout(this)
         page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(16) })
-        reset = chipButton(this, scale, "Сбросить").apply { setOnClickListener { resetAction() } }
-        page.addView(reset, LinearLayout.LayoutParams(-2, -2).apply { topMargin = px(12) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         showMain()
