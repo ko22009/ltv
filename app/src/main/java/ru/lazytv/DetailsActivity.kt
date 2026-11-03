@@ -203,8 +203,8 @@ class DetailsActivity : Activity() {
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    // the fill is the same frame at 48 px: stretched over the band it reads as a soft blur
-                    Glide.with(this).load("https://image.tmdb.org/t/p/w300${d.backdrop}").override(48, 27).into(blurBackdrop)
+                    // the fill is the same frame at 240 px: stretched over the band it reads as a soft blur, not a smear
+                    Glide.with(this).load("https://image.tmdb.org/t/p/w300${d.backdrop}").override(240, 135).into(blurBackdrop)
                     Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
