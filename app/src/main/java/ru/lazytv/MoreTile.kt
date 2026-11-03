@@ -96,7 +96,6 @@ class MoreTilePresenter(private val cardScale: Float = 1f) : Presenter() {
             setPadding(px(12f), px(14f), px(12f), 0)
         })
         tile.setOnFocusChangeListener { _, focused ->
-            tile.animate().translationZ(if (focused) px(24f).toFloat() else 0f).setDuration(150).start()
             plate.setColor(if (focused) 0xFF2F7D57.toInt() else 0xFF39423D.toInt())
         }
         return ViewHolder(tile)
