@@ -143,12 +143,15 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         })
         // the remote goes from the buttons straight down to the cards
         for (chip in listOf(filterChip, sortChip)) chip.nextFocusDownId = grid.id
-        // the browse screen does not pass the focus between the neighbours of the header: right and left are taken by hand
-        filterChip.setOnKeyListener { _, code, event ->
-            code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.action == android.view.KeyEvent.ACTION_DOWN && sortChip.requestFocus()
-        }
-        sortChip.setOnKeyListener { _, code, event ->
-            code == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event.action == android.view.KeyEvent.ACTION_DOWN && filterChip.requestFocus()
+        // the browse screen does not pass the focus between the neighbours of the header: right and left walk the buttons,
+        // at the ends the focus stays instead of jumping to a view that is not beside them
+        for (chip in listOf(filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
+            if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+            else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                buttons.getChildAt(buttons.indexOfChild(view) + step)?.requestFocus()
+                true
+            } else false
         }
 
         page.addView(grid, titleGridParams(scale))
