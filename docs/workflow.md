@@ -50,8 +50,10 @@ APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 
 ```powershell
 adb -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
-adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity
+adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true
 ```
+
+Ключ `restore` возвращает на экран, который был открыт до обновления: приложение запоминает intent последнего экрана (`LastScreen`), а на холодном старте с этим ключом открывает его снова. Без ключа приложение стартует как обычно, с меню. Плеер не запоминается: после обновления видео не должно запускаться само.
 
 ## Что писать в PLAN.md
 

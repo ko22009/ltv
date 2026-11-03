@@ -15,6 +15,16 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction().replace(android.R.id.content, MainFragment()).commit()
+            // the install script passes this after an update: come back to the screen the user was on (docs/workflow.md)
+            if (intent?.getBooleanExtra(RESTORE, false) == true) {
+                intent?.removeExtra(RESTORE)
+                LastScreen.restore(this)
+            }
         }
+    }
+
+    private companion object {
+        /** Extra of the launch intent: open the screen that was open before the update. */
+        const val RESTORE = "restore"
     }
 }

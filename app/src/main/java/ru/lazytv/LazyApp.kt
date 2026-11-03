@@ -1,12 +1,25 @@
 package ru.lazytv
 
+import android.app.Activity
 import android.app.Application
+import android.app.Application.ActivityLifecycleCallbacks
+import android.os.Bundle
 import com.lmd.dpi.DpiBypass
 
 /** Starts the automatic block bypass: direct, then the built-in ByeDPI, then the LazyMedia proxy. */
 class LazyApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        // the screen behind the cursor is remembered to come back to it after an update (docs/workflow.md)
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity) }
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
         RemoteConfig.init(this)
         if (Settings.bool(this, Settings.AUTO_BYPASS)) {
             DpiBypass.appProxyAllowed = Settings.bool(this, Settings.APP_PROXY)
