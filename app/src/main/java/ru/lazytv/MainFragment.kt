@@ -74,6 +74,8 @@ class MainFragment : BrowseSupportFragment() {
     private var currentPage = OVERVIEW
     /** The page the menu must open after an update; empty when the menu starts as usual (docs/workflow.md). */
     private var pageToRestore = ""
+    /** Whether the wide menu was open before the update; the rail stands in its place otherwise. */
+    private var menuToRestore = true
     private var searchPage: SearchPageFragment? = null
 
     fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -106,7 +108,10 @@ class MainFragment : BrowseSupportFragment() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         // the saved page is read before the overview opens and is saved over it (docs/workflow.md)
-        if (arguments?.getBoolean(RESTORE, false) == true) pageToRestore = LastScreen.page(requireContext())
+        if (arguments?.getBoolean(RESTORE, false) == true) {
+            pageToRestore = LastScreen.page(requireContext())
+            menuToRestore = LastScreen.menuOpen(requireContext())
+        }
         // no page title in the corner: the rows start at the top edge and would run under it
         title = ""
         headersState = HEADERS_ENABLED
@@ -202,6 +207,8 @@ class MainFragment : BrowseSupportFragment() {
         setSelectedPosition(0, false)
         setBrowseTransitionListener(object : BrowseTransitionListener() {
             override fun onHeadersTransitionStart(withHeaders: Boolean) {
+                // the state is remembered for the install script: after an update the menu opens as it was (docs/workflow.md)
+                LastScreen.rememberMenu(requireContext(), withHeaders)
                 // Leanback lays the menu out with its own gap again when it opens: the check of the gap starts over
                 spacingTries = 0
                 headersSupportFragment?.verticalGridView?.requestLayout()
@@ -224,12 +231,12 @@ class MainFragment : BrowseSupportFragment() {
         val name = pageToRestore
         // from now on the page is saved as it is chosen again
         pageToRestore = ""
-        if (name.isEmpty() || name == OVERVIEW) {
-            LastScreen.rememberPage(requireContext(), currentPage)
-            return
-        }
-        val index = (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == name }
+        val index = if (name.isEmpty() || name == OVERVIEW) 0 else
+            (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == name }
         if (index > 0) setSelectedPosition(index, false)
+        else LastScreen.rememberPage(requireContext(), currentPage)
+        // the menu was closed before the update: the rail stands in its place, as it was
+        if (!menuToRestore) startHeadersTransition(false)
     }
 
     /**

@@ -14,6 +14,7 @@ object LastScreen {
     private const val PREFS = "last_screen"
     private const val SCREEN = "intent"
     private const val PAGE = "page"
+    private const val MENU = "menu_open"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, 0)
 
@@ -46,4 +47,11 @@ object LastScreen {
     }
 
     fun page(context: Context): String = prefs(context).getString(PAGE, "") ?: ""
+
+    /** Whether the wide menu was open or the icon rail stood in its place. */
+    fun rememberMenu(context: Context, open: Boolean) {
+        prefs(context).edit().putBoolean(MENU, open).apply()
+    }
+
+    fun menuOpen(context: Context): Boolean = prefs(context).getBoolean(MENU, true)
 }
