@@ -176,9 +176,12 @@ class DetailsActivity : Activity() {
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
         posterView.setBackgroundColor(0xFF1B2E23.toInt())
-        posterPath?.takeIf { it.isNotEmpty() }?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w500$it").error(R.drawable.no_poster).into(posterView) }
-            ?: posterView.setImageResource(R.drawable.no_poster)
-        root.addView(posterView, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
+        posterSpinner = Spinner(this, dp(40))
+        posterView.showPoster(posterPath, posterSpinner)
+        root.addView(FrameLayout(this).apply {
+            addView(posterView, FrameLayout.LayoutParams(-1, -1))
+            addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+        }, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
             leftMargin = dp(176); topMargin = dp(228)
         })
 
@@ -224,7 +227,7 @@ class DetailsActivity : Activity() {
             onUi {
                 if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
                     posterPath = d.poster
-                    Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
+                    posterView.showPoster(d.poster, posterSpinner)
                 }
                 if (d.backdrop.isNotEmpty()) {
                     // the spinner is already turning: it stays until the frame is there, and goes away when there is none
@@ -279,6 +282,7 @@ class DetailsActivity : Activity() {
     private var originalTitle = ""
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
+    private lateinit var posterSpinner: Spinner
     private lateinit var backdrop: ImageView
     private lateinit var bannerSpinner: Spinner
 

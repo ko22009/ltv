@@ -89,6 +89,11 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1B2E23.toInt())
     }
 
+    private val posterSpinner = Spinner(context, px(40f)).apply { visibility = View.GONE }
+
+    /** Shows the poster with a spinner until it is loaded; no poster or a failed load ends with the stub. */
+    fun showPoster(path: String?) = poster.showPoster(path, posterSpinner)
+
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
     private val badge = ImageView(context).apply {
         setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
@@ -181,6 +186,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
         addView(android.widget.FrameLayout(context).apply {
             addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(posterSpinner, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)
