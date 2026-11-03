@@ -80,8 +80,9 @@ class TitlesGridActivity : Activity() {
         })
         grid = VerticalGridView(this)
         grid.setNumColumns(COLUMNS)
-        grid.setPadding(0, px(8), 0, px(16))
-        grid.clipToPadding = false
+        // cards scrolled up are cut at the padding edge, under the header, and do not run over its button and title
+        grid.setPadding(0, px(12), 0, px(16))
+        grid.clipToPadding = true
         grid.setItemSpacing(px(6))
         grid.adapter = bridge
         grid.setOnChildViewHolderSelectedListener(object : androidx.leanback.widget.OnChildViewHolderSelectedListener() {
