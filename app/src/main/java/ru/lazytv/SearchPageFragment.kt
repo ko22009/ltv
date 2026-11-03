@@ -155,7 +155,11 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
         historyBlock.addView(historyHeader)
         history = LinearLayout(requireContext())
-        historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(52)))
+        // a slider: up to 12 phrases do not fit the screen, the remote scrolls the row as the focus goes right
+        val historyScroll = android.widget.HorizontalScrollView(requireContext())
+        historyScroll.isHorizontalScrollBarEnabled = false
+        historyScroll.addView(history, FrameLayout.LayoutParams(-2, px(52)))
+        historyBlock.addView(historyScroll, LinearLayout.LayoutParams(-1, -2))
         page.addView(historyBlock)
 
         recentHeader = LinearLayout(requireContext())
