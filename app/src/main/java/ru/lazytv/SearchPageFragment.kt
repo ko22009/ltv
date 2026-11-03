@@ -344,11 +344,18 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             view.setOnKeyListener { _, keyCode, event ->
                 if (event.action != KeyEvent.ACTION_DOWN) false
                 else when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP -> { input.requestFocus(); true }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        // up goes to the first phrase of the search history when it is there, otherwise back to the field
+                        val first = if (historyBlock.isShown) history.getChildAt(0) else null
+                        (first ?: input).requestFocus()
+                        true
+                    }
                     KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> {
                         val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                        recentActions.getChildAt(recentActions.indexOfChild(view) + step)?.requestFocus()
-                        true
+                        val next = recentActions.getChildAt(recentActions.indexOfChild(view) + step)
+                        if (next != null) next.requestFocus()
+                        // right of the last button there is nothing to go to; left of the first the menu opens as usual
+                        next != null || step > 0
                     }
                     else -> false
                 }
@@ -429,7 +436,8 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                         next.requestFocus()
                         revealChip(next)
                     }
-                    true
+                    // right of the last phrase there is nothing to go to; left of the first the menu opens as usual
+                    next != null || step > 0
                 } else if (code == KeyEvent.KEYCODE_DPAD_UP) {
                     // the "clear" stands right above the phrases: up goes to it, as the eye expects
                     clearHistory.requestFocus()

@@ -149,8 +149,10 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                 val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                buttons.getChildAt(buttons.indexOfChild(view) + step)?.requestFocus()
-                true
+                val next = buttons.getChildAt(buttons.indexOfChild(view) + step)
+                if (next != null) next.requestFocus()
+                // right of the last button there is nothing to go to; left of the first the menu opens as usual
+                next != null || step > 0
             } else false
         }
 
