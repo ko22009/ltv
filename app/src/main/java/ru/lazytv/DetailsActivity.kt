@@ -89,10 +89,6 @@ class DetailsActivity : Activity() {
         banner.setBackgroundColor(0xFF15251B.toInt())
         backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
-        // the poster is not borrowed as a stand-in: until the wide backdrop is there, a spinner turns on the band
-        backdrop.alpha = 0f
-        bannerSpinner = Spinner(this, dp(44))
-        banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
         val appName = ImageView(this).apply {
@@ -209,30 +205,15 @@ class DetailsActivity : Activity() {
             originalTitle = d?.originalTitle.orEmpty()
             // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
             variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)
-            if (d == null) {
-                onUi { bannerSpinner.visibility = View.GONE }
-                return@Thread
-            }
+            if (d == null) return@Thread
             onUi {
-                if (posterPath == null && d.poster.isNotEmpty()) {
+                if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
                     posterPath = d.poster
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
-                        .listener(object : RequestListener<Drawable> {
-                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                                bannerSpinner.visibility = View.GONE
-                                return false
-                            }
-
-                            override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                                bannerSpinner.visibility = View.GONE
-                                backdrop.animate().alpha(1f).setDuration(250).start()
-                                return false
-                            }
-                        }).into(backdrop)
-                } else bannerSpinner.visibility = View.GONE
+                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}").into(backdrop)
+                }
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
                     "Длительность" to (formatRuntime(d.runtime)),
@@ -271,7 +252,6 @@ class DetailsActivity : Activity() {
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
     private lateinit var backdrop: ImageView
-    private lateinit var bannerSpinner: Spinner
 
     /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
     private fun castRow(people: List<Tmdb.Person>): View {
