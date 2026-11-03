@@ -105,11 +105,20 @@ class DetailsActivity : Activity() {
             topMargin = dp(24); rightMargin = dp(64)
         })
 
+        // the back stands on the frame, so it needs a rim of its own: a flat dark disc gets lost on a dark still
+        fun round(fill: Int) = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(fill)
+            setStroke(dp(1), 0x4DFFFFFF)
+        }
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = focusShape(scale, 0x66000000, circle = true)
+            background = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), round(0xFF2F7D57.toInt()))
+                addState(intArrayOf(), round(0x99000000.toInt()))
+            }
             isFocusable = true
             isClickable = true
             contentDescription = "Назад"
