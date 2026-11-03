@@ -266,6 +266,13 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         showYear()
     }
 
+    /** A saved record (the history, the bookmarks) keeps no genre: the card details bring it a moment later. */
+    fun setGenre(id: Long, value: String) {
+        if (id != shownId || value.isEmpty()) return
+        genre.text = value
+        genre.visibility = View.VISIBLE
+    }
+
     private fun showYear() {
         year.text = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(" · ")
     }

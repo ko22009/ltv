@@ -560,8 +560,12 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         }
         val appContext = card.context.applicationContext
         runtimePool.execute {
-            val minutes = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).runtime }.getOrDefault(0)
+            val details = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv) }.getOrNull()
+            val minutes = details?.runtime ?: 0
             if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }
+            // the saved records keep no genre: the card details fill the plate so it has no empty bottom
+            val genres = details?.genres?.joinToString(", ").orEmpty()
+            if (title.genre.isEmpty() && genres.isNotEmpty()) card.post { card.setGenre(title.id, genres) }
         }
         // the chosen title is about to be opened: its wide backdrop is loaded into the cache now, so the card
         // screen does not wait for it (the details are cached by the call above or this one)
