@@ -27,6 +27,8 @@ class PersonActivity : Activity() {
 
     private val cards = ArrayObjectAdapter(CardPresenter(CARD_SCALE))
     private lateinit var bridge: ItemBridgeAdapter
+    /** The "read more" button of a long biography; null when the text fits. */
+    private var readMore: View? = null
 
     private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(this).apply {
         text = value
@@ -52,6 +54,7 @@ class PersonActivity : Activity() {
             background = focusShape(scale, 0x66000000, circle = true)
             isFocusable = true
             isClickable = true
+            id = View.generateViewId()
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
@@ -85,11 +88,23 @@ class PersonActivity : Activity() {
                 result.onSuccess { person ->
                     title.text = person.name
                     page.addView(info(person))
+                    // from the cards the focus search skips a button that sits off their column: Up goes to it by hand
+                    val reach: View = readMore ?: back
+                    back.nextFocusDownId = reach.id
                     if (person.credits.isEmpty()) return@onSuccess
                     page.addView(label("ФИЛЬМОГРАФИЯ", 18f).apply { setPadding(0, px(14), 0, 0) })
                     val grid = titleCardGrid(this, scale, bridge, COLUMNS)
                     page.addView(grid, titleGridParams(scale))
                     cards.addAll(0, person.credits.map { it.title })
+                    grid.setOnKeyInterceptListener { e ->
+                        val up = e.action == android.view.KeyEvent.ACTION_DOWN && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+                        // only from the first row of the grid: the upper rows are reached by the grid itself
+                        if (up && grid.selectedPosition < COLUMNS) { reach.requestFocus(); true } else false
+                    }
+                    readMore?.let { button ->
+                        button.nextFocusUpId = back.id
+                        button.nextFocusDownId = grid.id
+                    }
                     grid.requestFocus()
                 }.onFailure {
                     page.addView(label("Не удалось загрузить страницу: ${it.message}", 16f, 0xFFAFC4B6.toInt()).apply {
@@ -135,6 +150,8 @@ class PersonActivity : Activity() {
         })
         // a long biography is cut by the band: the button in the middle opens the whole text
         if (person.biography.length > 400) texts.addView(chipButton(this, scale, "Читать далее").apply {
+            id = View.generateViewId()
+            readMore = this
             setOnClickListener {
                 android.app.AlertDialog.Builder(this@PersonActivity)
                     .setTitle(person.name).setMessage(person.biography)
