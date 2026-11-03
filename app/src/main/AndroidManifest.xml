@@ -23,7 +23,6 @@
         <activity android:name=".DetailsActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" android:theme="@style/Theme.LazyTV.Guided" />
         <activity android:name=".EpisodesActivity" android:exported="false" />
-        <activity android:name=".ServiceActivity" android:exported="false" />
         <activity android:name=".PersonActivity" android:exported="false" />
         <activity android:name=".TorrentsActivity" android:exported="false" />
         <activity android:name=".TitlesGridActivity" android:exported="false" />

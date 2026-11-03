@@ -40,9 +40,6 @@ private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
 
-/** A category tile of a service page, with the service it belongs to. */
-data class SourceCategory(val source: VideoSource, val category: ServiceCategory)
-
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
 
@@ -86,10 +83,6 @@ class MainFragment : BrowseSupportFragment() {
                 Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", item.title)
                     .putExtra("magnet", item.magnet).putExtra("size", item.size).putExtra("seeds", item.seeds)
                     .putExtra("leeches", item.leeches).putExtra("source", item.source)
-            )
-            is SourceCategory -> startActivity(
-                Intent(requireContext(), ServiceActivity::class.java)
-                    .putExtra("source", item.source.id).putExtra("category", item.category.id)
             )
             is ServiceItem -> startActivity(
                 Intent(requireContext(), EpisodesActivity::class.java)
@@ -748,45 +741,6 @@ class TorrentCardPresenter : Presenter() {
         val pair = tile.tag as Pair<TextView, TextView>
         pair.first.text = torrent.title
         pair.second.text = "${torrent.source} · ${torrent.size}"
-    }
-
-    override fun onUnbindViewHolder(holder: ViewHolder) {}
-}
-
-/** A category of a service page in the LazyMedia style: a colored tile with the caption. */
-class CategoryPresenter : Presenter() {
-    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
-        val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams((250 * scale).toInt(), (260 * scale).toInt())
-        tile.isFocusable = true
-        tile.isFocusableInTouchMode = true
-        val caption = TextView(parent.context).apply {
-            setTextColor(Color.WHITE)
-            textSize = 20f
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding((18 * scale).toInt(), 0, (18 * scale).toInt(), (24 * scale).toInt())
-        }
-        tile.addView(caption, FrameLayout.LayoutParams(-1, -1))
-        tile.tag = caption
-        return ViewHolder(tile)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, item: Any) {
-        val pair = item as SourceCategory
-        val tile = holder.view as FrameLayout
-        (tile.tag as TextView).text = pair.category.title
-        val color = pair.category.color
-        tile.setBackgroundColor(if (tile.isFocused) lighten(color) else color)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) lighten(color) else color) }
-    }
-
-    private fun lighten(color: Int): Int {
-        val r = (Color.red(color) + 45).coerceAtMost(255)
-        val g = (Color.green(color) + 45).coerceAtMost(255)
-        val b = (Color.blue(color) + 45).coerceAtMost(255)
-        return Color.rgb(r, g, b)
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
