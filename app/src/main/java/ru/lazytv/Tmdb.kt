@@ -27,13 +27,12 @@ object Tmdb {
     private const val BASE = "https://api.themoviedb.org/3"
 
     /**
-     * Lists on the left menu. There is no list per genre: the genre, country, years and the rest are picked with
-     * the filters of films and series. 18+ stays apart because of the parental code.
+     * Lists on the left menu: films and series only. There is no list per genre and no "18+": the genre, country,
+     * years, age mark and the rest are picked with the filters of films and series.
      */
     val categories = listOf(
         Category("movies", "Фильмы", false, "", 0xFF0555A0.toInt(), true),
         Category("serials", "Сериалы", true, "", 0xFF673AB7.toInt(), true),
-        Category("adult", "18+", false, "&include_adult=true&certification_country=RU&certification=18%2B", 0xFF37474F.toInt(), true),
     )
 
     val services = listOf(

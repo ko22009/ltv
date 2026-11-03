@@ -37,11 +37,6 @@ import kotlinx.coroutines.withContext
 private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
-private const val ADULT = "18+"
-
-
-/** A tile that asks for the parental code before the adult list opens. */
-private data class LockTile(val label: String, val ok: () -> Unit)
 
 /** A category tile of a service page, with the service it belongs to. */
 data class SourceCategory(val source: VideoSource, val category: ServiceCategory)
@@ -58,7 +53,6 @@ private val SETTINGS_SECTIONS = listOf(
     SettingsSection("Каталог", "Язык описаний, размер карточек"),
     SettingsSection("Сеть", "Обход блокировок и прокси"),
     SettingsSection("Данные", "Кэш, история, сброс настроек"),
-    SettingsSection("Родительский контроль", "Код для списка 18+"),
     SettingsSection("О приложении", "Версия"),
 )
 
@@ -69,8 +63,6 @@ class MainFragment : BrowseSupportFragment() {
     private val headers = ArrayObjectAdapter(ListRowPresenter())
     private val pages = HashMap<String, ArrayObjectAdapter>()
     private var shown = ""
-    /** The adult list was opened with the parental code during this screen's life. */
-    private var adultUnlocked = false
     /** Adapter of the page that changes when an episode is marked watched or starred. */
     private var favoritesRows: ArrayObjectAdapter? = null
     private var episodeRevision = ""
@@ -83,9 +75,6 @@ class MainFragment : BrowseSupportFragment() {
     fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
         searchPage?.voiceResult(requestCode, resultCode, data)
     }
-    /** Pages with the filter and sort buttons: their rows and the choices they were built from. */
-    private val catalogPages = HashMap<String, Pair<ArrayObjectAdapter, Category>>()
-    private val catalogSignatures = HashMap<String, String>()
 
     private val onClick = OnItemViewClickedListener { _, item, _, _ ->
         when (item) {
@@ -117,9 +106,6 @@ class MainFragment : BrowseSupportFragment() {
             is SettingsSection -> startActivity(
                 Intent(requireContext(), SettingsActivity::class.java).putExtra("section", item.title)
             )
-            is CatalogButton -> if (item.filters) {
-                startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", item.category))
-            } else chooseSort(item.category)
             OpenSettings -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
     }
@@ -218,7 +204,6 @@ class MainFragment : BrowseSupportFragment() {
             favoritesRows?.let { fillFavorites(it, ctx) }
         }
         if (shown != Settings.snapshot(ctx)) showHeaders()
-        refreshCatalogPages()
         // a title marked watched on its card: the cards of every opened page are drawn again, dimmed or not
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
@@ -235,12 +220,9 @@ class MainFragment : BrowseSupportFragment() {
     private fun showHeaders() {
         val ctx = requireContext()
         shown = Settings.snapshot(ctx)
-        if (Settings.string(ctx, Settings.PARENTAL_PIN, "").isNotEmpty()) adultUnlocked = false
         headers.clear()
         pages.clear()
         favoritesRows = null
-        catalogPages.clear()
-        catalogSignatures.clear()
         headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
         headers.add(PageRow(HeaderItem(OVERVIEW)))
         headers.add(PageRow(HeaderItem(FAVORITES)))
@@ -286,63 +268,9 @@ class MainFragment : BrowseSupportFragment() {
                 // the page has no title in the corner any more: the first row carries it
                 rows.add(if (index == 0) ListRow(HeaderItem("Настройки"), tiles) else ListRow(tiles))
             }
-            else -> servicePage(rows, name, ctx) ?: Tmdb.visibleCategories(ctx).firstOrNull { it.title.uppercase() == name }?.let { category ->
-                if (CatalogFilter.supports(category.id)) {
-                    catalogPages[name] = rows to category
-                    fillCatalog(rows, category)
-                } else Tmdb.rows.forEach { (title, sort) ->
-                    addRow(rows, title, MoreTile("${category.title}: $title", category = category.id, sort = sort)) { context -> Tmdb.load(context, category, sort) }
-                }
-            } ?: Unit
+            else -> servicePage(rows, name, ctx) ?: Unit
         }
         rows
-    }
-
-    /**
-     * Films and series: the two buttons go first, then either the usual rows or — once a filter or another sort is
-     * chosen — one row with what the choice found.
-     */
-    private fun fillCatalog(rows: ArrayObjectAdapter, category: Category) {
-        val ctx = requireContext()
-        catalogSignatures[category.title.uppercase()] = CatalogFilter.signature(ctx, category.id)
-        val filter = CatalogFilter.load(ctx, category.id)
-        val sort = CatalogFilter.sort(ctx, category.id)
-        rows.clear()
-        val buttons = ArrayObjectAdapter(CatalogButtonPresenter()).apply {
-            add(CatalogButton(category.id, true, if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"))
-            add(CatalogButton(category.id, false, "Сортировка · ${sort.label.replaceFirstChar { it.lowercase() }}"))
-        }
-        rows.add(ListRow(buttons))
-        if (filter.count == 0 && sort == CatalogSort.POPULAR) {
-            Tmdb.rows.forEach { (title, order) ->
-                addRow(rows, title, MoreTile("${category.title}: $title", category = category.id, sort = order)) { context -> Tmdb.load(context, category, order) }
-            }
-            return
-        }
-        val more = MoreTile("${category.title}: Результаты", category = category.id, sort = sort.sort, filtered = true)
-        addRow(rows, "Результаты", more) { context -> more.load(context, 1) }
-    }
-
-    /** The sort choice is a small window over the page: no separate screen to go through. */
-    private fun chooseSort(category: String) {
-        val ctx = requireContext()
-        val all = CatalogSort.values()
-        android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("Сортировка")
-            .setSingleChoiceItems(all.map { it.label }.toTypedArray(), all.indexOf(CatalogFilter.sort(ctx, category))) { dialog, which ->
-                CatalogFilter.saveSort(ctx, category, all[which])
-                dialog.dismiss()
-                refreshCatalogPages()
-            }
-            .show()
-    }
-
-    /** Pages whose filter or sort changed (on the other screen or in the window) are filled again. */
-    private fun refreshCatalogPages() {
-        val ctx = requireContext()
-        catalogPages.forEach { (name, entry) ->
-            if (catalogSignatures[name] != CatalogFilter.signature(ctx, entry.second.id)) fillCatalog(entry.first, entry.second)
-        }
     }
 
     private fun fillFavorites(rows: ArrayObjectAdapter, ctx: android.content.Context) {
@@ -406,56 +334,22 @@ class MainFragment : BrowseSupportFragment() {
 
     private inner class PageFactory : FragmentFactory<Fragment>() {
         override fun createFragment(row: Any?): Fragment {
-            val page = RowsSupportFragment()
             val name = (row as Row).headerItem.name
             if (name == SEARCH_HEADER) {
                 currentPage = name
                 return SearchPageFragment().also { searchPage = it }
             }
             currentPage = name
-            val pin = Settings.string(requireContext(), Settings.PARENTAL_PIN, "")
-            if (name == ADULT && pin.isNotEmpty() && !adultUnlocked) {
-                // the list stays closed until the code is typed; the page draws a single lock tile
-                val tile = ArrayObjectAdapter(SettingsTilePresenter()).apply { add(LockTile("18+ • Введите код") { unlockAdult(page, name) }) }
-                page.adapter = ArrayObjectAdapter(rowPresenter(dimOthers = true)).apply { add(ListRow(HeaderItem("Родительский контроль"), tile)) }
-                page.onItemViewClickedListener = OnItemViewClickedListener { _, item, _, _ ->
-                    if (item is LockTile) item.ok()
-                }
-                return page
+            // films and series are one long grid with lazy loading, not rows of collections with a "Результаты" tile
+            val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
+            if (category != null) return CatalogPageFragment().apply {
+                arguments = android.os.Bundle().apply { putString("category", category.id) }
             }
+            val page = RowsSupportFragment()
             page.adapter = pageFor(name)
             page.onItemViewClickedListener = onClick
             return page
         }
-    }
-
-    private fun unlockAdult(page: RowsSupportFragment, name: String) {
-        askPin { ok ->
-            if (ok) {
-                adultUnlocked = true
-                page.adapter = pageFor(name)
-                page.onItemViewClickedListener = onClick
-            }
-        }
-    }
-
-    /** Numeric code dialog of the parental control; the callback gets true only for the saved code. */
-    private fun askPin(done: (Boolean) -> Unit) {
-        val input = android.widget.EditText(requireContext()).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Код"
-            setSingleLine()
-        }
-        android.app.AlertDialog.Builder(requireContext()).setTitle("Родительский контроль")
-            .setMessage("Введите код из настроек")
-            .setView(input)
-            .setPositiveButton("Открыть") { _, _ ->
-                val ok = input.text.toString() == Settings.string(requireContext(), Settings.PARENTAL_PIN, "")
-                if (!ok) android.widget.Toast.makeText(requireContext(), "Неверный код", android.widget.Toast.LENGTH_SHORT).show()
-                done(ok)
-            }
-            .setNegativeButton("Отмена") { _, _ -> done(false) }
-            .show()
     }
 }
 
@@ -528,13 +422,18 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         }
         // the chosen title is about to be opened: its wide backdrop is loaded into the cache now, so the card
         // screen does not wait for it (the details are cached by the call above or this one)
-        card.onFocused = {
-            runtimePool.execute {
+        // it waits a moment and only runs if the cursor stays on the card: scrolling through a row loads nothing
+        val warmUp = Runnable {
+            if (card.isFocused && card.shownId == title.id) runtimePool.execute {
                 val backdrop = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).backdrop }.getOrDefault("")
                 if (backdrop.isNotEmpty()) card.post {
                     Glide.with(appContext).load("https://image.tmdb.org/t/p/w780$backdrop").preload()
                 }
             }
+        }
+        card.onFocused = {
+            card.removeCallbacks(warmUp)
+            card.postDelayed(warmUp, 300)
         }
         val poster = title.poster
         // w500 stays sharp at the card's size on a 1080p screen; w342 was upscaled and looked soft
@@ -629,38 +528,6 @@ class SettingsSectionPresenter : Presenter() {
         val texts = tile.tag as Pair<TextView, TextView>
         texts.first.text = section.title
         texts.second.text = section.description
-    }
-
-    override fun onUnbindViewHolder(holder: ViewHolder) {}
-}
-
-/** Colored tile in the style of LazyMedia: a big caption on a flat color. */
-class SettingsTilePresenter : Presenter() {
-    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(240, 360)
-        tile.setBackgroundColor(Color.parseColor("#455A64"))
-        tile.isFocusable = true
-        tile.isFocusableInTouchMode = true
-        val caption = TextView(parent.context)
-        caption.text = "Настройки"
-        caption.setTextColor(Color.WHITE)
-        caption.textSize = 22f
-        caption.typeface = Typeface.DEFAULT_BOLD
-        caption.gravity = Gravity.CENTER
-        tile.addView(caption, FrameLayout.LayoutParams(-1, -1))
-        return ViewHolder(tile)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, item: Any) {
-        val caption = ((holder.view as FrameLayout).getChildAt(0) as TextView)
-        caption.text = when (item) {
-            is String -> item
-            is TorrentQuery -> "Искать торренты: ${item.query}"
-            is LockTile -> item.label
-            else -> "Настройки"
-        }
-        caption.textSize = if (item is OpenSettings) 22f else 16f
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}

@@ -220,16 +220,6 @@ class SettingsScreen : GuidedStepSupportFragment() {
             requireActivity().finish()
         }
 
-        section(actions, "Родительский контроль")
-        editable(actions, "Код на список 18+ (4 цифры)", Settings.PARENTAL_PIN, "")
-        if (Settings.string(ctx, Settings.PARENTAL_PIN, "").isNotEmpty()) {
-            button(actions, "Снять код") {
-                Settings.setString(ctx, Settings.PARENTAL_PIN, "")
-                toast("Код снят")
-                requireActivity().recreate()
-            }
-        }
-
         section(actions, "О приложении")
         info(actions, "Версия", BuildConfig.VERSION_NAME)
     }
@@ -285,17 +275,6 @@ class SettingsScreen : GuidedStepSupportFragment() {
                 val url = value.trimEnd('/').let { if (it.isEmpty() || it.startsWith("http")) it else "http://$it" }
                 Settings.setString(ctx, key, url)
                 action.description = url.ifEmpty { "не задан" }
-            }
-            Settings.PARENTAL_PIN -> {
-                val pin = value.filter { it.isDigit() }.take(4)
-                if (pin.length != 4) {
-                    toast("Нужны ровно 4 цифры")
-                    action.description = Settings.string(ctx, key, "").ifEmpty { "не задан" }
-                    return GuidedAction.ACTION_ID_CURRENT
-                }
-                Settings.setString(ctx, key, pin)
-                action.description = pin
-                toast("Код сохранён")
             }
             else -> {
                 Settings.setString(ctx, key, value)
