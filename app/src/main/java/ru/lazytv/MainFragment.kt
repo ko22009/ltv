@@ -123,7 +123,8 @@ class MainFragment : BrowseSupportFragment() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Lazy TV"
+        // no page title in the corner: the rows start at the top edge and would run under it
+        title = ""
         headersState = HEADERS_ENABLED
         isHeadersTransitionOnBackEnabled = true
         brandColor = 0xFF1B2E23.toInt()
@@ -140,6 +141,14 @@ class MainFragment : BrowseSupportFragment() {
             .addClassPresenter(SectionRow::class.java, SectionHeaderPresenter())
             .addClassPresenter(Row::class.java, IconHeaderPresenter())
         buildRail(view)
+        // the smaller top margin of the pages is shared by the menu list, which would push "Поиск" off the screen:
+        // the menu keeps the alignment Leanback gives it by default
+        // (Leanback sets it again after the view is made, so it is held on every layout pass)
+        val menuTop = resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_rows_margin_top)
+        view.viewTreeObserver.addOnGlobalLayoutListener {
+            val menu = headersSupportFragment?.verticalGridView ?: return@addOnGlobalLayoutListener
+            if (menu.windowAlignmentOffset != menuTop) menu.windowAlignmentOffset = menuTop
+        }
         setSelectedPosition(1, false)
         setBrowseTransitionListener(object : BrowseTransitionListener() {
             override fun onHeadersTransitionStart(withHeaders: Boolean) {
@@ -161,7 +170,7 @@ class MainFragment : BrowseSupportFragment() {
             alpha = 0f
             // a solid panel in the colour of the menu: it also covers the bare edge Leanback leaves of the hidden one
             setBackgroundColor(0xFF1B2E23.toInt())
-            setPadding(0, (96 * resources.displayMetrics.widthPixels / 1280f).toInt(), 0, 0)
+            setPadding(0, (28 * resources.displayMetrics.widthPixels / 1280f).toInt(), 0, 0)
         }
         // narrower than the free left edge of the page (cards start at about 98 px of 1920), so nothing is covered
         val width = (64 * resources.displayMetrics.widthPixels / 1280f).toInt()
@@ -173,7 +182,7 @@ class MainFragment : BrowseSupportFragment() {
         val strip = rail ?: return
         val scale = resources.displayMetrics.widthPixels / 1280f
         val names = (0 until headers.size()).mapNotNull { (headers.get(it) as? PageRow)?.headerItem?.name }
-        val room = resources.displayMetrics.heightPixels - (96 + 24) * scale
+        val room = resources.displayMetrics.heightPixels - (28 + 24) * scale
         val cell = minOf(44 * scale, room / names.size.coerceAtLeast(1)).toInt()
         val icon = (cell * 0.62f).toInt()
         strip.removeAllViews()
@@ -441,12 +450,10 @@ class MainFragment : BrowseSupportFragment() {
                 // search is opened by OK, not by the cursor passing over it: the page stays what it was a moment ago
                 // (the locked adult list is never mirrored, it would skip the code)
                 val last = if (currentPage == ADULT) OVERVIEW else currentPage
-                title = last
                 page.adapter = pageFor(last)
                 page.onItemViewClickedListener = onClick
                 return page
             }
-            title = name
             currentPage = name
             val pin = Settings.string(requireContext(), Settings.PARENTAL_PIN, "")
             if (name == ADULT && pin.isNotEmpty() && !adultUnlocked) {
