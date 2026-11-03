@@ -112,18 +112,21 @@ class TitlesGridActivity : Activity() {
         val page = nextPage
         val appContext = applicationContext
         Thread {
-            val result = runCatching { more.load(appContext, page) }
+            val result = runCatching { more.loadPage(appContext, page) }
             runOnUiThread {
                 busy = false
                 loadingMore.visibility = View.GONE
                 result.onSuccess { loaded ->
                     // titles already shown are not added twice when TMDB repeats one on the next page
-                    val fresh = loaded.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
-                    if (loaded.isEmpty()) finished = true
+                    val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
+                    if (loaded.ended) finished = true
                     else {
                         nextPage = page + 1
+                        val first = cards.size() == 0
                         cards.addAll(cards.size(), fresh)
-                        if (page == 1) grid.requestFocus()
+                        if (first && fresh.isNotEmpty()) grid.requestFocus()
+                        // a page that held only watched titles adds nothing: the next one is asked for at once
+                        if (fresh.isEmpty()) loadNext()
                     }
                 }.onFailure {
                     finished = true

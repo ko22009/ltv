@@ -94,7 +94,7 @@ object Tmdb {
     fun visibleCategories(context: Context): List<Category> =
         categories.filter { Settings.bool(context, listKey(it), it.onByDefault) }
 
-    fun load(context: Context, category: Category, sort: String, page: Int = 1): List<Title> {
+    fun load(context: Context, category: Category, sort: String, page: Int = 1, extra: String = ""): List<Title> {
         val kind = if (category.tv) "tv" else "movie"
         val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
         val yearParam = if (category.tv) "first_air_date_year" else "primary_release_year"
@@ -102,7 +102,7 @@ object Tmdb {
             .replace("year=THIS_YEAR", "$yearParam=$year")
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val url = "$BASE/discover/$kind?api_key=${BuildConfig.TMDB_KEY}&language=$language" +
-            "&sort_by=$sortKey${category.query}&page=$page"
+            "&sort_by=$sortKey${category.query}$extra&page=$page"
         return parse(download(url), category.tv)
     }
 

@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.leanback.app.BrowseSupportFragment
@@ -39,8 +40,6 @@ private const val HISTORY = "ИСТОРИЯ"
 private const val SETTINGS = "НАСТРОЙКИ"
 private const val ADULT = "18+"
 
-/** Tag of the search orb that stays above the menu: the stock one, which hides with the headers, is left out. */
-private const val PINNED_ORB = "pinned_search_orb"
 
 /** A tile that asks for the parental code before the adult list opens. */
 private data class LockTile(val label: String, val ok: () -> Unit)
@@ -78,6 +77,12 @@ class MainFragment : BrowseSupportFragment() {
     private var historyRows: ArrayObjectAdapter? = null
     private var episodeRevision = ""
     private var watchedMarks = ""
+    /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
+    private var rail: LinearLayout? = null
+    private var currentPage = OVERVIEW
+    /** Pages with the filter and sort buttons: their rows and the choices they were built from. */
+    private val catalogPages = HashMap<String, Pair<ArrayObjectAdapter, Category>>()
+    private val catalogSignatures = HashMap<String, String>()
 
     private val onClick = OnItemViewClickedListener { _, item, _, _ ->
         when (item) {
@@ -109,6 +114,9 @@ class MainFragment : BrowseSupportFragment() {
             is SettingsSection -> startActivity(
                 Intent(requireContext(), SettingsActivity::class.java).putExtra("section", item.title)
             )
+            is CatalogButton -> if (item.filters) {
+                startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", item.category))
+            } else chooseSort(item.category)
             OpenSettings -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
     }
@@ -119,8 +127,6 @@ class MainFragment : BrowseSupportFragment() {
         headersState = HEADERS_ENABLED
         isHeadersTransitionOnBackEnabled = true
         brandColor = 0xFF1B2E23.toInt()
-        searchAffordanceColor = 0xFF2F7D57.toInt()
-        setOnSearchClickedListener { startActivity(Intent(requireContext(), SearchActivity::class.java)) }
         mainFragmentRegistry.registerFragment(PageRow::class.java, PageFactory())
         adapter = headers
         showHeaders()
@@ -133,57 +139,60 @@ class MainFragment : BrowseSupportFragment() {
             .addClassPresenter(DividerRow::class.java, DividerPresenter())
             .addClassPresenter(SectionRow::class.java, SectionHeaderPresenter())
             .addClassPresenter(Row::class.java, IconHeaderPresenter())
-        pinSearchButton(view)
+        buildRail(view)
+        setSelectedPosition(1, false)
+        setBrowseTransitionListener(object : BrowseTransitionListener() {
+            override fun onHeadersTransitionStart(withHeaders: Boolean) {
+                if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction { rail?.visibility = View.GONE }?.start()
+                else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(200)?.start() }
+            }
+        })
     }
 
     /**
-     * Search sits above the menu and stays in place: it does not scroll away with the list and does not disappear
-     * when a section is opened. The stock orb is hidden — it lives inside the headers and goes away with them.
+     * The menu shrinks to a narrow rail of icons while a page has the focus: the icons stay where the names were,
+     * the page under the cursor is lit. Leanback slides the wide menu out, and this strip takes its place.
      */
-    private fun pinSearchButton(root: android.view.View) {
-        val scale = resources.displayMetrics.widthPixels / 1280f
-        fun dp(value: Int) = (value * scale).toInt()
+    private fun buildRail(root: View) {
         val parent = root as? ViewGroup ?: return
-        val orb = FrameLayout(requireContext()).apply {
-            tag = PINNED_ORB
-            isFocusable = true
-            isFocusableInTouchMode = true
-            isClickable = true
-            contentDescription = "Поиск"
-            elevation = dp(5).toFloat()
-            background = circle(0xFF2F7D57.toInt(), dp(32))
-            addView(ImageView(requireContext()).apply {
-                // the stock Leanback magnifier: the one the orb had before it was pinned, bolder than the Material path
-                setImageResource(androidx.leanback.R.drawable.lb_ic_in_app_search)
-                setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
-            }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER))
-            setOnClickListener { startActivity(Intent(requireContext(), SearchActivity::class.java)) }
-            setOnFocusChangeListener { view, focused ->
-                view.background = circle(if (focused) 0xFF3A9468.toInt() else 0xFF2F7D57.toInt(), dp(32))
-            }
+        val strip = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            alpha = 0f
+            // a solid panel in the colour of the menu: it also covers the bare edge Leanback leaves of the hidden one
+            setBackgroundColor(0xFF1B2E23.toInt())
+            setPadding(0, (96 * resources.displayMetrics.widthPixels / 1280f).toInt(), 0, 0)
         }
-        parent.addView(orb, FrameLayout.LayoutParams(dp(64), dp(64), Gravity.TOP or Gravity.START).apply {
-            leftMargin = dp(56)
-            // the orb's centre sits on the line of the page title on the right (ОБЗОР, ФИЛЬМЫ ...)
-            topMargin = dp(45)
-        })
-        root.postDelayed({ hideStockOrb(requireActivity().window.decorView) }, 400)
-        // the headers fragment recreates its orb whenever the menu is shown again: hide it on every layout pass
-        root.viewTreeObserver.addOnGlobalLayoutListener { hideStockOrb(requireActivity().window.decorView) }
+        // narrower than the free left edge of the page (cards start at about 98 px of 1920), so nothing is covered
+        val width = (64 * resources.displayMetrics.widthPixels / 1280f).toInt()
+        parent.addView(strip, FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.TOP or Gravity.START))
+        rail = strip
     }
 
-    private fun circle(color: Int, radius: Int) = android.graphics.drawable.GradientDrawable().apply {
-        shape = android.graphics.drawable.GradientDrawable.OVAL
+    private fun refreshRail() {
+        val strip = rail ?: return
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        val names = (0 until headers.size()).mapNotNull { (headers.get(it) as? PageRow)?.headerItem?.name }
+        val room = resources.displayMetrics.heightPixels - (96 + 24) * scale
+        val cell = minOf(44 * scale, room / names.size.coerceAtLeast(1)).toInt()
+        val icon = (cell * 0.62f).toInt()
+        strip.removeAllViews()
+        names.forEach { name ->
+            val active = name == currentPage
+            strip.addView(ImageView(requireContext()).apply {
+                setImageDrawable(MenuIcons.forName(name).apply {
+                    setColorFilter(if (active) Color.WHITE else 0xFF94AFA1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                })
+                setPadding((cell - icon) / 2, (cell - icon) / 2, (cell - icon) / 2, (cell - icon) / 2)
+                if (active) background = plate(0xFF2A5540.toInt(), cell)
+                contentDescription = name
+            }, LinearLayout.LayoutParams(cell, cell).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        }
+    }
+
+    private fun plate(color: Int, size: Int) = android.graphics.drawable.GradientDrawable().apply {
         setColor(color)
-        cornerRadius = radius.toFloat()
-    }
-
-    private fun hideStockOrb(view: android.view.View) {
-        if (view.javaClass.simpleName == "SearchOrbView" && view.tag != PINNED_ORB) {
-            view.visibility = android.view.View.GONE
-            return
-        }
-        if (view is ViewGroup) for (i in 0 until view.childCount) hideStockOrb(view.getChildAt(i))
+        cornerRadius = size / 4f
     }
 
     /** Settings are applied when the screen comes back: lists appear and disappear without a restart. */
@@ -198,6 +207,7 @@ class MainFragment : BrowseSupportFragment() {
             historyRows?.let { fillHistory(it, ctx) }
         }
         if (shown != Settings.snapshot(ctx)) showHeaders()
+        refreshCatalogPages()
         // a title marked watched on its card: the cards of every opened page are drawn again, dimmed or not
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
@@ -219,6 +229,9 @@ class MainFragment : BrowseSupportFragment() {
         pages.clear()
         favoritesRows = null
         historyRows = null
+        catalogPages.clear()
+        catalogSignatures.clear()
+        headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
         headers.add(PageRow(HeaderItem(OVERVIEW)))
         headers.add(PageRow(HeaderItem(FAVORITES)))
         headers.add(PageRow(HeaderItem(HISTORY)))
@@ -231,6 +244,9 @@ class MainFragment : BrowseSupportFragment() {
         }
         headers.add(DividerRow())
         headers.add(PageRow(HeaderItem(SETTINGS)))
+        // the first entry is search; the page that opens is the overview
+        // (the view does not exist yet when this runs from onCreate: onViewCreated sets it then)
+        if (view != null) setSelectedPosition(1, false)
     }
 
     /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
@@ -264,12 +280,62 @@ class MainFragment : BrowseSupportFragment() {
                 rows.add(ListRow(ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }))
             }
             else -> servicePage(rows, name, ctx) ?: Tmdb.visibleCategories(ctx).firstOrNull { it.title.uppercase() == name }?.let { category ->
-                Tmdb.rows.forEach { (title, sort) ->
+                if (CatalogFilter.supports(category.id)) {
+                    catalogPages[name] = rows to category
+                    fillCatalog(rows, category)
+                } else Tmdb.rows.forEach { (title, sort) ->
                     addRow(rows, title, MoreTile("${category.title}: $title", category = category.id, sort = sort)) { context -> Tmdb.load(context, category, sort) }
                 }
             } ?: Unit
         }
         rows
+    }
+
+    /**
+     * Films and series: the two buttons go first, then either the usual rows or — once a filter or another sort is
+     * chosen — one row with what the choice found.
+     */
+    private fun fillCatalog(rows: ArrayObjectAdapter, category: Category) {
+        val ctx = requireContext()
+        catalogSignatures[category.title.uppercase()] = CatalogFilter.signature(ctx, category.id)
+        val filter = CatalogFilter.load(ctx, category.id)
+        val sort = CatalogFilter.sort(ctx, category.id)
+        rows.clear()
+        val buttons = ArrayObjectAdapter(CatalogButtonPresenter()).apply {
+            add(CatalogButton(category.id, true, if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"))
+            add(CatalogButton(category.id, false, "Сортировка · ${sort.label.replaceFirstChar { it.lowercase() }}"))
+        }
+        rows.add(ListRow(buttons))
+        if (filter.count == 0 && sort == CatalogSort.POPULAR) {
+            Tmdb.rows.forEach { (title, order) ->
+                addRow(rows, title, MoreTile("${category.title}: $title", category = category.id, sort = order)) { context -> Tmdb.load(context, category, order) }
+            }
+            return
+        }
+        val more = MoreTile("${category.title}: Результаты", category = category.id, sort = sort.sort, filtered = true)
+        addRow(rows, "Результаты", more) { context -> more.load(context, 1) }
+    }
+
+    /** The sort choice is a small window over the page: no separate screen to go through. */
+    private fun chooseSort(category: String) {
+        val ctx = requireContext()
+        val all = CatalogSort.values()
+        android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle("Сортировка")
+            .setSingleChoiceItems(all.map { it.label }.toTypedArray(), all.indexOf(CatalogFilter.sort(ctx, category))) { dialog, which ->
+                CatalogFilter.saveSort(ctx, category, all[which])
+                dialog.dismiss()
+                refreshCatalogPages()
+            }
+            .show()
+    }
+
+    /** Pages whose filter or sort changed (on the other screen or in the window) are filled again. */
+    private fun refreshCatalogPages() {
+        val ctx = requireContext()
+        catalogPages.forEach { (name, entry) ->
+            if (catalogSignatures[name] != CatalogFilter.signature(ctx, entry.second.id)) fillCatalog(entry.first, entry.second)
+        }
     }
 
     private fun fillFavorites(rows: ArrayObjectAdapter, ctx: android.content.Context) {
@@ -371,7 +437,17 @@ class MainFragment : BrowseSupportFragment() {
         override fun createFragment(row: Any?): Fragment {
             val page = RowsSupportFragment()
             val name = (row as Row).headerItem.name
+            if (name == SEARCH_HEADER) {
+                // search is opened by OK, not by the cursor passing over it: the page stays what it was a moment ago
+                // (the locked adult list is never mirrored, it would skip the code)
+                val last = if (currentPage == ADULT) OVERVIEW else currentPage
+                title = last
+                page.adapter = pageFor(last)
+                page.onItemViewClickedListener = onClick
+                return page
+            }
             title = name
+            currentPage = name
             val pin = Settings.string(requireContext(), Settings.PARENTAL_PIN, "")
             if (name == ADULT && pin.isNotEmpty() && !adultUnlocked) {
                 // the list stays closed until the code is typed; the page draws a single lock tile
