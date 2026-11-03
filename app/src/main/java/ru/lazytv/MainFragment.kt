@@ -465,7 +465,13 @@ class MainFragment : BrowseSupportFragment() {
             if (category != null) return CatalogPageFragment().apply {
                 arguments = android.os.Bundle().apply { putString("category", category.id) }
             }
-            val page = TitledRowsFragment().apply { arguments = android.os.Bundle().apply { putString("title", pageTitle(name)) } }
+            val page = TitledRowsFragment().apply {
+                arguments = android.os.Bundle().apply {
+                    putString("title", pageTitle(name))
+                    // the settings tiles stand as close under the title as the cards of "Фильмы"
+                    putBoolean("compact", name == SETTINGS)
+                }
+            }
             val rows = pageFor(name)
             page.adapter = rows
             page.onItemViewClickedListener = onClick
@@ -834,14 +840,16 @@ class TitledRowsFragment : RowsSupportFragment() {
     override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: android.os.Bundle?): View? {
         val rows = super.onCreateView(inflater, container, savedInstanceState) ?: return null
         val scale = resources.displayMetrics.widthPixels / 1280f
+        // measured on the emulator: with these numbers the title and the first tiles of the settings sit where the title and cards of "Фильмы" do
+        val compact = requireArguments().getBoolean("compact")
         val title = TextView(requireContext()).apply {
             text = requireArguments().getString("title")
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
-            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
+            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), ((if (compact) 22 else 30) * scale).toInt(), 0, (6 * scale).toInt())
         }
         return FrameLayout(requireContext()).apply {
-            addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = (72 * scale).toInt() })
+            addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = ((if (compact) 39 else 72) * scale).toInt() })
             addView(title, FrameLayout.LayoutParams(-1, -2))
         }
     }
