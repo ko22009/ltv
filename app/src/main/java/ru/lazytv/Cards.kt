@@ -279,8 +279,13 @@ fun formatRuntime(minutes: Int): String = when {
     minutes % 60 == 0 -> "${minutes / 60} ч"
     else -> "${minutes / 60} ч ${minutes % 60} мин"
 }
-/** Room around a grid of cards (dp of the screen): the focused card grows into it, and the grid cuts what goes past it. */
-private const val GRID_EDGE = 12
+/**
+ * Room around a grid of cards (dp of the screen): the focused card grows into it, and the grid cuts what goes past it.
+ * The card grows by 15% (about 15 dp at the sides, 24 dp up and down at the card scale 0.82): the side room must hold that,
+ * the top one is the room plus the card's own margin.
+ */
+private const val GRID_EDGE_SIDE = 20
+private const val GRID_EDGE_TOP = 14
 
 /**
  * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
@@ -289,11 +294,11 @@ private const val GRID_EDGE = 12
  */
 fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
     androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
-    val edge = (GRID_EDGE * scale).toInt()
+    val side = (GRID_EDGE_SIDE * scale).toInt()
     return androidx.leanback.widget.VerticalGridView(context).apply {
         id = View.generateViewId()
         setNumColumns(columns)
-        setPadding(edge, edge, edge, (16 * scale).toInt())
+        setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (16 * scale).toInt())
         clipToPadding = true
         setItemSpacing((6 * scale).toInt())
         adapter = bridge
@@ -302,6 +307,6 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
 
 /** Layout of [titleCardGrid] in a vertical page: the side room goes outside the page's padding, the cards stay on its edge. */
 fun titleGridParams(scale: Float) = LinearLayout.LayoutParams(-1, 0, 1f).apply {
-    val edge = (GRID_EDGE * scale).toInt()
-    setMargins(-edge, 0, -edge, 0)
+    val side = (GRID_EDGE_SIDE * scale).toInt()
+    setMargins(-side, 0, -side, 0)
 }
