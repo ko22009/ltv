@@ -596,8 +596,11 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         val poster = title.poster
         // w500 stays sharp at the card's size on a 1080p screen; w342 was upscaled and looked soft
         if (poster != null) Glide.with(card.context).load("https://image.tmdb.org/t/p/w500$poster").into(card.poster)
-        // no poster yet: an empty card, not the picture of a recycled one
-        else Glide.with(card.context).clear(card.poster)
+        // no poster (or TMDB has none at all): the card says so instead of showing an empty plate
+        else {
+            Glide.with(card.context).clear(card.poster)
+            card.poster.setImageResource(R.drawable.no_poster)
+        }
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {
