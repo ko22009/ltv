@@ -140,7 +140,7 @@ class PathDrawable(data: String) : Drawable() {
  * so it reads clearly against the muted rest of the menu — both when it is the selected page and when the D-pad
  * just lands on it.
  */
-/** Name of the first menu entry; it opens the search screen. */
+/** Name of the menu entry that opens the search screen (second, after the overview). */
 const val SEARCH_HEADER = "ПОИСК"
 
 class IconHeaderPresenter : RowHeaderPresenter() {

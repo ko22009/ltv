@@ -185,7 +185,7 @@ class MainFragment : BrowseSupportFragment() {
                 } else if (Math.abs(second.top - first.bottom - gap) <= 2) spacingTries = 0
             }
         }
-        setSelectedPosition(1, false)
+        setSelectedPosition(0, false)
         setBrowseTransitionListener(object : BrowseTransitionListener() {
             override fun onHeadersTransitionStart(withHeaders: Boolean) {
                 if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction { rail?.visibility = View.GONE }?.start()
@@ -290,14 +290,14 @@ class MainFragment : BrowseSupportFragment() {
         pendingLoads.clear()
         pagers.clear()
         favoritesRows = null
-        headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
+        // the overview is the first entry and the page that opens, so the app does not start on the search and jump away
         headers.add(PageRow(HeaderItem(OVERVIEW)))
+        headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
         headers.add(PageRow(HeaderItem(FAVORITES)))
         Tmdb.visibleCategories(ctx).forEach { headers.add(PageRow(HeaderItem(it.title.uppercase()))) }
         headers.add(PageRow(HeaderItem(SETTINGS)))
-        // the first entry is search; the page that opens is the overview
         // (the view does not exist yet when this runs from onCreate: onViewCreated sets it then)
-        if (view != null) setSelectedPosition(1, false)
+        if (view != null) setSelectedPosition(0, false)
     }
 
     /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
