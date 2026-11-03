@@ -237,6 +237,7 @@ class DetailsActivity : Activity() {
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                                 bannerSpinner.visibility = View.GONE
+                                showNoBackdrop()
                                 return false
                             }
 
@@ -246,7 +247,10 @@ class DetailsActivity : Activity() {
                                 return false
                             }
                         }).into(backdrop)
-                } else bannerSpinner.visibility = View.GONE
+                } else {
+                    bannerSpinner.visibility = View.GONE
+                    showNoBackdrop()
+                }
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
                     "Длительность" to (formatRuntime(d.runtime)),
@@ -287,6 +291,12 @@ class DetailsActivity : Activity() {
     private lateinit var posterSpinner: Spinner
     private lateinit var backdrop: ImageView
     private lateinit var bannerSpinner: Spinner
+
+    /** A title with no frame (or one that failed to load) gets a calm picture instead of a bare dark band. */
+    private fun showNoBackdrop() {
+        backdrop.setImageResource(R.drawable.no_backdrop)
+        backdrop.animate().alpha(1f).setDuration(250).start()
+    }
 
     /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
     private fun castRow(people: List<Tmdb.Person>): View {

@@ -130,7 +130,7 @@ class TorrentsActivity : Activity() {
             val image = ImageView(this)
             image.scaleType = ImageView.ScaleType.CENTER_CROP
             image.setBackgroundColor(0xFF12201A.toInt())
-            Glide.with(this).load("https://image.tmdb.org/t/p/w342$poster").into(image)
+            image.showPoster(poster, null, "w342")
             val split = LinearLayout(this)
             split.addView(image, LinearLayout.LayoutParams(px(170), px(256)).apply { leftMargin = px(64); topMargin = px(36) })
             page.setPadding(px(32), px(36), px(64), px(20))

@@ -73,28 +73,28 @@ private val failedPosters = HashSet<String>()
  * Loads a TMDB poster into the view; the spinner shows until the picture is there.
  * A title without a poster, or a failed load, ends with the stub picture, never with an empty plate.
  */
-fun ImageView.showPoster(path: String?, spinner: View) {
+fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", stub: Int = R.drawable.no_poster) {
     val glide = com.bumptech.glide.Glide.with(context)
     glide.clear(this)
     // a poster that already failed to load once is not requested again (the list and the card share this)
     if (path.isNullOrEmpty() || path in failedPosters) {
-        spinner.visibility = View.GONE
-        setImageResource(R.drawable.no_poster)
+        spinner?.visibility = View.GONE
+        setImageResource(stub)
         return
     }
-    spinner.visibility = View.VISIBLE
+    spinner?.visibility = View.VISIBLE
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-            spinner.visibility = View.GONE
+            spinner?.visibility = View.GONE
             failedPosters.add(path)
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
                                      dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-            spinner.visibility = View.GONE
+            spinner?.visibility = View.GONE
             return false
         }
     }
-    glide.load("https://image.tmdb.org/t/p/w500$path").error(R.drawable.no_poster).listener(done).into(this)
+    glide.load("https://image.tmdb.org/t/p/$size$path").error(stub).listener(done).into(this)
 }

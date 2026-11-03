@@ -96,7 +96,7 @@ object History {
     fun withPosters(context: Context, titles: List<Title>): List<Title> {
         if (titles.none { it.poster == null }) return titles
         return titles.map { title ->
-            val poster = title.poster ?: runCatching { Tmdb.details(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
+            val poster = title.poster ?: runCatching { Tmdb.detailsCached(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
             if (title.poster == null && poster.isNotEmpty()) {
                 setPoster(context, title.id, title.tv, poster)
                 title.copy(poster = poster)

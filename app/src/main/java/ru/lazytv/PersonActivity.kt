@@ -77,7 +77,7 @@ class PersonActivity : Activity() {
         val photo = ImageView(this)
         photo.scaleType = ImageView.ScaleType.CENTER_CROP
         photo.setBackgroundColor(0xFF12201A.toInt())
-        person.photo?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w342$it").into(photo) }
+        photo.showPoster(person.photo, null, "w342", R.drawable.no_photo)
         top.addView(photo, LinearLayout.LayoutParams(px(220), px(300)).apply { rightMargin = px(28) })
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
@@ -117,7 +117,7 @@ class PersonActivity : Activity() {
         val poster = ImageView(this)
         poster.scaleType = ImageView.ScaleType.CENTER_CROP
         poster.setBackgroundColor(0xFF12201A.toInt())
-        credit.title.poster?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w185$it").into(poster) }
+        poster.showPoster(credit.title.poster, null, "w185")
         card.addView(poster, LinearLayout.LayoutParams(px(64), px(94)).apply { rightMargin = px(18) })
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
