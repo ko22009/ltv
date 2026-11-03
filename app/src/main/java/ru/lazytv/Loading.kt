@@ -67,6 +67,8 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
 /** Hands a background result to the screen, but only while it is alive: a closed screen gets nothing (Glide throws on a destroyed one). */
 fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinishing && !isDestroyed) block() }
 
+private val failedPosters = HashSet<String>()
+
 /**
  * Loads a TMDB poster into the view; the spinner shows until the picture is there.
  * A title without a poster, or a failed load, ends with the stub picture, never with an empty plate.
@@ -74,7 +76,8 @@ fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinish
 fun ImageView.showPoster(path: String?, spinner: View) {
     val glide = com.bumptech.glide.Glide.with(context)
     glide.clear(this)
-    if (path.isNullOrEmpty()) {
+    // a poster that already failed to load once is not requested again (the list and the card share this)
+    if (path.isNullOrEmpty() || path in failedPosters) {
         spinner.visibility = View.GONE
         setImageResource(R.drawable.no_poster)
         return
@@ -84,6 +87,7 @@ fun ImageView.showPoster(path: String?, spinner: View) {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
             spinner.visibility = View.GONE
+            failedPosters.add(path)
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
