@@ -85,7 +85,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     val poster = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        setBackgroundColor(0xFF12201A.toInt())
+        // a title without a poster shows the brand green, not a hole that looks like a failed load
+        setBackgroundColor(0xFF1B2E23.toInt())
     }
 
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
@@ -189,7 +190,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
-            setColor(0xFF12201A.toInt())
+            setColor(0xFF1B2E23.toInt())
             cornerRadius = px(4f).toFloat()
         }
         clipToOutline = true

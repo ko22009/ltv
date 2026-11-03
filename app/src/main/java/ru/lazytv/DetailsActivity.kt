@@ -167,7 +167,7 @@ class DetailsActivity : Activity() {
 
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
-        posterView.setBackgroundColor(0xFF12201A.toInt())
+        posterView.setBackgroundColor(0xFF1B2E23.toInt())
         posterPath?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w500$it").into(posterView) }
         root.addView(posterView, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
             leftMargin = dp(176); topMargin = dp(228)
