@@ -145,6 +145,17 @@ class DetailsActivity : Activity() {
         bar.addView(seen)
         bar.addView(button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) })
         bar.addView(button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) })
+        // left and right walk the buttons of the bar: at the right end there is nothing to go to, the focus stays;
+        // at the left end the key goes on to the back button as usual
+        for (i in 0 until bar.childCount) bar.getChildAt(i).setOnKeyListener { view, code, event ->
+            if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+            else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                val next = bar.getChildAt(bar.indexOfChild(view) + step)
+                if (next != null) next.requestFocus()
+                next != null || step > 0
+            } else false
+        }
         root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
 
         posterView = ImageView(this)
