@@ -38,6 +38,22 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         visibility = View.GONE
     }
 
+    /** The mark of a card chosen for deletion (edit mode of the history): a green veil and a big tick. */
+    private val pick = android.widget.FrameLayout(context).apply {
+        setBackgroundColor(0x992F7D57.toInt())
+        visibility = View.GONE
+        // a square of its own: the icon is drawn by width, a stretched view would cut it
+        addView(ImageView(context).apply {
+            setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
+                setColorFilter(0xFFB9F6CA.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            })
+        }, android.widget.FrameLayout.LayoutParams(px(72f), px(72f), Gravity.CENTER))
+    }
+
+    fun setPicked(on: Boolean) {
+        pick.visibility = if (on) View.VISIBLE else View.GONE
+    }
+
     private val name = TextView(context).apply {
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
@@ -101,6 +117,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
         addView(android.widget.FrameLayout(context).apply {
             addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)
                 rightMargin = px(10f)

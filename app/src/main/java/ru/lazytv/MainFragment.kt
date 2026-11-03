@@ -36,7 +36,6 @@ import kotlinx.coroutines.withContext
 
 private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
-private const val HISTORY = "ИСТОРИЯ"
 private const val SETTINGS = "НАСТРОЙКИ"
 private const val ADULT = "18+"
 
@@ -72,9 +71,8 @@ class MainFragment : BrowseSupportFragment() {
     private var shown = ""
     /** The adult list was opened with the parental code during this screen's life. */
     private var adultUnlocked = false
-    /** Adapters of the two pages that change when an episode is marked watched or starred. */
+    /** Adapter of the page that changes when an episode is marked watched or starred. */
     private var favoritesRows: ArrayObjectAdapter? = null
-    private var historyRows: ArrayObjectAdapter? = null
     private var episodeRevision = ""
     private var watchedMarks = ""
     /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
@@ -211,9 +209,8 @@ class MainFragment : BrowseSupportFragment() {
         val revision = EpisodeState.revision(ctx)
         if (revision != episodeRevision) {
             episodeRevision = revision
-            // the episode marks change the bookmarks and the history while the player screen was open
+            // the episode marks change the bookmarks while the player screen was open
             favoritesRows?.let { fillFavorites(it, ctx) }
-            historyRows?.let { fillHistory(it, ctx) }
         }
         if (shown != Settings.snapshot(ctx)) showHeaders()
         refreshCatalogPages()
@@ -237,13 +234,11 @@ class MainFragment : BrowseSupportFragment() {
         headers.clear()
         pages.clear()
         favoritesRows = null
-        historyRows = null
         catalogPages.clear()
         catalogSignatures.clear()
         headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
         headers.add(PageRow(HeaderItem(OVERVIEW)))
         headers.add(PageRow(HeaderItem(FAVORITES)))
-        headers.add(PageRow(HeaderItem(HISTORY)))
         headers.add(SectionRow(HeaderItem("СПИСКИ")))
         Tmdb.visibleCategories(ctx).forEach { headers.add(PageRow(HeaderItem(it.title.uppercase()))) }
         val catalog = Sources.enabled(ctx)
@@ -280,10 +275,6 @@ class MainFragment : BrowseSupportFragment() {
             FAVORITES -> {
                 favoritesRows = rows
                 fillFavorites(rows, ctx)
-            }
-            HISTORY -> {
-                historyRows = rows
-                fillHistory(rows, ctx)
             }
             SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEachIndexed { index, chunk ->
                 val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }
@@ -365,42 +356,6 @@ class MainFragment : BrowseSupportFragment() {
         if (rows.size() == 0) rows.add(ListRow(ArrayObjectAdapter(PlainTextPresenter()).apply {
             add("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или через ⋮ у серии")
         }))
-    }
-
-    private fun fillHistory(rows: ArrayObjectAdapter, ctx: android.content.Context) {
-        rows.clear()
-        val seen = History.all(ctx)
-        if (seen.isEmpty()) {
-            rows.add(ListRow(HeaderItem("Недавно смотрели"), ArrayObjectAdapter(PlainTextPresenter()).apply { add("Пока пусто") }))
-            return
-        }
-        val cards = ArrayObjectAdapter(CardPresenter())
-        cards.addAll(0, seen)
-        rows.add(ListRow(HeaderItem("Недавно смотрели"), cards))
-        fillPosters(cards, seen, ctx)
-    }
-
-    /**
-     * Records saved before the card asked TMDB for a poster have none, and their card stayed empty. The posters are
-     * filled in once, saved into the record and the row is drawn again.
-     */
-    private fun fillPosters(cards: ArrayObjectAdapter, titles: List<Title>, ctx: android.content.Context) {
-        if (titles.none { it.poster == null }) return
-        lifecycleScope.launch {
-            val fixed = withContext(Dispatchers.IO) {
-                titles.map { title ->
-                    val poster = title.poster ?: runCatching { Tmdb.details(ctx, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
-                    if (title.poster == null && poster.isNotEmpty()) {
-                        History.setPoster(ctx, title.id, title.tv, poster)
-                        title.copy(poster = poster)
-                    } else title
-                }
-            }
-            if (fixed != titles) {
-                cards.clear()
-                cards.addAll(0, fixed)
-            }
-        }
     }
 
     /** A row of title cards; the "show all" tile closes it, and it opens the whole list as a page. */

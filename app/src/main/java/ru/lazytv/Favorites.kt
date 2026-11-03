@@ -80,6 +80,27 @@ object History {
 
     fun clear(context: Context) = Settings.setString(context, KEY, "[]")
 
+    /** Takes the given titles out of the history (the "edit" mode of the search page). */
+    fun remove(context: Context, titles: Collection<Title>) {
+        val gone = titles.map { it.tv to it.id }.toSet()
+        save(context, all(context).filter { (it.tv to it.id) !in gone })
+    }
+
+    /**
+     * Records saved before the card asked TMDB for a poster have none, and their card stayed empty. The posters are
+     * asked for once, saved into the record and returned; call it off the main thread.
+     */
+    fun withPosters(context: Context, titles: List<Title>): List<Title> {
+        if (titles.none { it.poster == null }) return titles
+        return titles.map { title ->
+            val poster = title.poster ?: runCatching { Tmdb.details(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
+            if (title.poster == null && poster.isNotEmpty()) {
+                setPoster(context, title.id, title.tv, poster)
+                title.copy(poster = poster)
+            } else title
+        }
+    }
+
     private fun save(context: Context, list: List<Title>) {
         val array = JSONArray()
         list.forEach { array.put(it.toJson()) }

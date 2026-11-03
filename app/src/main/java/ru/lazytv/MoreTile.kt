@@ -59,9 +59,9 @@ data class MoreTile(val title: String, val collection: Int = -1, val category: S
 }
 
 /** The tile has the size of a title card, so the row keeps its height. */
-class MoreTilePresenter : Presenter() {
+class MoreTilePresenter(private val cardScale: Float = 1f) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.resources.displayMetrics.widthPixels / 1280f * cardScale
         fun px(v: Float) = (v * scale).toInt()
         val context = parent.context
         val tile = LinearLayout(context)
