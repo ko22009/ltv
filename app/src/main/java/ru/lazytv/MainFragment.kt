@@ -801,7 +801,10 @@ class SectionHeaderPresenter : RowHeaderPresenter(androidx.leanback.R.layout.lb_
 }
 
 
-/** A line of text as the only row of a page (the empty bookmarks): no selection band, nothing to focus. */
+/**
+ * A line of text for a page with nothing in it (the empty bookmarks). It is only a marker in the rows: the page
+ * itself shows the text right under its title ([TitledRowsFragment]), so it does not depend on how the list aligns its rows.
+ */
 class PageNoteRow(val text: String) : Row()
 
 class PageNotePresenter : RowPresenter() {
@@ -810,24 +813,8 @@ class PageNotePresenter : RowPresenter() {
         selectEffectEnabled = false
     }
 
-    override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
-        val start = parent.resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start)
-        val view = TextView(parent.context).apply {
-            setTextColor(0xFF8FA597.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
-            setPadding(start, 0, 0, 0)
-            isFocusable = false
-            // the row sits a little low under the title; more than ~25 would push the text above the list's top edge, where it is clipped
-            translationY = -20f * scale
-        }
-        return RowPresenter.ViewHolder(view)
-    }
-
-    override fun onBindRowViewHolder(vh: RowPresenter.ViewHolder, item: Any) {
-        super.onBindRowViewHolder(vh, item)
-        (vh.view as TextView).text = (item as PageNoteRow).text
-    }
+    override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder =
+        RowPresenter.ViewHolder(View(parent.context).apply { isFocusable = false; minimumHeight = 1 })
 
     override fun isUsingDefaultSelectEffect() = false
 }
@@ -848,9 +835,46 @@ class TitledRowsFragment : RowsSupportFragment() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
             setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
         }
+        note = TextView(requireContext()).apply {
+            setTextColor(0xFF8FA597.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
+            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (6 * scale).toInt(), 0, 0)
+            visibility = View.GONE
+        }
         return FrameLayout(requireContext()).apply {
             addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = ((if (compact) 39 else 72) * scale).toInt() })
-            addView(title, FrameLayout.LayoutParams(-1, -2))
+            addView(android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                addView(title, android.widget.LinearLayout.LayoutParams(-1, -2))
+                addView(note, android.widget.LinearLayout.LayoutParams(-1, -2))
+            }, FrameLayout.LayoutParams(-1, -2))
         }
+    }
+
+    private lateinit var note: TextView
+
+    /** The text of the note row, when the page has one, stands under the title. */
+    private val noteWatcher = object : androidx.leanback.widget.ObjectAdapter.DataObserver() {
+        override fun onChanged() = showNote()
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = showNote()
+        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = showNote()
+    }
+
+    private fun showNote() {
+        val rows = adapter ?: return
+        val text = (0 until rows.size()).firstNotNullOfOrNull { (rows.get(it) as? PageNoteRow)?.text }
+        note.text = text.orEmpty()
+        note.visibility = if (text == null) View.GONE else View.VISIBLE
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        adapter?.registerObserver(noteWatcher)
+        showNote()
+    }
+
+    override fun onDestroyView() {
+        adapter?.unregisterObserver(noteWatcher)
+        super.onDestroyView()
     }
 }

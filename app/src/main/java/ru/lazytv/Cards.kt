@@ -16,13 +16,17 @@ import android.widget.TextView
 /** Stand-in for a card of a row that is still loading: it keeps the row's height, so nothing jumps when the real cards come. */
 object SkeletonCard
 
-/** Grey card of the size of [TitleCard] that slowly pulses; it takes no focus. */
+/** Grey card of the size of [TitleCard] with a light band running over it (shimmer); it takes no focus. */
 class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = 300f, infoHeight: Float = 82f) : LinearLayout(context) {
-    private val pulse = android.animation.ObjectAnimator.ofFloat(this, ALPHA, 0.45f, 1f).apply {
-        duration = 800
+    /** 0..1: where the band is on its way from the left edge to the right one. */
+    private var phase = 0f
+    private val sweep = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = 1400
         repeatCount = android.animation.ValueAnimator.INFINITE
-        repeatMode = android.animation.ValueAnimator.REVERSE
+        interpolator = android.view.animation.LinearInterpolator()
+        addUpdateListener { phase = it.animatedValue as Float; invalidate() }
     }
+    private val bandPaint = android.graphics.Paint()
 
     init {
         orientation = VERTICAL
@@ -39,15 +43,28 @@ class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = 300
         // the same heights as the poster and the text plate of a real card
         addView(View(context), LayoutParams(-1, (posterHeight * scale).toInt()))
         addView(View(context).apply { setBackgroundColor(0xFF24352C.toInt()) }, LayoutParams(-1, (infoHeight * scale).toInt()))
+        // the band must not stick out of the rounded corners
+        clipToOutline = true
+    }
+
+    override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        super.dispatchDraw(canvas)
+        val band = width * 0.6f
+        val left = -band + (width + band) * phase
+        bandPaint.shader = android.graphics.LinearGradient(
+            left, 0f, left + band, 0f,
+            intArrayOf(0x00FFFFFF, 0x26FFFFFF, 0x00FFFFFF), null, android.graphics.Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bandPaint)
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        pulse.start()
+        sweep.start()
     }
 
     override fun onDetachedFromWindow() {
-        pulse.cancel()
+        sweep.cancel()
         super.onDetachedFromWindow()
     }
 }
