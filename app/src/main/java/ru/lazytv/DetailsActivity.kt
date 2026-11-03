@@ -81,7 +81,10 @@ class DetailsActivity : Activity() {
         // a calm dark band; the frame of the film (TMDB backdrop) fades in under a dark veil once it is known
         val banner = FrameLayout(this)
         banner.setBackgroundColor(0xFF15251B.toInt())
-        backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        // the frame is shown whole, in the middle; the sides are filled with the same frame, softly blurred (as in a video call)
+        blurBackdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        banner.addView(blurBackdrop, FrameLayout.LayoutParams(-1, -1))
+        backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
         // the poster is not borrowed as a stand-in: until the wide backdrop is there, a spinner turns on the band
         backdrop.alpha = 0f
@@ -200,6 +203,8 @@ class DetailsActivity : Activity() {
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
+                    // the fill is the same frame at 48 px: stretched over the band it reads as a soft blur
+                    Glide.with(this).load("https://image.tmdb.org/t/p/w300${d.backdrop}").override(48, 27).into(blurBackdrop)
                     Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
@@ -252,6 +257,7 @@ class DetailsActivity : Activity() {
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
     private lateinit var backdrop: ImageView
+    private lateinit var blurBackdrop: ImageView
     private lateinit var bannerSpinner: Spinner
 
     /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
