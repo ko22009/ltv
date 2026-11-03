@@ -125,7 +125,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
         })
-        page.addView(searchBar)
+        // the bar ends where the last card of a row ends: the free part of a grid cell (cell minus the card) is cut off on the right
+        val cell = (resources.displayMetrics.widthPixels - px(92) - px(48)) / COLUMNS
+        val barCut = (cell - (240 * CARD_SCALE * scale).toInt()).coerceAtLeast(0)
+        page.addView(searchBar, LinearLayout.LayoutParams(-1, -2).apply { rightMargin = barCut })
 
         // history
         historyBlock = LinearLayout(requireContext())
