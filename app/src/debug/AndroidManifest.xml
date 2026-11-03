@@ -7,5 +7,9 @@
         <activity android:name="ru.lazytv.SettingsActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
         <activity android:name="ru.lazytv.EpisodesActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
         <activity android:name="ru.lazytv.PersonActivity" android:exported="true" tools:node="merge" tools:replace="android:exported" />
+        <!-- debug builds only: fills a setting with sample data (see DebugSeed) -->
+        <receiver android:name="ru.lazytv.DebugSeed" android:exported="true">
+            <intent-filter><action android:name="ru.lazytv.SEED" /></intent-filter>
+        </receiver>
     </application>
 </manifest>
