@@ -74,7 +74,9 @@ object Tmdb {
     fun loadCollection(context: Context, collection: Collection, page: Int = 1): List<Title> {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val kind = if (collection.tv) "tv" else "movie"
-        return parse(download(context, "$BASE/$kind/${collection.path}?api_key=${BuildConfig.TMDB_KEY}&language=$language${collection.extra}&page=$page"), collection.tv)
+        val url = "$BASE/$kind/${collection.path}?api_key=${BuildConfig.TMDB_KEY}&language=$language${collection.extra}&page=$page"
+        cachedList(url)?.let { return it }
+        return parse(download(context, url), collection.tv).also { rememberList(url, it) }
     }
 
     fun listKey(category: Category) = "list_${category.id}"
@@ -84,15 +86,24 @@ object Tmdb {
         categories.filter { Settings.bool(context, listKey(it), it.onByDefault) }
 
     fun load(context: Context, category: Category, sort: String, page: Int = 1, extra: String = ""): List<Title> {
+        val url = listUrl(context, category, sort, page, extra)
+        cachedList(url)?.let { return it }
+        return parse(download(context, url), category.tv).also { rememberList(url, it) }
+    }
+
+    /** The page already fetched: it stands at once, without skeletons. */
+    fun peekPage(context: Context, category: Category, sort: String, page: Int = 1, extra: String = ""): List<Title>? =
+        cachedList(listUrl(context, category, sort, page, extra))
+
+    private fun listUrl(context: Context, category: Category, sort: String, page: Int, extra: String): String {
         val kind = if (category.tv) "tv" else "movie"
         val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
         val yearParam = if (category.tv) "first_air_date_year" else "primary_release_year"
         val sortKey = (if (category.tv) sort.replace("primary_release_date", "first_air_date") else sort)
             .replace("year=THIS_YEAR", "$yearParam=$year")
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
-        val url = "$BASE/discover/$kind?api_key=${BuildConfig.TMDB_KEY}&language=$language" +
+        return "$BASE/discover/$kind?api_key=${BuildConfig.TMDB_KEY}&language=$language" +
             "&sort_by=$sortKey${category.query}$extra&page=$page"
-        return parse(download(context, url), category.tv)
     }
 
     private fun parse(json: String, tv: Boolean): List<Title> {
@@ -311,22 +322,36 @@ object Tmdb {
     }
 
     /**
-     * Debug builds keep the answers on the device: while working on the screens the same pages are opened again and
-     * again, and every opening used to spend a TMDB request. The cache lives half a day; release builds ask every time.
+     * The answers are kept on the device: the lists and the cards are opened again and again, and every opening used to
+     * ask TMDB. Half a day old data is still better than a spinner; the lifetime is one number to tune later.
      */
     private fun download(context: Context, address: String): String {
-        if (BuildConfig.DEBUG) {
-            val file = cacheFile(context, address)
-            if (file.isFile && System.currentTimeMillis() - file.lastModified() < DEBUG_CACHE_MS) return file.readText()
-        }
+        val file = cacheFile(context, address)
+        if (file.isFile && System.currentTimeMillis() - file.lastModified() < CACHE_MS) return file.readText()
         val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 15000
         connection.readTimeout = 20000
         val body = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
-        if (BuildConfig.DEBUG) runCatching {
-            cacheFile(context, address).apply { parentFile?.mkdirs(); writeText(body) }
-        }
+        runCatching { file.apply { parentFile?.mkdirs(); writeText(body) } }
         return body
+    }
+
+    /** Lists already fetched: a page opened again stands at once instead of waiting for the network and showing skeletons. */
+    private class CachedList(val titles: List<Title>, val at: Long)
+    private val listCache = java.util.concurrent.ConcurrentHashMap<String, CachedList>()
+    private const val LIST_TTL_MS = 10 * 60 * 1000L
+
+    private fun cachedList(url: String): List<Title>? {
+        val hit = listCache[url] ?: return null
+        if (System.currentTimeMillis() - hit.at > LIST_TTL_MS) {
+            listCache.remove(url)
+            return null
+        }
+        return hit.titles
+    }
+
+    private fun rememberList(url: String, titles: List<Title>) {
+        listCache[url] = CachedList(titles, System.currentTimeMillis())
     }
 
     private fun cacheFile(context: Context, address: String): java.io.File {
@@ -335,5 +360,5 @@ object Tmdb {
         return java.io.File(java.io.File(context.cacheDir, "tmdb"), hash)
     }
 
-    private const val DEBUG_CACHE_MS = 12 * 60 * 60 * 1000L
+    private const val CACHE_MS = 12 * 60 * 60 * 1000L
 }

@@ -224,6 +224,18 @@ class MainFragment : BrowseSupportFragment() {
         })
         // the page stands next to the open menu from the start, not only after the menu was closed and opened once
         view.post { shiftPage(isShowingHeaders()) }
+        // the lists are warmed in the background: the pages and the rows open with the cards, not with skeletons
+        val warmContext = requireContext().applicationContext
+        Thread {
+            runCatching {
+                Tmdb.visibleCategories(warmContext).forEach { category ->
+                    if (!CatalogFilter.supports(category.id)) return@forEach
+                    val filter = CatalogFilter.load(warmContext, category.id)
+                    Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
+                }
+                Tmdb.overview.take(4).forEach { runCatching { Tmdb.loadCollection(warmContext, it) } }
+            }
+        }.start()
         // after an update the menu comes back to the page the user was on instead of the overview (docs/workflow.md)
         if (arguments?.getBoolean(RESTORE, false) == true) view.post { restorePage() }
     }

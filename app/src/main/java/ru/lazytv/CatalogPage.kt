@@ -244,8 +244,18 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         busy = false
         finished = false
         message.visibility = View.GONE
-        repeat(COLUMNS * 4) { cards.add(SkeletonCard) }
-        skeletons = true
+        val ctx = requireContext()
+        val filter = CatalogFilter.load(ctx, category.id)
+        // the first page is warmed at the start of the app: it stands at once, without skeletons
+        val cached = Tmdb.peekPage(ctx, category, CatalogFilter.sort(ctx, category.id).sort, 1, filter.query(category.tv))
+        if (cached != null) {
+            cards.addAll(0, cached)
+            skeletons = false
+            nextPage = 2
+        } else {
+            repeat(COLUMNS * 4) { cards.add(SkeletonCard) }
+            skeletons = true
+        }
         loadNext()
     }
 
