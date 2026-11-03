@@ -139,7 +139,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         // leanback 1.0 keeps the cursor inside the grid at its first row: up from there is sent to the buttons by hand
         grid.setOnKeyInterceptListener { event ->
             val up = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP && event.action == android.view.KeyEvent.ACTION_DOWN
-            if (up && grid.selectedPosition < COLUMNS && filterChip.isShown) filterChip.requestFocus() else false
+            if (up && grid.selectedPosition < COLUMNS && filterChip.isShown) nearestChip().requestFocus() else false
         }
         grid.adapter = bridge
         grid.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {
@@ -169,6 +169,19 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         signature = CatalogFilter.signature(requireContext(), category.id)
         renderButtons()
         startOver()
+    }
+
+    /** The button above the focused card (or the closest one to it): the first cards go up to the filters, the next ones to the sort. */
+    private fun nearestChip(): View {
+        val card = grid.focusedChild ?: return filterChip
+        val at = IntArray(2)
+        card.getLocationOnScreen(at)
+        val x = at[0] + card.width / 2
+        fun gap(chip: View): Int {
+            chip.getLocationOnScreen(at)
+            return if (x < at[0]) at[0] - x else if (x > at[0] + chip.width) x - (at[0] + chip.width) else 0
+        }
+        return if (gap(sortChip) < gap(filterChip)) sortChip else filterChip
     }
 
     /** The captions of the buttons after a choice on the filters or sort screens. */
