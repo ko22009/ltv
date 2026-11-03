@@ -71,6 +71,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private lateinit var input: EditText
     private lateinit var history: LinearLayout
     private lateinit var historyBlock: LinearLayout
+    private lateinit var clearHistory: View
     private lateinit var grid: VerticalGridView
     private lateinit var message: TextView
     private var pending: Runnable? = null
@@ -116,7 +117,12 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         searchBar = SearchBar(requireActivity(), scale) { submit(it) }
         input = searchBar.input
         // the browse screen does not pass the ids of the next view, so down and up between the field, the buttons and the cards are taken here
-        searchBar.onDown = { (if (showingRecent && recentActions.childCount > 0) recentActions.getChildAt(0) else grid).requestFocus() }
+        // down from the input goes to the nearest thing below: the "clear" of the search history, then the buttons of the viewing history
+        searchBar.onDown = {
+            (if (historyBlock.isShown) clearHistory
+            else if (showingRecent && recentActions.childCount > 0) recentActions.getChildAt(0)
+            else grid).requestFocus()
+        }
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 pending?.let { ui.removeCallbacks(it) }
@@ -141,11 +147,12 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         historyHeader.gravity = Gravity.CENTER_VERTICAL
         historyHeader.setPadding(0, px(18), 0, px(4))
         historyHeader.addView(label("История поиска", 22f), LinearLayout.LayoutParams(-2, -2))
-        historyHeader.addView(button(MenuIcons.DELETE, "Очистить") {
+        clearHistory = button(MenuIcons.DELETE, "Очистить") {
             Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
             showHistory()
             input.requestFocus()
-        }, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
+        }
+        historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
         historyBlock.addView(historyHeader)
         history = LinearLayout(requireContext())
         historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(52)))
