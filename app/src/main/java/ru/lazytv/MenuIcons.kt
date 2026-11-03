@@ -165,7 +165,6 @@ class IconHeaderPresenter : RowHeaderPresenter() {
         val container = viewHolder.view as HeaderRow
         (container.getChildAt(0) as ImageView).setImageDrawable(MenuIcons.forName(name))
         container.title = findTitle(container)
-        container.isSearch = name == SEARCH_HEADER
         container.restyle()
     }
 
@@ -181,15 +180,6 @@ class IconHeaderPresenter : RowHeaderPresenter() {
     /** The row repaints itself as soon as the list selects it or the focus lands anywhere inside. */
     private class HeaderRow(context: Context, private val scale: Float) : LinearLayout(context) {
         var title: TextView? = null
-        /** The search entry opens the search screen instead of a page: a click is caught here, whatever Leanback sets. */
-        var isSearch = false
-
-        override fun performClick(): Boolean {
-            if (!isSearch) return super.performClick()
-            context.startActivity(android.content.Intent(context, SearchActivity::class.java))
-            return true
-        }
-
         init {
             background = plate()
             setPadding((6 * scale).toInt(), (4 * scale).toInt(), (18 * scale).toInt(), (4 * scale).toInt())

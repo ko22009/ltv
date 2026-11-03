@@ -26,7 +26,6 @@
         <activity android:name=".ServiceActivity" android:exported="false" />
         <activity android:name=".PersonActivity" android:exported="false" />
         <activity android:name=".TorrentsActivity" android:exported="false" />
-        <activity android:name=".SearchActivity" android:exported="false" />
         <activity android:name=".TitlesGridActivity" android:exported="false" />
         <activity android:name=".FiltersActivity" android:exported="false" />
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="landscape" android:configChanges="orientation|screenSize|keyboardHidden" />

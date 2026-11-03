@@ -78,6 +78,11 @@ class MainFragment : BrowseSupportFragment() {
     /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
     private var rail: LinearLayout? = null
     private var currentPage = OVERVIEW
+    private var searchPage: SearchPageFragment? = null
+
+    fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        searchPage?.voiceResult(requestCode, resultCode, data)
+    }
     /** Pages with the filter and sort buttons: their rows and the choices they were built from. */
     private val catalogPages = HashMap<String, Pair<ArrayObjectAdapter, Category>>()
     private val catalogSignatures = HashMap<String, String>()
@@ -404,12 +409,8 @@ class MainFragment : BrowseSupportFragment() {
             val page = RowsSupportFragment()
             val name = (row as Row).headerItem.name
             if (name == SEARCH_HEADER) {
-                // search is opened by OK, not by the cursor passing over it: the page stays what it was a moment ago
-                // (the locked adult list is never mirrored, it would skip the code)
-                val last = if (currentPage == ADULT) OVERVIEW else currentPage
-                page.adapter = pageFor(last)
-                page.onItemViewClickedListener = onClick
-                return page
+                currentPage = name
+                return SearchPageFragment().also { searchPage = it }
             }
             currentPage = name
             val pin = Settings.string(requireContext(), Settings.PARENTAL_PIN, "")

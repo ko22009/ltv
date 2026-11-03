@@ -1,6 +1,5 @@
 package ru.lazytv
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -11,12 +10,16 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.ClassPresenterSelector
 import androidx.leanback.widget.ItemBridgeAdapter
@@ -27,12 +30,18 @@ import org.json.JSONArray
 data class TorrentQuery(val query: String)
 
 /**
- * Search in the LazyMedia layout: microphone and torrent-mode buttons next to the input, the search
+ * The search page of the menu, in the LazyMedia layout: microphone and torrent-mode buttons next to the input, the search
  * history with "clear", and the found titles below. In torrent mode the phrase goes straight to the
  * torrent list. While no phrase is typed the grid shows the viewing history, which can be edited in place.
  * The cards are the ones of the rest of the app ([CardPresenter], [MoreTilePresenter]), not their own copies.
  */
-class SearchActivity : Activity() {
+class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
+    private val pageAdapter = BrowseSupportFragment.MainFragmentAdapter<SearchPageFragment>(this)
+    override fun getMainFragmentAdapter() = pageAdapter.also {
+        // the same as the rows pages: the page is squeezed into what the menu leaves, instead of lying under it
+        it.isScalingEnabled = true
+    }
+
     private val scale get() = resources.displayMetrics.widthPixels / 1280f
     private fun px(value: Int) = (value * scale).toInt()
     private val ui = Handler(Looper.getMainLooper())
@@ -61,7 +70,7 @@ class SearchActivity : Activity() {
     /** The phrase the grid shows results of; the torrent tile searches it. */
     private var phraseShown = ""
 
-    private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(this).apply {
+    private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(requireContext()).apply {
         text = value
         setTextColor(color)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, size * scale)
@@ -71,12 +80,12 @@ class SearchActivity : Activity() {
     private fun focusBackground(normal: Int, radius: Float = 3f, circle: Boolean = false) = focusShape(scale, normal, radius, circle)
 
     /** Chip with a small vector icon and a caption; focus turns it bright green. */
-    private fun button(icon: String, caption: String, action: () -> Unit) = LinearLayout(this).apply {
+    private fun button(icon: String, caption: String, action: () -> Unit) = LinearLayout(requireContext()).apply {
         gravity = Gravity.CENTER
         isFocusable = true
         isClickable = true
         background = focusBackground(0x66000000)
-        addView(ImageView(this@SearchActivity).apply {
+        addView(ImageView(requireContext()).apply {
             setImageDrawable(PathDrawable(icon).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
         }, LinearLayout.LayoutParams(px(18), px(18)))
         addView(label(caption, 15f).apply { setPadding(px(10), 0, 0, 0) })
@@ -84,16 +93,15 @@ class SearchActivity : Activity() {
         setOnClickListener { action() }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val root = FrameLayout(this)
-        root.background = calmBackground()
-        val page = LinearLayout(this)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val page = LinearLayout(requireContext())
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(16))
+        // the page sits to the right of the icon rail; the top margin matches the rows of the other pages
+        // (the left edge is where the cards of the rows start, to the right of the icon rail)
+        page.setPadding(px(75), px(24), px(48), px(16))
 
         // microphone and the input
-        searchBar = SearchBar(this, scale) { submit(it) }
+        searchBar = SearchBar(requireActivity(), scale) { submit(it) }
         input = searchBar.input
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -107,19 +115,19 @@ class SearchActivity : Activity() {
         page.addView(searchBar)
 
         // history
-        historyBlock = LinearLayout(this)
+        historyBlock = LinearLayout(requireContext())
         historyBlock.orientation = LinearLayout.VERTICAL
         historyBlock.addView(label("История поиска", 22f).apply { setPadding(0, px(20), 0, px(10)) })
-        history = LinearLayout(this)
+        history = LinearLayout(requireContext())
         historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(44)))
         page.addView(historyBlock)
 
-        recentHeader = LinearLayout(this)
+        recentHeader = LinearLayout(requireContext())
         recentHeader.gravity = Gravity.CENTER_VERTICAL
         recentHeader.setPadding(0, px(18), 0, px(4))
         recentHeader.visibility = View.GONE
         recentHeader.addView(label("Недавно просмотренное", 22f), LinearLayout.LayoutParams(0, -2, 1f))
-        recentActions = LinearLayout(this)
+        recentActions = LinearLayout(requireContext())
         recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(44)))
         page.addView(recentHeader)
 
@@ -139,16 +147,31 @@ class SearchActivity : Activity() {
                 (viewHolder.itemView as? TitleCard)?.setPicked(title != null && showingRecent && editing && key(title) in picked)
             }
         })
-        grid = VerticalGridView(this)
+        grid = VerticalGridView(requireContext())
         grid.setNumColumns(COLUMNS)
         grid.setPadding(0, px(8), 0, px(16))
         grid.clipToPadding = false
         grid.setItemSpacing(px(6))
         grid.adapter = bridge
         page.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(page, FrameLayout.LayoutParams(-1, -1))
-        setContentView(root)
         showHistory()
+        return page
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        tellBrowse()
+    }
+
+    /** The browse screen waits for a page to say that it is made and filled; this page is ready at once. */
+    private fun tellBrowse() {
+        pageAdapter.fragmentHost?.notifyViewCreated(pageAdapter)
+        pageAdapter.fragmentHost?.notifyDataReady(pageAdapter)
+    }
+
+    /** The answer of the voice recognizer arrives at the activity and is passed here by the menu screen. */
+    fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (::searchBar.isInitialized) searchBar.handleResult(requestCode, resultCode, data)
     }
 
     private fun key(title: Title) = title.tv to title.id
@@ -157,7 +180,7 @@ class SearchActivity : Activity() {
     private fun open(item: Any?, view: View) {
         if (item is MoreTile) {
             remember(input.text.toString())
-            startActivity(Intent(this, TorrentsActivity::class.java).putExtra("name", phraseShown).putExtra("tv", true))
+            startActivity(Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", phraseShown).putExtra("tv", true))
             return
         }
         val title = item as? Title ?: return
@@ -168,7 +191,7 @@ class SearchActivity : Activity() {
             return
         }
         remember(input.text.toString())
-        startActivity(Intent(this, DetailsActivity::class.java).putExtras(title.toExtras()))
+        startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
     }
 
     private fun setCards(items: List<Any>) {
@@ -179,6 +202,7 @@ class SearchActivity : Activity() {
     /** The history changes while a card is open (a title is watched): the grid is filled again on return. */
     override fun onResume() {
         super.onResume()
+        tellBrowse()
         showRecent()
     }
 
@@ -202,8 +226,8 @@ class SearchActivity : Activity() {
         message.text = "Ищем…"
         message.visibility = View.VISIBLE
         Thread {
-            val found = runCatching { Tmdb.search(applicationContext, phrase) }
-            runOnUiThread {
+            val found = runCatching { Tmdb.search(requireContext().applicationContext, phrase) }
+            activity?.runOnUiThread {
                 if (input.text.toString().trim() != phrase) return@runOnUiThread
                 val titles = found.getOrDefault(emptyList())
                 phraseShown = phrase
@@ -214,16 +238,11 @@ class SearchActivity : Activity() {
         }.start()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        searchBar.handleResult(requestCode, resultCode, data)
-    }
-
     // --- viewing history -----------------------------------------------------------------------
 
     private fun showRecent() {
         if (input.text.toString().trim().length >= 2) return
-        recent = History.all(this)
+        recent = History.all(requireContext())
         showingRecent = recent.isNotEmpty()
         if (!showingRecent) {
             editing = false
@@ -236,8 +255,8 @@ class SearchActivity : Activity() {
         message.visibility = View.GONE
         renderRecentActions()
         if (recent.any { it.poster == null }) Thread {
-            val fixed = History.withPosters(applicationContext, recent)
-            runOnUiThread {
+            val fixed = History.withPosters(requireContext().applicationContext, recent)
+            activity?.runOnUiThread {
                 if (showingRecent && fixed != recent) {
                     recent = fixed
                     setCards(fixed)
@@ -267,18 +286,18 @@ class SearchActivity : Activity() {
     }
 
     private fun removePicked() {
-        History.remove(this, recent.filter { key(it) in picked })
+        History.remove(requireContext(), recent.filter { key(it) in picked })
         picked.clear()
         showRecent()
         recentActions.getChildAt(recentActions.childCount - 1)?.requestFocus()
     }
 
     private fun askClearRecent() {
-        android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+        android.app.AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog_Alert)
             .setTitle("Очистить весь список?")
             .setMessage("Недавно просмотренное будет удалено.")
             .setPositiveButton("Очистить") { _, _ ->
-                History.clear(this)
+                History.clear(requireContext())
                 picked.clear()
                 editing = false
                 showRecent()
@@ -291,7 +310,7 @@ class SearchActivity : Activity() {
     // --- search history ------------------------------------------------------------------------
 
     private fun saved(): List<String> {
-        val raw = Settings.string(this, Settings.SEARCH_HISTORY, "[]")
+        val raw = Settings.string(requireContext(), Settings.SEARCH_HISTORY, "[]")
         val array = runCatching { JSONArray(raw) }.getOrDefault(JSONArray())
         return (0 until array.length()).map { array.getString(it) }
     }
@@ -300,7 +319,7 @@ class SearchActivity : Activity() {
         val text = phrase.trim()
         if (text.length < 2) return
         val list = (listOf(text) + saved().filter { !it.equals(text, true) }).take(12)
-        Settings.setString(this, Settings.SEARCH_HISTORY, JSONArray(list).toString())
+        Settings.setString(requireContext(), Settings.SEARCH_HISTORY, JSONArray(list).toString())
         showHistory()
     }
 
@@ -309,7 +328,7 @@ class SearchActivity : Activity() {
         val items = saved()
         historyBlock.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
         history.addView(button(MenuIcons.DELETE, "Очистить") {
-            Settings.setString(this, Settings.SEARCH_HISTORY, "[]")
+            Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
             showHistory()
             input.requestFocus()
         }, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
@@ -323,9 +342,9 @@ class SearchActivity : Activity() {
         }
     }
 
-    override fun onDestroy() {
+    override fun onDestroyView() {
         ui.removeCallbacksAndMessages(null)
-        super.onDestroy()
+        super.onDestroyView()
     }
 
     private companion object {

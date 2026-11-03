@@ -26,24 +26,14 @@ data class Service(val id: String, val name: String)
 object Tmdb {
     private const val BASE = "https://api.themoviedb.org/3"
 
-    /** Lists on the left menu. The first five are on by default, the rest are picked in the settings. */
+    /**
+     * Lists on the left menu. There is no list per genre: the genre, country, years and the rest are picked with
+     * the filters of films and series. 18+ stays apart because of the parental code.
+     */
     val categories = listOf(
         Category("movies", "Фильмы", false, "", 0xFF0555A0.toInt(), true),
         Category("serials", "Сериалы", true, "", 0xFF673AB7.toInt(), true),
-        Category("cartoons", "Мультфильмы", false, "&with_genres=16", 0xFF26A9C0.toInt(), true),
-        Category("horror", "Ужастики", false, "&with_genres=27", 0xFF8E1B1B.toInt(), true),
         Category("adult", "18+", false, "&include_adult=true&certification_country=RU&certification=18%2B", 0xFF37474F.toInt(), true),
-        Category("action", "Боевики", false, "&with_genres=28", 0xFFB71C1C.toInt(), false),
-        Category("comedy", "Комедии", false, "&with_genres=35", 0xFFF9A825.toInt(), false),
-        Category("drama", "Драмы", false, "&with_genres=18", 0xFF4E342E.toInt(), false),
-        Category("scifi", "Фантастика", false, "&with_genres=878", 0xFF1565C0.toInt(), false),
-        Category("thriller", "Триллеры", false, "&with_genres=53", 0xFF263238.toInt(), false),
-        Category("romance", "Мелодрамы", false, "&with_genres=10749", 0xFFAD1457.toInt(), false),
-        Category("detective", "Детективы", false, "&with_genres=9648", 0xFF455A64.toInt(), false),
-        Category("adventure", "Приключения", false, "&with_genres=12", 0xFF2F7D57.toInt(), false),
-        Category("fantasy", "Фэнтези", false, "&with_genres=14", 0xFF6A1B9A.toInt(), false),
-        Category("docs", "Документальные", false, "&with_genres=99", 0xFF00695C.toInt(), false),
-        Category("anime", "Аниме", true, "&with_genres=16&with_original_language=ja", 0xFFD81B60.toInt(), false),
     )
 
     val services = listOf(
