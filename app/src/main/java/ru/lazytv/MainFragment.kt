@@ -40,6 +40,9 @@ private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
 
+/** How long the menu slides (Leanback's lb_browse_headers_transition_duration): the rail and the page follow the same time, or the move looks cut short. */
+private const val MENU_SLIDE_MS = 250L
+
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
 
@@ -198,8 +201,8 @@ class MainFragment : BrowseSupportFragment() {
                 // Leanback lays the menu out with its own gap again when it opens: the check of the gap starts over
                 spacingTries = 0
                 headersSupportFragment?.verticalGridView?.requestLayout()
-                if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction { rail?.visibility = View.GONE }?.start()
-                else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(200)?.start() }
+                if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(MENU_SLIDE_MS)?.withEndAction { rail?.visibility = View.GONE }?.start()
+                else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(MENU_SLIDE_MS)?.start() }
                 shiftPage(withHeaders)
             }
 
@@ -221,7 +224,7 @@ class MainFragment : BrowseSupportFragment() {
         val frame = this.view?.findViewById<View>(androidx.leanback.R.id.scale_frame) ?: return
         frame.animate().cancel()
         if (menuOpen == menuWasOpen) frame.translationX = shift
-        else frame.animate().translationX(shift).setDuration(150).start()
+        else frame.animate().translationX(shift).setDuration(MENU_SLIDE_MS).start()
         menuWasOpen = menuOpen
     }
 
