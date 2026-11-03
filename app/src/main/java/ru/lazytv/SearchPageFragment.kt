@@ -165,23 +165,14 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                 (viewHolder.itemView as? TitleCard)?.setPicked(title != null && showingRecent && editing && key(title) in picked)
             }
         })
-        // the focused card grows a little, as on the overview, so it is clear at once which one is chosen
-        androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
-        grid = VerticalGridView(requireContext())
-        grid.id = View.generateViewId()
-        grid.setNumColumns(COLUMNS)
-        grid.setPadding(0, px(8), 0, px(16))
-        grid.clipToPadding = false
-        grid.clipChildren = false
-        grid.setItemSpacing(px(6))
-        grid.adapter = bridge
+        grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS)
         // up from the first row of the history goes to its buttons: the nearest view above the card is not the button, which sits to the side
         grid.setOnKeyInterceptListener { event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
                 showingRecent && grid.selectedPosition in 0 until COLUMNS && recentActions.childCount > 0
             ) recentActions.getChildAt(0).requestFocus() else false
         }
-        page.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
+        page.addView(grid, titleGridParams(scale))
         showHistory()
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide

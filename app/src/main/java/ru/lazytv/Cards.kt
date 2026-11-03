@@ -272,3 +272,29 @@ fun formatRuntime(minutes: Int): String = when {
     minutes % 60 == 0 -> "${minutes / 60} ч"
     else -> "${minutes / 60} ч ${minutes % 60} мин"
 }
+/** Room around a grid of cards (dp of the screen): the focused card grows into it, and the grid cuts what goes past it. */
+private const val GRID_EDGE = 12
+
+/**
+ * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
+ * ([bridge] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut under the header
+ * instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where the page's edge is.
+ */
+fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
+    androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
+    val edge = (GRID_EDGE * scale).toInt()
+    return androidx.leanback.widget.VerticalGridView(context).apply {
+        id = View.generateViewId()
+        setNumColumns(columns)
+        setPadding(edge, edge, edge, (16 * scale).toInt())
+        clipToPadding = true
+        setItemSpacing((6 * scale).toInt())
+        adapter = bridge
+    }
+}
+
+/** Layout of [titleCardGrid] in a vertical page: the side room goes outside the page's padding, the cards stay on its edge. */
+fun titleGridParams(scale: Float) = LinearLayout.LayoutParams(-1, 0, 1f).apply {
+    val edge = (GRID_EDGE * scale).toInt()
+    setMargins(-edge, 0, -edge, 0)
+}

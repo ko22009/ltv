@@ -127,21 +127,12 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
                 }
             }
         })
-        // the focused card grows a little, as on the overview, so it is clear at once which one is chosen
-        androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
-        grid = VerticalGridView(requireContext())
-        grid.id = View.generateViewId()
-        grid.setNumColumns(COLUMNS)
-        grid.setPadding(0, px(18), 0, px(16))
-        grid.clipToPadding = false
-        grid.clipChildren = false
-        grid.setItemSpacing(px(6))
+        grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS)
         // leanback 1.0 keeps the cursor inside the grid at its first row: up from there is sent to the buttons by hand
         grid.setOnKeyInterceptListener { event ->
             val up = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP && event.action == android.view.KeyEvent.ACTION_DOWN
             if (up && grid.selectedPosition < COLUMNS && filterChip.isShown) nearestChip().requestFocus() else false
         }
-        grid.adapter = bridge
         grid.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {
             override fun onChildViewHolderSelected(
                 parent: RecyclerView, child: RecyclerView.ViewHolder?, position: Int, subposition: Int,
@@ -160,7 +151,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             code == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event.action == android.view.KeyEvent.ACTION_DOWN && filterChip.requestFocus()
         }
 
-        page.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
+        page.addView(grid, titleGridParams(scale))
 
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
