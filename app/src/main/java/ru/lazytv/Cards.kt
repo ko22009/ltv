@@ -285,7 +285,10 @@ fun formatRuntime(minutes: Int): String = when {
  * the top one is the room plus the card's own margin.
  */
 private const val GRID_EDGE_SIDE = 20
+/** The grid's top padding: the room the enlarged card grows into above the first row. */
 private const val GRID_EDGE_TOP = 14
+/** The grid starts this much below the header, so a scrolling list is cut with a gap instead of sticking to it. */
+private const val GRID_TOP_GAP = 14
 
 /**
  * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
@@ -307,8 +310,8 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
     }
 }
 
-/** Layout of [titleCardGrid] in a vertical page: the side room goes outside the page's padding, the cards stay on its edge. */
+/** Layout of [titleCardGrid] in a vertical page: the side room and the top gap go outside the page's padding, the cards stay on its edge. */
 fun titleGridParams(scale: Float) = LinearLayout.LayoutParams(-1, 0, 1f).apply {
     val side = (GRID_EDGE_SIDE * scale).toInt()
-    setMargins(-side, 0, -side, 0)
+    setMargins(-side, (GRID_TOP_GAP * scale).toInt(), -side, 0)
 }
