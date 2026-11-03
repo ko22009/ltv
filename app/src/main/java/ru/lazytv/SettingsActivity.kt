@@ -9,8 +9,9 @@ import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
 
 /**
- * Settings screen: one flat list, no pages inside pages. Sections follow each other as captions, a choice shows
- * its values as rows right under its caption, and a change is saved at once — screens pick it up when shown.
+ * Settings screens: one section per screen, opened from a card on the settings page. The options of the section
+ * follow each other, a choice shows its values as rows under it, and a change is saved at once — screens pick it up
+ * when shown.
  */
 class SettingsActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,25 +43,15 @@ class SettingsScreen : GuidedStepSupportFragment() {
     private val requestSave = 7001
     private val requestLoad = 7002
 
-    override fun onCreateGuidance(savedInstanceState: Bundle?) =
-        GuidanceStylist.Guidance("Настройки", "Изменения применяются сразу", "LazyTV", null)
+    override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
+        val section = arguments?.getString("section").orEmpty()
+        val title = section.ifEmpty { "Настройки" }
+        return GuidanceStylist.Guidance(title, "Изменения применяются сразу", if (section.isEmpty()) "LazyTV" else "Настройки", null)
+    }
 
-    /** The list starts on a section caption, which takes no focus: the first real row is focused by hand. */
     override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.post { focusFirstRow(view) }
-        val section = arguments?.getString("section").orEmpty()
-        if (section.isNotEmpty()) view.post { scrollToSection(view, section) }
-    }
-
-    /** Opened from a settings card: bring its section to the top and focus its first row. */
-    private fun scrollToSection(view: android.view.View, title: String) {
-        val actionId = sectionIds[title] ?: return
-        val position = findActionPositionById(actionId)
-        if (position < 0) return
-        val list = findList(view) ?: return
-        list.scrollToPosition(position)
-        list.postDelayed({ focusFirstRow(view) }, 150)
     }
 
     private fun focusFirstRow(view: android.view.View) {
@@ -222,6 +213,18 @@ class SettingsScreen : GuidedStepSupportFragment() {
 
         section(actions, "О приложении")
         info(actions, "Версия", BuildConfig.VERSION_NAME)
+
+        // one section per screen: the cards on the settings page open their own screen, not one long list
+        val title = arguments?.getString("section").orEmpty().ifEmpty { "Списки" }
+        val start = sectionIds[title] ?: return
+        val all = actions.toList()
+        val headers = sectionIds.values.toSet()
+        val from = all.indexOfFirst { it.id == start }
+        if (from < 0) return
+        val rest = all.drop(from + 1)
+        val end = rest.indexOfFirst { it.id in headers }
+        actions.clear()
+        actions.addAll(if (end < 0) rest else rest.take(end))
     }
 
     override fun onGuidedActionClicked(action: GuidedAction) {
