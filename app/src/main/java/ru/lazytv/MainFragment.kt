@@ -222,6 +222,8 @@ class MainFragment : BrowseSupportFragment() {
                 headersSupportFragment?.verticalGridView?.requestLayout()
             }
         })
+        // the page stands next to the open menu from the start, not only after the menu was closed and opened once
+        view.post { shiftPage(isShowingHeaders()) }
         // after an update the menu comes back to the page the user was on instead of the overview (docs/workflow.md)
         if (arguments?.getBoolean(RESTORE, false) == true) view.post { restorePage() }
     }
@@ -246,7 +248,8 @@ class MainFragment : BrowseSupportFragment() {
      */
     private fun shiftPage(menuOpen: Boolean) {
         val scale = resources.displayMetrics.widthPixels / 1280f
-        val shift = if (!menuOpen) 0f else -15 * scale
+        // the menu is 30dp narrower than the stock one, so the page comes closer by the same room
+        val shift = if (!menuOpen) 0f else -55 * scale
         val frame = this.view?.findViewById<View>(androidx.leanback.R.id.scale_frame) ?: return
         frame.animate().cancel()
         if (menuOpen == menuWasOpen) frame.translationX = shift

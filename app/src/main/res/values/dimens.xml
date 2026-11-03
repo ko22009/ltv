@@ -3,4 +3,6 @@
     <dimen name="lb_browse_expanded_row_no_hovercard_bottom_padding">6dp</dimen>
     <!-- rows start this far from the page edge; the icon rail is 48dp wide, so the gap to it is about the gap to the open menu.
          (lb_browse_rows_margin_start must stay: Leanback hides the menu by it) -->
-    <dimen name="lb_browse_padding_start">69dp</dimen></resources>
+    <dimen name="lb_browse_padding_start">69dp</dimen>    <!-- the open menu is narrower than the stock 270dp: its items fit and the page gets the room back -->
+    <dimen name="lb_browse_headers_width">240dp</dimen>
+</resources>
