@@ -86,7 +86,9 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC101A14.toInt(), 0xF2101A14.toInt()))
         }, FrameLayout.LayoutParams(-1, -1))
-        banner.addView(View(this).apply { background = DotsDrawable(0x33A7D6BC) }, FrameLayout.LayoutParams(-1, -1))
+        banner.addView(View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC101A14.toInt(), 0xF2101A14.toInt()))
+        }, FrameLayout.LayoutParams(-1, -1))
         // the poster is not borrowed as a stand-in: until the wide backdrop is there, a spinner turns on the band
         backdrop.alpha = 0f
         bannerSpinner = Spinner(this, dp(44))
