@@ -76,10 +76,9 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private lateinit var message: TextView
     private var pending: Runnable? = null
 
-    /** Titles of the grid; after a phrase the first tile sends it to the torrent search. */
+    /** Titles of the grid: the found ones, or the viewing history while no phrase is typed. */
     private val cards = ArrayObjectAdapter(ClassPresenterSelector()
-        .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE))
-        .addClassPresenter(MoreTile::class.java, MoreTilePresenter(CARD_SCALE)))
+        .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE)))
 
     // the viewing history shown under the input while no phrase is typed, and its edit mode
     private lateinit var recentHeader: LinearLayout
@@ -89,8 +88,6 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private var showingRecent = false
     private var editing = false
     private val picked = mutableSetOf<Pair<Boolean, Long>>()
-    /** The phrase the grid shows results of; the torrent tile searches it. */
-    private var phraseShown = ""
 
     private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(requireContext()).apply {
         text = value
@@ -150,6 +147,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
             showHistory()
             input.requestFocus()
+        }
+        // right of "clear" there is nothing: the focus must not jump to the microphone, which is above and left
+        clearHistory.setOnKeyListener { _, code, event ->
+            code == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN
         }
         historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { leftMargin = px(8) })
         historyBlock.addView(historyHeader)
@@ -230,13 +231,8 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
 
     private fun key(title: Title) = title.tv to title.id
 
-    /** A card: opens the title, or in the edit mode of the history marks it for deletion; the tile opens the torrent search. */
+    /** A card: opens the title, or in the edit mode of the history marks it for deletion. */
     private fun open(item: Any?, view: View) {
-        if (item is MoreTile) {
-            remember(input.text.toString())
-            startActivity(Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", phraseShown).putExtra("tv", true))
-            return
-        }
         val title = item as? Title ?: return
         if (showingRecent && editing) {
             if (!picked.remove(key(title))) picked.add(key(title))
@@ -287,9 +283,8 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                 if (!isAdded || input.text.toString().trim() != phrase) return@runOnUiThread
                 loader.visibility = View.GONE
                 val titles = found.getOrDefault(emptyList())
-                phraseShown = phrase
-                setCards(listOf<Any>(MoreTile("Искать торренты")) + titles)
-                message.text = if (found.isFailure) "Нет связи с каталогом" else if (titles.isEmpty()) "В каталоге ничего не найдено, можно искать торренты" else ""
+                setCards(titles)
+                message.text = if (found.isFailure) "Нет связи с каталогом" else if (titles.isEmpty()) "В каталоге ничего не найдено" else ""
                 message.visibility = if (message.text.isEmpty()) View.GONE else View.VISIBLE
             }
         }.start()
