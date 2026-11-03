@@ -392,13 +392,42 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         history.removeAllViews()
         val items = saved()
         historyBlock.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
-        items.forEach { phrase ->
-            history.addView(button(MenuIcons.HISTORY, phrase) {
+        items.forEachIndexed { index, phrase ->
+            val chip = button(MenuIcons.HISTORY, phrase) {
                 input.setText(phrase)
                 input.setSelection(phrase.length)
                 submit(phrase)
-            }.also { (it.getChildAt(1) as TextView).apply { maxLines = 1; maxWidth = px(220); ellipsize = android.text.TextUtils.TruncateAt.END } },
-                LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
+            }.also { (it.getChildAt(1) as TextView).apply { maxLines = 1; maxWidth = px(220); ellipsize = android.text.TextUtils.TruncateAt.END } }
+            // the row is a slider: the focus walks the phrases itself, also those out of sight, and stays at the ends
+            chip.setOnKeyListener { _, code, event ->
+                if (event.action != KeyEvent.ACTION_DOWN) false
+                else if (code == KeyEvent.KEYCODE_DPAD_RIGHT || code == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    val step = if (code == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    val next = history.getChildAt(index + step)
+                    if (next != null) {
+                        next.requestFocus()
+                        revealChip(next)
+                    }
+                    true
+                } else if (code == KeyEvent.KEYCODE_DPAD_UP) {
+                    // the "clear" stands right above the phrases: up goes to it, as the eye expects
+                    clearHistory.requestFocus()
+                    true
+                } else false
+            }
+            history.addView(chip, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
+        }
+    }
+
+    /** Scrolls the phrase row so the focused chip is fully seen, not cut by the row's edge. */
+    private fun revealChip(chip: View) {
+        val scroll = history.parent as? android.widget.HorizontalScrollView ?: return
+        val pad = px(12)
+        val left = chip.left - pad
+        val right = chip.right + pad - scroll.width
+        when {
+            left < scroll.scrollX -> scroll.smoothScrollTo(left.coerceAtLeast(0), 0)
+            right > scroll.scrollX -> scroll.smoothScrollTo(right.coerceAtLeast(0), 0)
         }
     }
 
