@@ -13,6 +13,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.leanback.widget.Presenter
 
+/** Height of the one button of the app (dp of the screen), and of the rows that hold such buttons. */
+const val CHIP_HEIGHT = 44
+
 /** A button above the rows of a films/series page: it opens the filters or the sort screen of that list. */
 data class CatalogButton(val category: String, val filters: Boolean, val caption: String)
 
@@ -28,17 +31,17 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         isFocusableInTouchMode = true
         isClickable = true
         background = focusShape(scale, 0xFF1F3228.toInt(), radius = 6f)
-        layoutParams = ViewGroup.MarginLayoutParams(-2, px(52))
-        setPadding(px(if (icon == null) 26 else 22), 0, px(26), 0)
+        layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
+        setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {
             tag = "icon"
             setChipIcon(icon)
-        }, LinearLayout.LayoutParams(px(22), px(22)).apply { rightMargin = px(10) })
+        }, LinearLayout.LayoutParams(px(18), px(18)).apply { rightMargin = px(8) })
         addView(TextView(context).apply {
             tag = "caption"
             text = caption
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scale)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             maxLines = 1
@@ -61,7 +64,7 @@ class CatalogButtonPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
         val chip = chipButton(parent.context, scale, "")
-        chip.layoutParams = ViewGroup.MarginLayoutParams(-2, (52 * scale).toInt()).apply {
+        chip.layoutParams = ViewGroup.MarginLayoutParams(-2, (CHIP_HEIGHT * scale).toInt()).apply {
             rightMargin = (16 * scale).toInt()
             topMargin = (6 * scale).toInt()
             bottomMargin = (6 * scale).toInt()

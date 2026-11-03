@@ -152,13 +152,13 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             showHistory()
             input.requestFocus()
         }
-        historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
+        historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { leftMargin = px(8) })
         historyBlock.addView(historyHeader)
         history = LinearLayout(requireContext())
         // a slider: up to 12 phrases do not fit the screen, the remote scrolls the row as the focus goes right
         val historyScroll = android.widget.HorizontalScrollView(requireContext())
         historyScroll.isHorizontalScrollBarEnabled = false
-        historyScroll.addView(history, FrameLayout.LayoutParams(-2, px(52)))
+        historyScroll.addView(history, FrameLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         historyBlock.addView(historyScroll, LinearLayout.LayoutParams(-1, -2))
         page.addView(historyBlock)
 
@@ -168,7 +168,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         recentHeader.visibility = View.GONE
         recentHeader.addView(label("Недавно открытое", 22f), LinearLayout.LayoutParams(-2, -2))
         recentActions = LinearLayout(requireContext())
-        recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
+        recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { leftMargin = px(8) })
         page.addView(recentHeader)
 
         message = label("", 16f, 0xFFAFC4B6.toInt())

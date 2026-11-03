@@ -103,8 +103,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             }
         }
         sortChip = chipButton(requireContext(), scale, "Сортировка", MenuIcons.SORT).apply { setOnClickListener { chooseSort() } }
-        buttons.addView(filterChip, LinearLayout.LayoutParams(-2, px(52)).apply { rightMargin = px(16) })
-        buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(52)))
+        buttons.addView(filterChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(16) })
+        buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         // a catalogue without its own sort and filters shows only the list
         if (!CatalogFilter.supports(category.id)) buttons.visibility = View.GONE
         header.addView(buttons)
