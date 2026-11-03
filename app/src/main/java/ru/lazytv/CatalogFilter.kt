@@ -32,6 +32,26 @@ data class CatalogFilter(
         ratingFrom != 1 || ratingTo != 10, age.isNotEmpty(), hideWatched,
     ).count { it }
 
+    /** What is chosen now, comma-separated, for the line under the list's buttons. */
+    fun describe(category: Category): String {
+        val parts = mutableListOf<String>()
+        val pickedGenres = (if (category.tv) CatalogOptions.tvGenres else CatalogOptions.movieGenres)
+            .filter { it.first in genres }.map { it.second }
+        if (pickedGenres.isNotEmpty()) parts += pickedGenres.joinToString(", ")
+        val pickedCountries = (CatalogOptions.popularCountries + CatalogOptions.otherCountries)
+            .filter { it.first in countries }.map { it.second }
+        if (pickedCountries.isNotEmpty()) parts += pickedCountries.joinToString(", ")
+        when {
+            yearFrom > 0 && yearTo > 0 -> parts += if (yearFrom == yearTo) "$yearFrom" else "$yearFrom–$yearTo"
+            yearFrom > 0 -> parts += "с $yearFrom"
+            yearTo > 0 -> parts += "до $yearTo"
+        }
+        if (ratingFrom != 1 || ratingTo != 10) parts += "рейтинг $ratingFrom–$ratingTo"
+        if (age.isNotEmpty()) parts += age
+        if (hideWatched) parts += "без просмотренных"
+        return parts.joinToString(", ")
+    }
+
     /** The part of the TMDB discover address that the filter adds. */
     fun query(tv: Boolean): String = buildString {
         if (genres.isNotEmpty()) append("&with_genres=").append(genres.joinToString(","))

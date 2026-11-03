@@ -55,6 +55,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
 
     private lateinit var filterChip: LinearLayout
     private lateinit var sortChip: LinearLayout
+    private lateinit var resetChip: LinearLayout
+    private lateinit var filtersText: TextView
     private lateinit var grid: VerticalGridView
     private lateinit var message: TextView
 
@@ -102,7 +104,9 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
                 startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", category.id))
             }
         }
+        resetChip = chipButton(requireContext(), scale, "Сбросить").apply { setOnClickListener { resetFilters() } }
         sortChip = chipButton(requireContext(), scale, "Сортировка", MenuIcons.SORT).apply { setOnClickListener { chooseSort() } }
+        buttons.addView(resetChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(16) })
         buttons.addView(filterChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(16) })
         buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         // a catalogue without its own sort and filters shows only the list
@@ -113,6 +117,14 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         val barCut = (gridWidth - (COLUMNS - 1) * pitch - (240 * CARD_SCALE * scale).toInt()).coerceAtLeast(0)
         header.addView(View(requireContext()), LinearLayout.LayoutParams(0, 1, 1f))
         header.addView(buttons, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = barCut })
+        // what is chosen now, one line under the buttons
+        filtersText = TextView(requireContext()).apply {
+            setTextColor(0xFF9FB3A9.toInt())
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 15f * scale)
+            setPadding(0, px(6), 0, 0)
+            visibility = View.GONE
+        }
+        page.addView(filtersText)
 
         message = TextView(requireContext()).apply {
             setTextColor(0xFFAFC4B6.toInt())
@@ -147,10 +159,10 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             }
         })
         // the remote goes from the buttons straight down to the cards
-        for (chip in listOf(filterChip, sortChip)) chip.nextFocusDownId = grid.id
+        for (chip in listOf(resetChip, filterChip, sortChip)) chip.nextFocusDownId = grid.id
         // the browse screen does not pass the focus between the neighbours of the header: right and left walk the buttons,
         // at the ends the focus stays instead of jumping to a view that is not beside them
-        for (chip in listOf(filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
+        for (chip in listOf(resetChip, filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                 val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
@@ -199,6 +211,20 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         val filter = CatalogFilter.load(ctx, category.id)
         filterChip.chipCaption = if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"
         sortChip.chipCaption = "Сортировка · ${CatalogFilter.sort(ctx, category.id).label.replaceFirstChar { it.lowercase() }}"
+        // the reset is only useful when something is chosen; the line under the buttons names what is chosen
+        resetChip.visibility = if (filter.count > 0) View.VISIBLE else View.GONE
+        val chosen = filter.describe(category)
+        filtersText.text = chosen
+        filtersText.visibility = if (chosen.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    /** Clears every filter of the list and asks it again. */
+    private fun resetFilters() {
+        val ctx = requireContext()
+        CatalogFilter.save(ctx, category.id, CatalogFilter())
+        signature = CatalogFilter.signature(ctx, category.id)
+        renderButtons()
+        startOver()
     }
 
     /** The sort choice is a small window over the page: the list is asked again with the new order at once. */
