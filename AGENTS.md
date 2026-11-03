@@ -80,3 +80,4 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`. Эмулятор: `adb -s emul
 **Windows (PowerShell 5.1, русская локаль)**
 - Скрипт `.ps1` с кириллицей сохранять в UTF-8 с BOM или держать ASCII и передавать русские пути параметрами. `Get-Content`, `Set-Content`, `Import-Csv` с `-Encoding UTF8`. Пути в `-LiteralPath`, в одинарных кавычках.
 - Многострочный код писать инструментами правки файлов, а не `heredoc` и `sed`. Python запускать `python -I -X utf8`, файлы открывать с `encoding='utf-8'`.
+- Текстовые файлы с кириллицей править только инструментами правки: `Get-Content`/`Set-Content` в PowerShell 5.1 читают и пишут в системной кодировке и портят текст (случай 2026-11-03, испорченные строки в `DetailsActivity`). Если без PowerShell нельзя: `[IO.File]::ReadAllText($p, [Text.Encoding]::UTF8)` и `[IO.File]::WriteAllText($p, $t, (New-Object Text.UTF8Encoding($false)))`.
