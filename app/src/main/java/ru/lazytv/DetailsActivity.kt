@@ -87,8 +87,13 @@ class DetailsActivity : Activity() {
         // a calm dark band; the frame of the film (TMDB backdrop) fades in under a dark veil once it is known
         val banner = FrameLayout(this)
         banner.setBackgroundColor(0xFF15251B.toInt())
-        backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; alpha = 0f }
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
+        // a light dim on the frame: the white logo and the buttons stay readable on a bright still
+        banner.addView(View(this).apply { setBackgroundColor(0x26000000) }, FrameLayout.LayoutParams(-1, -1))
+        bannerSpinner = Spinner(this, dp(44))
+        bannerSpinner.visibility = View.GONE
+        banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
         val appName = ImageView(this).apply {
@@ -164,7 +169,7 @@ class DetailsActivity : Activity() {
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
         posterView.setBackgroundColor(0xFF1B2E23.toInt())
-        posterPath?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w500$it").into(posterView) }
+        posterPath?.takeIf { it.isNotEmpty() }?.let { Glide.with(this).load("https://image.tmdb.org/t/p/w500$it").into(posterView) }
             ?: posterView.setImageResource(R.drawable.no_poster)
         root.addView(posterView, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
             leftMargin = dp(176); topMargin = dp(228)
@@ -212,7 +217,21 @@ class DetailsActivity : Activity() {
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}").into(backdrop)
+                    // the spinner stands only while a frame that exists is loading: without one the band just stays green
+                    bannerSpinner.visibility = View.VISIBLE
+                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
+                        .listener(object : RequestListener<Drawable> {
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                                bannerSpinner.visibility = View.GONE
+                                return false
+                            }
+
+                            override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                                bannerSpinner.visibility = View.GONE
+                                backdrop.animate().alpha(1f).setDuration(250).start()
+                                return false
+                            }
+                        }).into(backdrop)
                 }
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
@@ -252,6 +271,7 @@ class DetailsActivity : Activity() {
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
     private lateinit var backdrop: ImageView
+    private lateinit var bannerSpinner: Spinner
 
     /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
     private fun castRow(people: List<Tmdb.Person>): View {
