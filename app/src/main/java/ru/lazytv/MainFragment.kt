@@ -453,6 +453,8 @@ class MainFragment : BrowseSupportFragment() {
         override fun createFragment(row: Any?): Fragment {
             val name = (row as Row).headerItem.name
             currentPage = name
+            // the page can be opened after the menu has closed (the restore after an update): the icon rail lights it then
+            if (rail?.visibility == View.VISIBLE) refreshRail()
             // the page is remembered for the install script: after an update the menu opens on it (docs/workflow.md)
             if (pageToRestore.isEmpty()) LastScreen.rememberPage(requireContext(), name)
             if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
