@@ -289,8 +289,9 @@ private const val GRID_EDGE_TOP = 14
 
 /**
  * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
- * ([bridge] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut under the header
- * instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where the page's edge is.
+ * ([bridge] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut at the grid's edge
+ * under the header instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where
+ * the page's edge is.
  */
 fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
     androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
@@ -299,7 +300,8 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
         id = View.generateViewId()
         setNumColumns(columns)
         setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (16 * scale).toInt())
-        clipToPadding = true
+        // the focused card grows into the padding: clipping it there would cut the enlarged card at the page's edge
+        clipToPadding = false
         setItemSpacing((6 * scale).toInt())
         adapter = bridge
     }
