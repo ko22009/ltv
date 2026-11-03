@@ -107,6 +107,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         // a catalogue without its own sort and filters shows only the list
         if (!CatalogFilter.supports(category.id)) buttons.visibility = View.GONE
+        // the buttons sit at the right edge of the header, the title keeps the left one
+        header.addView(View(requireContext()), LinearLayout.LayoutParams(0, 1, 1f))
         header.addView(buttons)
 
         message = TextView(requireContext()).apply {
