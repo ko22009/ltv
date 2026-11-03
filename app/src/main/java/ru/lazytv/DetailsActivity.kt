@@ -124,11 +124,12 @@ class DetailsActivity : Activity() {
         // filled bookmark: the title is saved in a folder; outline: it is not
         fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
             .apply { setBounds(0, 0, dp(22), dp(22)) }
-        favorite = button(MenuIcons.BOOKMARK, bookmarkLabel(title)) {
-            chooseFolder(title) {
-                favorite.text = bookmarkLabel(title).uppercase()
-                favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
-            }
+        // one bookmark: the title is either in the favorites or not, no folders to choose from
+        favorite = button(MenuIcons.BOOKMARK, "Закладки") {
+            val saved = Favorites.folderOf(this, title) != null
+            Favorites.set(this, title, if (saved) null else Folder.FAVORITES)
+            favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
+            toast(if (saved) "Убрано из закладок" else "В закладках")
         }
         favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
         bar.addView(favorite)
@@ -356,25 +357,10 @@ class DetailsActivity : Activity() {
         )
     }
 
-    private fun bookmarkLabel(title: Title) = Favorites.folderOf(this, title)?.label ?: "Закладки"
-
     /** The history record: with the poster found through TMDB, when the list did not pass one to the card. */
     private fun historyTitle(): Title {
         val title = titleFrom(intent.extras!!)
         return if (title.poster == null && posterPath != null) title.copy(poster = posterPath) else title
-    }
-
-    /** Lists the folders (the current one is marked) and a line that removes the title from the bookmarks. */
-    private fun chooseFolder(title: Title, changed: () -> Unit) {
-        val current = Favorites.folderOf(this, title)
-        val labels = Folder.values().map { (if (it == current) "✓ " else "") + it.label } +
-            (if (current != null) listOf("Убрать из закладок") else emptyList())
-        android.app.AlertDialog.Builder(this).setTitle("Закладки").setItems(labels.toTypedArray()) { _, which ->
-            val folder = Folder.values().getOrNull(which)
-            Favorites.set(this, title, folder)
-            changed()
-            toast(if (folder != null) "В папке «${folder.label}»" else "Убрано из закладок")
-        }.show()
     }
 
     /** Opens the trailer found through TMDB; falls back to a YouTube search when there is none. */
