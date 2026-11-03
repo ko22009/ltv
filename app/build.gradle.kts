@@ -18,6 +18,16 @@ android {
         versionName = "0.2"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
     }
+    buildTypes {
+        release {
+            // smaller and faster to start; the rules keep what is found by name at run time
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // the app is installed from a file, not from a store: the debug key lets this build be installed
+            signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
     buildFeatures { buildConfig = true }
     // ByeDPI is run from the native library directory, so the libraries must be unpacked on install
     packaging { jniLibs { useLegacyPackaging = true } }

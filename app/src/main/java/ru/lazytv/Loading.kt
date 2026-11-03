@@ -60,3 +60,6 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
 
     fun caption(value: String) { label.text = value }
 }
+
+/** Hands a background result to the screen, but only while it is alive: a closed screen gets nothing (Glide throws on a destroyed one). */
+fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinishing && !isDestroyed) block() }

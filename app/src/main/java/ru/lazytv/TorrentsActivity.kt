@@ -351,7 +351,7 @@ class TorrentsActivity : Activity() {
             preloading = true
             Thread {
                 val magnet = runCatching { ExtraTorrents.magnetOf(torrent) }
-                runOnUiThread {
+                onUi {
                     preloading = false
                     magnet.onSuccess {
                         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
@@ -374,7 +374,7 @@ class TorrentsActivity : Activity() {
             runCatching { TorrServe.files(applicationContext, ExtraTorrents.magnetOf(torrent), name) }
                 .onSuccess { (hash, files) ->
                     val videos = files.filter { f -> VIDEO.any { f.path.lowercase().endsWith(it) } }.ifEmpty { files }
-                    runOnUiThread {
+                    onUi {
                         if (videos.size == 1) preload(hash, videos[0], name, torrent.source, view)
                         else {
                             dialog?.dismiss()

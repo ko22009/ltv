@@ -48,7 +48,7 @@ class PersonActivity : Activity() {
         val fallbackName = intent.getStringExtra("name").orEmpty()
         Thread {
             val result = runCatching { Tmdb.person(applicationContext, id) }
-            runOnUiThread {
+            onUi {
                 loading.visibility = View.GONE
                 result.onSuccess { person ->
                     list.addHeaderView(header(person), null, false)

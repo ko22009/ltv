@@ -82,7 +82,7 @@ class ServiceActivity : Activity() {
 
         Thread {
             val result = runCatching { source.browse(category) }
-            runOnUiThread {
+            onUi {
                 loading.visibility = View.GONE
                 result.onSuccess {
                     loading.visibility = View.GONE
