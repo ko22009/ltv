@@ -13,11 +13,18 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
+/**
+ * The height of a title card is fixed (poster + the plate under it), and the skeleton and the "show all" tile take the same:
+ * a row is as tall as its tallest card, so a tile or a card that is a few pixels taller makes the rows below jump while it scrolls in and out.
+ */
+const val TITLE_POSTER_HEIGHT = 300f
+const val TITLE_INFO_HEIGHT = 86f
+
 /** Stand-in for a card of a row that is still loading: it keeps the row's height, so nothing jumps when the real cards come. */
 object SkeletonCard
 
 /** Grey card of the size of [TitleCard] with a light band running over it (shimmer); it takes no focus. */
-class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = 300f, infoHeight: Float = 82f) : LinearLayout(context) {
+class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = TITLE_POSTER_HEIGHT, infoHeight: Float = TITLE_INFO_HEIGHT) : LinearLayout(context) {
     /** 0..1: where the band is on its way from the left edge to the right one. */
     private var phase = 0f
     private val sweep = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
@@ -178,8 +185,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
                 topMargin = px(10f)
                 rightMargin = px(10f)
             })
-        }, LayoutParams(-1, px(300f)))
-        addView(info, LayoutParams(-1, -2))
+        }, LayoutParams(-1, px(TITLE_POSTER_HEIGHT)))
+        addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
             setColor(0xFF12201A.toInt())
