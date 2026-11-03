@@ -74,12 +74,11 @@ class MoreTilePresenter(private val cardScale: Float = 1f) : Presenter() {
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        // kept in a variable: Leanback hands the focus listener a view whose background is not always this one
-        val plate = GradientDrawable().apply {
+        // the tile keeps its plate colour on focus: the focus is shown by the zoom, as on the cards
+        tile.background = GradientDrawable().apply {
             setColor(0xFF39423D.toInt())
             cornerRadius = px(4f).toFloat()
         }
-        tile.background = plate
         tile.elevation = 0f
         tile.addView(ImageView(context).apply {
             setImageDrawable(PathDrawable(MenuIcons.LINK).apply {
@@ -95,9 +94,6 @@ class MoreTilePresenter(private val cardScale: Float = 1f) : Presenter() {
             gravity = Gravity.CENTER
             setPadding(px(12f), px(14f), px(12f), 0)
         })
-        tile.setOnFocusChangeListener { _, focused ->
-            plate.setColor(if (focused) 0xFF2F7D57.toInt() else 0xFF39423D.toInt())
-        }
         return ViewHolder(tile)
     }
 
