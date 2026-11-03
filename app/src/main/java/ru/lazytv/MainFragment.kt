@@ -84,13 +84,6 @@ class MainFragment : BrowseSupportFragment() {
                     .putExtra("magnet", item.magnet).putExtra("size", item.size).putExtra("seeds", item.seeds)
                     .putExtra("leeches", item.leeches).putExtra("source", item.source)
             )
-            is ServiceItem -> startActivity(
-                Intent(requireContext(), EpisodesActivity::class.java)
-                    .putExtra("source", item.variant.source).putExtra("sourceId", item.variant.sourceId)
-                    .putExtra("title", item.variant.title).putExtra("note", item.variant.note)
-                    .putExtra("ref", item.variant.ref).putExtra("alt", item.variant.alt)
-                    .putExtra("description", item.variant.description)
-            )
             is FavoriteEpisode -> startActivity(
                 Intent(requireContext(), EpisodesActivity::class.java)
                     .putExtra("source", item.source).putExtra("sourceId", item.sourceId)
@@ -364,7 +357,7 @@ class MainFragment : BrowseSupportFragment() {
                 val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }
                 rows.add(ListRow(tiles))
             }
-            else -> servicePage(rows, name, ctx) ?: Unit
+            else -> Unit
         }
         rows
     }
@@ -406,43 +399,6 @@ class MainFragment : BrowseSupportFragment() {
                 if (loaded.isNotEmpty()) pagers[row] = RowPager(more, cards)
             }
         }
-    }
-
-    /**
-     * Page of one video service: its categories go one under another, and each row is filled with real poster
-     * cards as soon as the site answers, so the page opens already showing what the service has — no taps on tiles.
-     * Returns null when the name belongs to no service, and the caller looks among the catalogue lists.
-     */
-    private fun servicePage(rows: ArrayObjectAdapter, name: String, ctx: android.content.Context): Unit? {
-        val source = Sources.enabled(ctx).firstOrNull { it.name == name } ?: return null
-        if (source.categories.isEmpty()) {
-            rows.add(ListRow(HeaderItem(source.name), ArrayObjectAdapter(PlainTextPresenter()).apply {
-                add("У этого сервиса нет каталога: название ищется в общем поиске и в карточке фильма.")
-            }))
-            return Unit
-        }
-        // every category gets its row at once with grey cards; a category the site has nothing for drops its row
-        val pending = source.categories.map { category ->
-            val presenters = ClassPresenterSelector()
-                .addClassPresenter(ServiceItem::class.java, ServiceCardPresenter())
-                .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(raw = true))
-            val cards = ArrayObjectAdapter(presenters)
-            repeat(SKELETONS) { cards.add(SkeletonCard) }
-            val row = ListRow(HeaderItem(category.title), cards)
-            rows.add(row)
-            Triple(category, cards, row)
-        }
-        lifecycleScope.launch {
-            pending.forEach { (category, cards, row) ->
-                val items = withContext(Dispatchers.IO) { runCatching { source.browse(category) }.getOrDefault(emptyList()) }
-                if (items.isEmpty()) rows.remove(row)
-                else {
-                    cards.clear()
-                    cards.addAll(0, items)
-                }
-            }
-        }
-        return Unit
     }
 
     private inner class PageFactory : FragmentFactory<Fragment>() {
@@ -516,13 +472,10 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
 
 private const val SKELETONS = 7
 
-/** [cardScale] is the one of the matching [CardPresenter]; with [raw] the card is in plain pixels, like [ServiceCardPresenter]. */
-class SkeletonPresenter(private val cardScale: Float = 1f, private val raw: Boolean = false) : Presenter() {
+/** [cardScale] is the one of the matching [CardPresenter]. */
+class SkeletonPresenter(private val cardScale: Float = 1f) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
-        ViewHolder(
-            if (raw) SkeletonCardView(parent.context, 1f, 360f, 70f)
-            else SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale),
-        )
+        ViewHolder(SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {}
 
@@ -580,31 +533,6 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
 
     override fun onUnbindViewHolder(holder: ViewHolder) {
         (holder.view as TitleCard).poster.setImageDrawable(null)
-    }
-}
-
-/** Poster card of one release of a service catalogue: the same look as the TMDB cards of the app. */
-class ServiceCardPresenter : Presenter() {
-    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val card = ImageCardView(parent.context)
-        card.isFocusable = true
-        card.setMainImageDimensions(240, 360)
-        return ViewHolder(card)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, item: Any) {
-        val release = item as ServiceItem
-        val card = holder.view as ImageCardView
-        card.titleText = release.title
-        card.contentText = release.note
-        card.badgeImage = null
-        val poster = release.poster
-        if (poster != null) Glide.with(card.context).load(poster).into(card.mainImageView)
-        else Glide.with(card.context).clear(card.mainImageView)
-    }
-
-    override fun onUnbindViewHolder(holder: ViewHolder) {
-        (holder.view as ImageCardView).mainImage = null
     }
 }
 

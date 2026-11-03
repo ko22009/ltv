@@ -18,32 +18,18 @@ data class Variant(
 /** One playable item of a variant (an episode or the whole film) with streams per quality, best first. */
 data class Episode(val title: String, val streams: List<Pair<String, String>>)
 
-/** A category of a video service page (its own catalog section: genre, type, "new", "popular"). */
-data class ServiceCategory(val id: String, val title: String, val color: Int, val query: String = "")
-
-/** A title in a service catalog: what the service page draws as a card; [variant] opens its episodes. */
-data class ServiceItem(val title: String, val note: String, val poster: String?, val variant: Variant)
-
 /** A video site. Each source answers a title search and lists the playable items of a found variant. */
 interface VideoSource {
     val id: String
     val name: String
     fun search(title: String, original: String, year: String): List<Variant>
     fun episodes(variant: Variant): List<Episode>
-
-    /** Catalog sections shown on the service page; empty when the site has no browsable catalog. */
-    val categories: List<ServiceCategory> get() = emptyList()
-    fun browse(category: ServiceCategory): List<ServiceItem> = emptyList()
 }
 
 object Sources {
     val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube)
 
     fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
-
-    /** Sources that have a browsable catalog (the ВИДЕОСЕРВИСЫ section of the menu). */
-    fun catalogSources(context: Context): List<VideoSource> =
-        all.filter { it.categories.isNotEmpty() && Settings.bool(context, Settings.service(it.id)) }
 
     /** Sources the user left switched on in the settings (a change applies at once). */
     fun enabled(context: Context) = all.filter { Settings.bool(context, Settings.service(it.id)) }
@@ -234,50 +220,6 @@ object Anilibria : VideoSource {
             ordinal to Episode("Серия $ordinal" + (name?.let { " • $it" } ?: ""), streams)
         }.sortedBy { it.first }.map { it.second }
     }
-
-    private fun filter(name: String, value: String) = "f%5B${name}%5D%5B%5D=$value"
-
-    /** The catalog sections of the site: its sorting options, types and the most seen genres. */
-    override val categories: List<ServiceCategory>
-        get() = listOf(
-            ServiceCategory("new", "Новинки", 0xFF2F7D57.toInt(), "f%5Bsorting%5D=FRESH_AT_DESC"),
-            ServiceCategory("top", "Популярное", 0xFF1B5E20.toInt(), "f%5Bsorting%5D=RATING_DESC"),
-            ServiceCategory("films", "Фильмы", 0xFF0555A0.toInt(), filter("types", "MOVIE")),
-            ServiceCategory("tv", "Сериалы", 0xFF673AB7.toInt(), filter("types", "TV")),
-            ServiceCategory("action", "Экшен", 0xFFB71C1C.toInt(), filter("genres", "14")),
-            ServiceCategory("comedy", "Комедия", 0xFFF9A825.toInt(), filter("genres", "1")),
-            ServiceCategory("romance", "Романтика", 0xFFAD1457.toInt(), filter("genres", "11")),
-            ServiceCategory("fantasy", "Фэнтези", 0xFF6A1B9A.toInt(), filter("genres", "29")),
-            ServiceCategory("drama", "Драма", 0xFF4E342E.toInt(), filter("genres", "8")),
-            ServiceCategory("adventure", "Приключения", 0xFF2F7D57.toInt(), filter("genres", "27")),
-            ServiceCategory("scifi", "Фантастика", 0xFF1565C0.toInt(), filter("genres", "22")),
-            ServiceCategory("detective", "Детектив", 0xFF455A64.toInt(), filter("genres", "25")),
-            ServiceCategory("horror", "Ужасы", 0xFF8E1B1B.toInt(), filter("genres", "13")),
-            ServiceCategory("school", "Школа", 0xFF26A9C0.toInt(), filter("genres", "7")),
-            ServiceCategory("mecha", "Меха", 0xFF37474F.toInt(), filter("genres", "2")),
-            ServiceCategory("isekai", "Исекай", 0xFF00695C.toInt(), filter("genres", "34")),
-        )
-
-    override fun browse(category: ServiceCategory): List<ServiceItem> {
-        val answer = Sources.getAny(id) { base -> "$base/api/v1/anime/catalog/releases?page=1&limit=30&${category.query}" }
-        val json = JSONObject(answer.value)
-        val data = json.getJSONArray("data")
-        return (0 until data.length()).mapNotNull { i ->
-            val r = data.getJSONObject(i)
-            val names = r.optJSONObject("name") ?: return@mapNotNull null
-            val title = names.optString("main").ifEmpty { return@mapNotNull null }
-            val poster = r.optJSONObject("poster")?.optString("src").orEmpty()
-            val type = r.optJSONObject("type")?.optString("description").orEmpty()
-            val rating = r.optJSONObject("rating")?.optDouble("average", 0.0) ?: 0.0
-            val note = listOf(r.optInt("year").toString(), type, if (rating > 0) "★ %.1f".format(rating) else "")
-                .filter { it.isNotEmpty() && it != "0" }.joinToString(" • ")
-            val ref = r.getInt("id").toString()
-            ServiceItem(
-                title, note, if (poster.isEmpty()) null else answer.base + poster,
-                Variant(this.name, id, title, note, ref),
-            )
-        }
-    }
 }
 
 /** Makes text of an HTML fragment readable: drops tags, turns <br> into a space and decodes the usual entities. */
@@ -328,17 +270,6 @@ object Seasonvar : VideoSource {
                 if (href.startsWith("http")) href else base + href, originalName, description,
             ) to poster
         }.toList()
-    }
-
-    override val categories: List<ServiceCategory>
-        get() = listOf(
-            ServiceCategory("top", "Лучшие сериалы", 0xFF2F7D57.toInt(), "/?mode=top"),
-            ServiceCategory("soon", "Скоро", 0xFF6A1B9A.toInt(), "/?mode=soon"),
-        )
-
-    override fun browse(category: ServiceCategory): List<ServiceItem> {
-        val answer = Sources.getAny(id) { base -> base + category.query }
-        return parseList(answer.value, answer.base).map { (variant, poster) -> ServiceItem(variant.title, variant.note, poster, variant) }
     }
 
     override fun episodes(variant: Variant): List<Episode> {
