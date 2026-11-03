@@ -32,7 +32,7 @@ class FiltersActivity : Activity() {
     private lateinit var filter: CatalogFilter
     private lateinit var heading: TextView
     private lateinit var body: FrameLayout
-    private lateinit var reset: TextView
+    private lateinit var reset: android.view.View
     private var resetAction: () -> Unit = {}
     private var onMain = true
 
@@ -62,14 +62,7 @@ class FiltersActivity : Activity() {
         page.addView(header)
         body = FrameLayout(this)
         page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(16) })
-        reset = text("✕  Сбросить", 18f).apply {
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(px(22), px(12), px(22), px(12))
-            background = focusShape(scale, 0x33FFFFFF)
-            isFocusable = true
-            isClickable = true
-            setOnClickListener { resetAction() }
-        }
+        reset = chipButton(this, scale, "Сбросить").apply { setOnClickListener { resetAction() } }
         page.addView(reset, LinearLayout.LayoutParams(-2, -2).apply { topMargin = px(12) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)

@@ -27,9 +27,9 @@ class EpisodesActivity : Activity() {
     private var adapter: ArrayAdapter<Episode>? = null
     private lateinit var list: ListView
     private lateinit var actions: LinearLayout
-    private lateinit var actionFavorite: TextView
-    private lateinit var actionWatched: TextView
-    private lateinit var geoButton: TextView
+    private lateinit var actionFavorite: View
+    private lateinit var actionWatched: View
+    private lateinit var geoButton: View
     private var selectedIndex = 0
 
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
@@ -39,21 +39,8 @@ class EpisodesActivity : Activity() {
         if (bold) typeface = Typeface.DEFAULT_BOLD
     }
 
-    /** One of the two action buttons above the list; works on the selected episode. */
-    private fun actionButton() = label("", 17f, Color.WHITE).apply {
-        gravity = Gravity.CENTER
-        setPadding(px(24), 0, px(24), 0)
-        isFocusable = true
-        isClickable = true
-        background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(0xFF2F7D57.toInt()); cornerRadius = px(3).toFloat()
-            })
-            addState(intArrayOf(), GradientDrawable().apply {
-                setColor(0x55000000); cornerRadius = px(3).toFloat()
-            })
-        }
-    }
+    /** One of the action buttons above the list: the button of the design system ([chipButton]); works on the selected episode. */
+    private fun actionButton() = chipButton(this, scale, "")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,7 +75,7 @@ class EpisodesActivity : Activity() {
         status.visibility = View.GONE
         page.addView(status)
         geoButton = actionButton().apply {
-            text = "Искать торренты"
+            chipCaption = "Искать торренты"
             visibility = View.GONE
             setOnClickListener { openTorrents() }
         }
@@ -114,7 +101,7 @@ class EpisodesActivity : Activity() {
 
         Thread {
             val result = runCatching { Sources.all.first { it.id == variant.sourceId }.episodes(variant) }
-            runOnUiThread {
+            onUi {
                 loading.visibility = View.GONE
                 result.onSuccess { loaded ->
                     episodes = loaded
@@ -190,8 +177,8 @@ class EpisodesActivity : Activity() {
         val episode = episodes[position]
         val watched = EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episode.title))
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
-        actionFavorite.text = if (favorite) "Убрать из избранного" else "Добавить в избранное"
-        actionWatched.text = if (watched) "Снять отметку «просмотрено»" else "Пометить просмотренным"
+        actionFavorite.chipCaption = if (favorite) "Убрать из избранного" else "Добавить в избранное"
+        actionWatched.chipCaption = if (watched) "Снять отметку «просмотрено»" else "Пометить просмотренным"
     }
 
     private fun toggleFavorite() {
