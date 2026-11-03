@@ -46,6 +46,13 @@ $env:JAVA_HOME='<JDK 17>'
 
 APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 
+Обновление убивает процесс, и Android сам приложение не открывает. Поэтому после установки сразу открываем его:
+
+```powershell
+adb -s emulator-5554 install -r app\build\outputs\apk\debug\app-debug.apk
+adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity
+```
+
 ## Что писать в PLAN.md
 
 `PLAN.md` — что сделано и чем проверено, `plan_future.md` — что осталось, `docs/not-doing.md` — что не делаем и почему. Коммит, меняющий поведение, обновляет `PLAN.md` тем же коммитом.

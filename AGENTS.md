@@ -12,6 +12,7 @@ $env:JAVA_HOME='<JDK 17>'
 ```
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Эмулятор: `adb -s emulator-5554`, приставка: `<приставка>:5555`.
+После установки приложение открывать сразу: `adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity`. Android после обновления сам его не запускает.
 
 ## Коммиты
 
