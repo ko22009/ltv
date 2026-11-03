@@ -136,7 +136,17 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         // history
         historyBlock = LinearLayout(requireContext())
         historyBlock.orientation = LinearLayout.VERTICAL
-        historyBlock.addView(label("История поиска", 22f).apply { setPadding(0, px(20), 0, px(10)) })
+        // the caption with its "clear" button beside it, as the viewing history below has its own buttons
+        val historyHeader = LinearLayout(requireContext())
+        historyHeader.gravity = Gravity.CENTER_VERTICAL
+        historyHeader.setPadding(0, px(18), 0, px(4))
+        historyHeader.addView(label("История поиска", 22f), LinearLayout.LayoutParams(-2, -2))
+        historyHeader.addView(button(MenuIcons.DELETE, "Очистить") {
+            Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
+            showHistory()
+            input.requestFocus()
+        }, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
+        historyBlock.addView(historyHeader)
         history = LinearLayout(requireContext())
         historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(52)))
         page.addView(historyBlock)
@@ -371,11 +381,6 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         history.removeAllViews()
         val items = saved()
         historyBlock.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
-        history.addView(button(MenuIcons.DELETE, "Очистить") {
-            Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
-            showHistory()
-            input.requestFocus()
-        }, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         items.forEach { phrase ->
             history.addView(button(MenuIcons.HISTORY, phrase) {
                 input.setText(phrase)
