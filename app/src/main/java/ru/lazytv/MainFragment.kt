@@ -285,8 +285,10 @@ class MainFragment : BrowseSupportFragment() {
                 historyRows = rows
                 fillHistory(rows, ctx)
             }
-            SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEach { chunk ->
-                rows.add(ListRow(ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }))
+            SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEachIndexed { index, chunk ->
+                val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }
+                // the page has no title in the corner any more: the first row carries it
+                rows.add(if (index == 0) ListRow(HeaderItem("Настройки"), tiles) else ListRow(tiles))
             }
             else -> servicePage(rows, name, ctx) ?: Tmdb.visibleCategories(ctx).firstOrNull { it.title.uppercase() == name }?.let { category ->
                 if (CatalogFilter.supports(category.id)) {
@@ -643,7 +645,7 @@ class SettingsSectionPresenter : Presenter() {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(170))
+        tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(124))
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
         val texts = android.widget.LinearLayout(parent.context)

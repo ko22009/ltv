@@ -1,0 +1,4 @@
+<resources>
+    <!-- Leanback leaves 28dp under every row; rows (and the settings tiles) sit closer together -->
+    <dimen name="lb_browse_expanded_row_no_hovercard_bottom_padding">6dp</dimen>
+</resources>

@@ -2,7 +2,7 @@
     <style name="Theme.LazyTV" parent="@style/Theme.Leanback">
         <item name="android:windowBackground">#0C140F</item>
         <!-- the pages start near the top edge: Leanback leaves 167dp there for its title bar, which is not used -->
-        <item name="browseRowsMarginTop">24dp</item>
+        <item name="browseRowsMarginTop">48dp</item>
     </style>
     <style name="Theme.LazyTV.Guided" parent="@style/Theme.Leanback.GuidedStep">
         <item name="android:windowBackground">#101A14</item>
