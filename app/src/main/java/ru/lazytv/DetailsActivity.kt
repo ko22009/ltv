@@ -92,7 +92,6 @@ class DetailsActivity : Activity() {
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44))
-        bannerSpinner.visibility = View.GONE
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
@@ -220,15 +219,17 @@ class DetailsActivity : Activity() {
             originalTitle = d?.originalTitle.orEmpty()
             // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
             variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)
-            if (d == null) return@Thread
+            if (d == null) {
+                onUi { bannerSpinner.visibility = View.GONE }
+                return@Thread
+            }
             onUi {
                 if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
                     posterPath = d.poster
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
                 }
                 if (d.backdrop.isNotEmpty()) {
-                    // the spinner stands only while a frame that exists is loading: without one the band just stays green
-                    bannerSpinner.visibility = View.VISIBLE
+                    // the spinner is already turning: it stays until the frame is there, and goes away when there is none
                     Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
                         .listener(object : RequestListener<Drawable> {
                             override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
@@ -242,7 +243,7 @@ class DetailsActivity : Activity() {
                                 return false
                             }
                         }).into(backdrop)
-                }
+                } else bannerSpinner.visibility = View.GONE
                 if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
                 fillTable(table, baseRows + listOf(
                     "Длительность" to (formatRuntime(d.runtime)),
