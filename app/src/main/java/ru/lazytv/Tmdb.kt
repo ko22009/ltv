@@ -166,8 +166,8 @@ object Tmdb {
         val poster: String = "",
     )
 
-    /** An actor of the cast: the name and the TMDB id of the person page. */
-    data class Person(val id: Long, val name: String)
+    /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
+    data class Person(val id: Long, val name: String, val photo: String = "", val role: String = "")
 
     private val detailCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Details>>()
     private val detailPending = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.FutureTask<Details>>()
@@ -212,10 +212,10 @@ object Tmdb {
         }
         val credits = o.optJSONObject("credits")
         val castPeople = credits?.optJSONArray("cast")?.let { a ->
-            (0 until minOf(a.length(), 8)).mapNotNull { i ->
+            (0 until minOf(a.length(), 20)).mapNotNull { i ->
                 val p = a.getJSONObject(i)
                 val name = p.optString("name")
-                if (name.isEmpty()) null else Person(p.optLong("id"), name)
+                if (name.isEmpty()) null else Person(p.optLong("id"), name, p.optString("profile_path"), p.optString("character"))
             }
         } ?: emptyList()
         val cast = castPeople.map { it.name }

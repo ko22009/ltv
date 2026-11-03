@@ -255,28 +255,27 @@ class DetailsActivity : Activity() {
     private lateinit var backdrop: ImageView
     private lateinit var bannerSpinner: Spinner
 
-    /** Cast of the film: a caption and a row of names; picking a name opens the actor page. */
+    /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
     private fun castRow(people: List<Tmdb.Person>): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
         block.addView(text("В РОЛЯХ", 18f).apply { setPadding(0, dp(14), 0, dp(8)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
+        val photoSize = dp(92)
         people.forEach { person ->
-            val name = TextView(this).apply {
-                text = person.name
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
-                setTextColor(0xFFDCE8E0.toInt())
-                gravity = Gravity.CENTER
-                setPadding(dp(16), 0, dp(16), 0)
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding(dp(8), dp(8), dp(8), dp(8))
                 isFocusable = true
                 isClickable = true
                 background = StateListDrawable().apply {
                     addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(0xFF2F7D57.toInt()); cornerRadius = dp(3).toFloat()
+                        setColor(0xFF2F7D57.toInt()); cornerRadius = dp(6).toFloat()
                     })
                     addState(intArrayOf(), GradientDrawable().apply {
-                        setColor(0x44000000); cornerRadius = dp(3).toFloat()
+                        setColor(0x33000000); cornerRadius = dp(6).toFloat()
                     })
                 }
                 setOnClickListener {
@@ -284,10 +283,26 @@ class DetailsActivity : Activity() {
                         .putExtra("id", person.id).putExtra("name", person.name))
                 }
             }
-            row.addView(name, LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(10) })
+            val photo = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                // the empty circle stays while the photo loads and for an actor who has none
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFF2A3A31.toInt()) }
+            }
+            if (person.photo.isNotEmpty()) {
+                Glide.with(this).load("https://image.tmdb.org/t/p/w185${person.photo}").circleCrop().into(photo)
+            }
+            card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
+            card.addView(text(person.name, 14f).apply {
+                gravity = Gravity.CENTER; maxLines = 2; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(6), 0, 0)
+            }, LinearLayout.LayoutParams(dp(112), -2))
+            if (person.role.isNotEmpty()) card.addView(text(person.role, 12f, 0xFF8FB39D.toInt()).apply {
+                gravity = Gravity.CENTER; maxLines = 2
+            }, LinearLayout.LayoutParams(dp(112), -2))
+            row.addView(card, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })
         }
         val scroll = android.widget.HorizontalScrollView(this)
         scroll.isHorizontalScrollBarEnabled = false
+        scroll.clipToPadding = false
         scroll.addView(row)
         block.addView(scroll)
         return block
