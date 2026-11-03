@@ -846,7 +846,7 @@ class TitledRowsFragment : RowsSupportFragment() {
             text = requireArguments().getString("title")
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
-            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), ((if (compact) 22 else 30) * scale).toInt(), 0, (6 * scale).toInt())
+            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
         }
         return FrameLayout(requireContext()).apply {
             addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = ((if (compact) 39 else 72) * scale).toInt() })
