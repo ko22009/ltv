@@ -326,14 +326,19 @@ class DetailsActivity : Activity() {
                         .putExtra("id", person.id).putExtra("name", person.name))
                 }
             }
-            val photo = ImageView(this).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                // the empty circle stays while the photo loads and for an actor who has none
-                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFF2A3A31.toInt()) }
-                // the round outline of the background cuts the photo and the stub into a circle
+            // initials on a calm green circle sit under the photo: they show while it loads and for an actor who has none
+            val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
+            val photo = FrameLayout(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF2F5A44.toInt(), 0xFF1B3327.toInt()))
+                    .apply { shape = GradientDrawable.OVAL }
+                // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
+                addView(text(initials, 30f, 0xFFB9F6CA.toInt()).apply { gravity = Gravity.CENTER },
+                    FrameLayout.LayoutParams(-1, -1))
+                val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+                addView(image, FrameLayout.LayoutParams(-1, -1))
+                if (person.photo.isNotEmpty()) Glide.with(this@DetailsActivity).load("https://image.tmdb.org/t/p/w185${person.photo}").into(image)
             }
-            photo.showPoster(person.photo, null, "w185", R.drawable.no_photo)
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             card.addView(text(person.name, 14f).apply {
                 gravity = Gravity.CENTER; maxLines = 2; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(6), 0, 0)
