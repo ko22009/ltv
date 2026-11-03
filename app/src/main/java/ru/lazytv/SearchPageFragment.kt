@@ -148,9 +148,20 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             showHistory()
             input.requestFocus()
         }
-        // right of "clear" there is nothing: the focus must not jump to the microphone, which is above and left
+        // right of "clear" there is nothing: the focus must not jump to the microphone; up goes back to the search field,
+        // down goes to the first phrase (the nearest search often lands on the second one)
         clearHistory.setOnKeyListener { _, code, event ->
-            code == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (code) {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                KeyEvent.KEYCODE_DPAD_UP -> { input.requestFocus(); true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    val first = history.getChildAt(0)
+                    if (first != null) { first.requestFocus(); revealChip(first) }
+                    first != null
+                }
+                else -> false
+            }
         }
         historyHeader.addView(clearHistory, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { leftMargin = px(8) })
         historyBlock.addView(historyHeader)
@@ -329,8 +340,18 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             // and up to the input: the field is wider than the button and the search for the nearest view above may miss it
             if (input.id == View.NO_ID) input.id = View.generateViewId()
             view.nextFocusUpId = input.id
+            // left and right walk the buttons of the row; at the ends the focus stays instead of jumping to the microphone
             view.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) input.requestFocus() else false
+                if (event.action != KeyEvent.ACTION_DOWN) false
+                else when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> { input.requestFocus(); true }
+                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                        recentActions.getChildAt(recentActions.indexOfChild(view) + step)?.requestFocus()
+                        true
+                    }
+                    else -> false
+                }
             }
             recentActions.addView(view, LinearLayout.LayoutParams(-2, -1).apply { leftMargin = px(12) })
         }
