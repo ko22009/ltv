@@ -43,8 +43,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
     }
 
     override fun getMainFragmentAdapter() = pageAdapter.also {
-        // no scaling: it shrinks the page towards its left edge while the menu is open, and the margins shrink with it
-        it.isScalingEnabled = false
+        // scaled like the rows pages and the search page, so the left edge is the same on all of them with the menu open and closed
+        it.isScalingEnabled = true
     }
 
     private val scale get() = resources.displayMetrics.widthPixels / 1280f
@@ -71,24 +71,38 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         val page = LinearLayout(requireContext())
         page.orientation = LinearLayout.VERTICAL
         // the same left edge as the rows of the other pages (to the right of the icon rail) and the top margin of the rows
-        page.setPadding(px(75), px(42), px(48), px(16))
+        page.setPadding(px(92), px(21), px(48), px(16))
+        // the focused card grows past its cell: the page must not cut it
+        page.clipChildren = false
+        page.clipToPadding = false
+
+        // the name of the page, like the title row of the other pages, and the buttons of the list in the same line
+        val header = LinearLayout(requireContext())
+        header.orientation = LinearLayout.HORIZONTAL
+        header.gravity = android.view.Gravity.CENTER_VERTICAL
+        page.addView(header)
+        header.addView(TextView(requireContext()).apply {
+            text = category.title
+            setTextColor(android.graphics.Color.WHITE)
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 28f * scale)
+        })
 
         // the buttons of the list: the filters and the sort order, made by the one button of the design system
         val buttons = LinearLayout(requireContext())
         buttons.orientation = LinearLayout.HORIZONTAL
         buttons.gravity = android.view.Gravity.CENTER_VERTICAL
-        buttons.setPadding(0, px(6), 0, px(6))
-        filterChip = chipButton(requireContext(), scale, "Фильтры").apply {
+        buttons.setPadding(px(28), 0, 0, 0)
+        filterChip = chipButton(requireContext(), scale, "Фильтры", MenuIcons.FILTER).apply {
             setOnClickListener {
                 startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", category.id))
             }
         }
-        sortChip = chipButton(requireContext(), scale, "Сортировка").apply { setOnClickListener { chooseSort() } }
+        sortChip = chipButton(requireContext(), scale, "Сортировка", MenuIcons.SORT).apply { setOnClickListener { chooseSort() } }
         buttons.addView(filterChip, LinearLayout.LayoutParams(-2, px(52)).apply { rightMargin = px(16) })
         buttons.addView(sortChip, LinearLayout.LayoutParams(-2, px(52)))
         // a catalogue without its own sort and filters shows only the list
         if (!CatalogFilter.supports(category.id)) buttons.visibility = View.GONE
-        page.addView(buttons)
+        header.addView(buttons)
 
         message = TextView(requireContext()).apply {
             setTextColor(0xFFAFC4B6.toInt())
@@ -108,11 +122,14 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
                 }
             }
         })
+        // the focused card grows a little, as on the overview, so it is clear at once which one is chosen
+        androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
         grid = VerticalGridView(requireContext())
         grid.id = View.generateViewId()
         grid.setNumColumns(COLUMNS)
         grid.setPadding(0, px(18), 0, px(16))
         grid.clipToPadding = false
+        grid.clipChildren = false
         grid.setItemSpacing(px(6))
         grid.adapter = bridge
         grid.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {

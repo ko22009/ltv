@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.util.TypedValue
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.leanback.app.BrowseSupportFragment
@@ -28,6 +29,7 @@ import androidx.leanback.widget.RowHeaderPresenter
 import androidx.leanback.widget.SectionRow
 import androidx.leanback.widget.Presenter
 import androidx.leanback.widget.Row
+import androidx.leanback.widget.RowPresenter
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
@@ -122,6 +124,42 @@ class MainFragment : BrowseSupportFragment() {
         showHeaders()
     }
 
+    private val ROW_AHEAD = 6 // titles left in a row when the next page is asked for
+
+    private var spacingTries = 0
+
+    /** The next pages of an overview row: asked for while the cursor nears the end of the row. */
+    private class RowPager(val more: MoreTile, val cards: ArrayObjectAdapter) {
+        var next = 2
+        var busy = false
+        var ended = false
+    }
+
+    private val pagers = HashMap<ListRow, RowPager>()
+
+    private fun loadMoreOf(row: ListRow, item: Any?) {
+        val pager = pagers[row] ?: return
+        val index = pager.cards.indexOf(item)
+        if (pager.busy || pager.ended || index < pager.cards.size() - ROW_AHEAD) return
+        pager.busy = true
+        val ctx = requireContext().applicationContext
+        val page = pager.next
+        lifecycleScope.launch {
+            val loaded = withContext(Dispatchers.IO) { runCatching { pager.more.loadPage(ctx, page) }.getOrNull() }
+            pager.busy = false
+            if (loaded == null) return@launch
+            // titles already in the row are not added twice when TMDB repeats one on the next page
+            val fresh = loaded.titles.filter { t -> (0 until pager.cards.size()).none { (pager.cards.get(it) as? Title)?.id == t.id } }
+            if (loaded.ended) pager.ended = true else pager.next = page + 1
+            if (fresh.isNotEmpty()) pager.cards.addAll(pager.cards.size(), fresh)
+            // a page that held only watched titles adds nothing: the next one is asked for at once
+            else if (!loaded.ended) loadMoreOf(row, pager.cards.get(pager.cards.size() - 1))
+        }
+    }
+
+    /** Rows of the overview that wait to be loaded until they come near the screen. */
+    private val pendingLoads = HashMap<ListRow, () -> Unit>()
+
     /** The menu fragment exists only after the view is created, so its look is set here. */
     override fun onViewCreated(view: android.view.View, savedInstanceState: android.os.Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -130,22 +168,63 @@ class MainFragment : BrowseSupportFragment() {
             .addClassPresenter(SectionRow::class.java, SectionHeaderPresenter())
             .addClassPresenter(Row::class.java, IconHeaderPresenter())
         buildRail(view)
-        // the smaller top margin of the pages is shared by the menu list, which would push "Поиск" off the screen:
-        // the menu keeps the alignment Leanback gives it by default
-        // (Leanback sets it again after the view is made, so it is held on every layout pass)
-        val menuTop = resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_rows_margin_top)
+        // the menu list starts at the top and the cursor walks down it; it scrolls only when the cursor reaches the middle
+        // (Leanback pins the chosen item to one place by default). The pages share the sizes of Leanback, so the menu
+        // takes its own edges here. Leanback sets the alignment again after the view is made, so it is held on every layout pass.
+        val scale = resources.displayMetrics.widthPixels / 1280f
         view.viewTreeObserver.addOnGlobalLayoutListener {
             val menu = headersSupportFragment?.verticalGridView ?: return@addOnGlobalLayoutListener
-            if (menu.windowAlignmentOffset != menuTop) menu.windowAlignmentOffset = menuTop
+            if (menu.windowAlignment != androidx.leanback.widget.BaseGridView.WINDOW_ALIGN_BOTH_EDGE) {
+                menu.windowAlignment = androidx.leanback.widget.BaseGridView.WINDOW_ALIGN_BOTH_EDGE
+                menu.windowAlignmentOffsetPercent = 50f
+                menu.windowAlignmentOffset = 0
+            }
+            // the first item sits level with the search row of the page and the edges are not tight
+            val side = (28 * scale).toInt()
+            val top = (27 * scale).toInt()
+            val gap = (8 * scale).toInt()
+            if (menu.paddingLeft != side || menu.paddingTop != top) {
+                menu.clipToPadding = false
+                menu.setPadding(side, top, side, (16 * scale).toInt())
+            }
+            // Leanback leaves 28dp between the items of the menu; they stand closer. Just after the start Leanback keeps its own gap
+            // even when the value is already set, so the gap really laid out is compared and the value is forced through a change
+            val first = menu.getChildAt(0)
+            val second = menu.getChildAt(1)
+            if (first != null && second != null) {
+                if (Math.abs(second.top - first.bottom - gap) > 2 && spacingTries < 4) {
+                    spacingTries++
+                    menu.verticalSpacing = gap + 1
+                    menu.verticalSpacing = gap
+                } else if (Math.abs(second.top - first.bottom - gap) <= 2) spacingTries = 0
+            }
         }
         setSelectedPosition(1, false)
         setBrowseTransitionListener(object : BrowseTransitionListener() {
             override fun onHeadersTransitionStart(withHeaders: Boolean) {
                 if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction { rail?.visibility = View.GONE }?.start()
                 else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(200)?.start() }
+                shiftPage(withHeaders)
             }
         })
     }
+
+    /**
+     * The page keeps its wide left margin for the rail, but next to the open menu that margin is too much: the page moves
+     * left by the extra. It glides only when the menu opens or closes; moving the cursor from one page to another (the pages
+     * swap under it) must not slide the page.
+     */
+    private fun shiftPage(menuOpen: Boolean) {
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        val shift = if (!menuOpen) 0f else -15 * scale
+        val frame = this.view?.findViewById<View>(androidx.leanback.R.id.scale_frame) ?: return
+        frame.animate().cancel()
+        if (menuOpen == menuWasOpen) frame.translationX = shift
+        else frame.animate().translationX(shift).setDuration(150).start()
+        menuWasOpen = menuOpen
+    }
+
+    private var menuWasOpen = true
 
     /**
      * The menu shrinks to a narrow rail of icons while a page has the focus: the icons stay where the names were,
@@ -222,18 +301,13 @@ class MainFragment : BrowseSupportFragment() {
         shown = Settings.snapshot(ctx)
         headers.clear()
         pages.clear()
+        pendingLoads.clear()
+        pagers.clear()
         favoritesRows = null
         headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
         headers.add(PageRow(HeaderItem(OVERVIEW)))
         headers.add(PageRow(HeaderItem(FAVORITES)))
-        headers.add(SectionRow(HeaderItem("СПИСКИ")))
         Tmdb.visibleCategories(ctx).forEach { headers.add(PageRow(HeaderItem(it.title.uppercase()))) }
-        val catalog = Sources.enabled(ctx)
-        if (catalog.isNotEmpty()) {
-            headers.add(SectionRow(HeaderItem("ВИДЕОСЕРВИСЫ")))
-            catalog.forEach { headers.add(PageRow(HeaderItem(it.name))) }
-        }
-        headers.add(DividerRow())
         headers.add(PageRow(HeaderItem(SETTINGS)))
         // the first entry is search; the page that opens is the overview
         // (the view does not exist yet when this runs from onCreate: onViewCreated sets it then)
@@ -241,13 +315,43 @@ class MainFragment : BrowseSupportFragment() {
     }
 
     /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
-    private fun rowPresenter(dimOthers: Boolean) = ListRowPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM).apply {
+    private fun rowPresenter(dimOthers: Boolean) = object : ListRowPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM) {
+        // Leanback hides the captions of the rows while the menu has the focus, and they appear only after the page opens;
+        // here they are there at once, so the page does not change when it is opened
+        override fun onRowViewExpanded(holder: RowPresenter.ViewHolder, expanded: Boolean) {
+            super.onRowViewExpanded(holder, expanded)
+            showCaption(holder)
+        }
+
+        override fun onBindRowViewHolder(holder: RowPresenter.ViewHolder, item: Any) {
+            super.onBindRowViewHolder(holder, item)
+            showCaption(holder)
+            pendingLoads.remove(item)?.invoke()
+        }
+
+        override fun onRowViewSelected(holder: RowPresenter.ViewHolder, selected: Boolean) {
+            super.onRowViewSelected(holder, selected)
+            showCaption(holder)
+        }
+
+        // the caption sits in a dock of the row container, which Leanback closes while the row is not expanded
+        private fun showCaption(holder: RowPresenter.ViewHolder) {
+            (holder.headerViewHolder?.view?.parent as? View)?.visibility = View.VISIBLE
+        }
+    }.apply {
         selectEffectEnabled = dimOthers
     }
 
+    /** Rows of a page plus its title row: the title is a part of the page, so it moves, shrinks and dims together with it. */
+    private fun pageRows(dimOthers: Boolean) = ClassPresenterSelector()
+        .addClassPresenter(PageNoteRow::class.java, PageNotePresenter())
+        .addClassPresenter(ListRow::class.java, rowPresenter(dimOthers))
+
+    private fun pageTitle(name: String) = name.lowercase().replaceFirstChar { it.uppercase() }
+
     private fun pageFor(name: String): ArrayObjectAdapter = pages.getOrPut(name) {
         // settings tiles keep one background in every row: no dimming of the rows under the focused one
-        val rows = ArrayObjectAdapter(rowPresenter(dimOthers = name != SETTINGS))
+        val rows = ArrayObjectAdapter(pageRows(dimOthers = name != SETTINGS))
         val ctx = requireContext()
         when (name) {
             OVERVIEW -> {
@@ -265,8 +369,7 @@ class MainFragment : BrowseSupportFragment() {
             }
             SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEachIndexed { index, chunk ->
                 val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }
-                // the page has no title in the corner any more: the first row carries it
-                rows.add(if (index == 0) ListRow(HeaderItem("Настройки"), tiles) else ListRow(tiles))
+                rows.add(ListRow(tiles))
             }
             else -> servicePage(rows, name, ctx) ?: Unit
         }
@@ -285,10 +388,7 @@ class MainFragment : BrowseSupportFragment() {
                 addAll(0, episodes)
             }))
         }
-        // the page itself is already called "Закладки": the empty-state row goes without a second caption
-        if (rows.size() == 0) rows.add(ListRow(ArrayObjectAdapter(PlainTextPresenter()).apply {
-            add("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или через ⋮ у серии")
-        }))
+        if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или через ⋮ у серии"))
     }
 
     /** A row of title cards; the "show all" tile closes it, and it opens the whole list as a page. */
@@ -300,10 +400,14 @@ class MainFragment : BrowseSupportFragment() {
         val row = ListRow(HeaderItem(title), cards)
         rows.add(row)
         val ctx = requireContext().applicationContext
-        lifecycleScope.launch {
-            val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
-            // the tile goes first and takes the cursor when a row is entered
-            cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
+        // lazy: the row is asked for only when the list binds it, that is when it comes to the screen or near it
+        pendingLoads[row] = {
+            lifecycleScope.launch {
+                val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
+                // the tile goes first and takes the cursor when a row is entered
+                cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
+                if (loaded.isNotEmpty()) pagers[row] = RowPager(more, cards)
+            }
         }
     }
 
@@ -345,9 +449,11 @@ class MainFragment : BrowseSupportFragment() {
             if (category != null) return CatalogPageFragment().apply {
                 arguments = android.os.Bundle().apply { putString("category", category.id) }
             }
-            val page = RowsSupportFragment()
-            page.adapter = pageFor(name)
+            val page = TitledRowsFragment().apply { arguments = android.os.Bundle().apply { putString("title", pageTitle(name)) } }
+            val rows = pageFor(name)
+            page.adapter = rows
             page.onItemViewClickedListener = onClick
+            page.onItemViewSelectedListener = androidx.leanback.widget.OnItemViewSelectedListener { _, item, _, row -> if (row is ListRow) loadMoreOf(row, item) }
             return page
         }
     }
@@ -480,7 +586,7 @@ class PlainTextPresenter : Presenter() {
             setTextColor(0xFFDCE8E0.toInt())
             textSize = 18f
             gravity = Gravity.START
-            setPadding((16 * scale).toInt(), (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
+            setPadding(0, (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
             isFocusable = false
             isClickable = false
         }
@@ -657,3 +763,55 @@ class SectionHeaderPresenter : RowHeaderPresenter(androidx.leanback.R.layout.lb_
     }
 }
 
+
+/** A line of text as the only row of a page (the empty bookmarks): no selection band, nothing to focus. */
+class PageNoteRow(val text: String) : Row()
+
+class PageNotePresenter : RowPresenter() {
+    init {
+        headerPresenter = null
+        selectEffectEnabled = false
+    }
+
+    override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder {
+        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val start = parent.resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start)
+        val view = TextView(parent.context).apply {
+            setTextColor(0xFF8FA597.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
+            setPadding(start, 0, 0, 0)
+            isFocusable = false
+            // leanback aligns the first row far below the grid top; for a lone line of text pull it up to the title
+            translationY = -90f * scale
+        }
+        return RowPresenter.ViewHolder(view)
+    }
+
+    override fun onBindRowViewHolder(vh: RowPresenter.ViewHolder, item: Any) {
+        super.onBindRowViewHolder(vh, item)
+        (vh.view as TextView).text = (item as PageNoteRow).text
+    }
+
+    override fun isUsingDefaultSelectEffect() = false
+}
+
+/**
+ * The rows of a page under its title. The title is a part of the page, so it moves and scales with it, but it is not a row:
+ * it does not scroll away with the rows and stands at the same place with the menu open and closed, like on the catalogue pages.
+ */
+class TitledRowsFragment : RowsSupportFragment() {
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: android.os.Bundle?): View? {
+        val rows = super.onCreateView(inflater, container, savedInstanceState) ?: return null
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        val title = TextView(requireContext()).apply {
+            text = requireArguments().getString("title")
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
+            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
+        }
+        return FrameLayout(requireContext()).apply {
+            addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = (72 * scale).toInt() })
+            addView(title, FrameLayout.LayoutParams(-1, -2))
+        }
+    }
+}

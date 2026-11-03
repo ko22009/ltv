@@ -9,6 +9,7 @@ import android.speech.RecognizerIntent
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
@@ -32,6 +33,9 @@ fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = 
 class SearchBar(private val activity: Activity, private val scale: Float, private val onSubmit: (String) -> Unit) : LinearLayout(activity) {
     val input = EditText(activity)
 
+    /** Down from the field: the page says where it goes (the browse screen does not find it itself). */
+    var onDown: (() -> Boolean)? = null
+
     private fun px(value: Int) = (value * scale).toInt()
 
     init {
@@ -54,10 +58,34 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
         input.setPadding(px(18), 0, px(18), 0)
-        input.background = GradientDrawable().apply { setColor(0xFF1F3228.toInt()); cornerRadius = px(3).toFloat() }
+        // the field lights up when the remote reaches it and the keyboard comes up at once: the field is active, as when it is clicked
+        input.background = focusShape(scale, 0xFF1F3228.toInt())
+        input.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) view.post {
+                (activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
         input.setOnEditorActionListener { _, _, event ->
             if (event == null || event.action == KeyEvent.ACTION_DOWN) onSubmit(input.text.toString())
             true
+        }
+        // the remote goes between the microphone and the field directly: the search for the nearest view did not reach the field
+        input.id = View.generateViewId()
+        input.isFocusable = true
+        input.nextFocusLeftId = mic.id.takeIf { it != View.NO_ID } ?: View.generateViewId().also { mic.id = it }
+        mic.nextFocusRightId = input.id
+        // the browse screen answers the search for the next view itself and passes over the ids above: the keys are taken here
+        mic.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) input.requestFocus() else false
+        }
+        input.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (input.selectionStart <= 0) mic.requestFocus() else false
+                KeyEvent.KEYCODE_DPAD_DOWN -> onDown?.invoke() ?: false
+                else -> false
+            }
         }
         addView(input, LayoutParams(0, px(56), 1f))
     }

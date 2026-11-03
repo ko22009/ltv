@@ -11,9 +11,8 @@
 |---|---|---|
 | Карточка фильма/сериала | `TitleCard`, `CardPresenter(cardScale)` в `Cards.kt` | Везде, где показывается постер с названием: ряды, «весь список», поиск, закладки. Свою карточку не рисовать. Режим выбора — `TitleCard.setPicked` |
 | Плитка «весь список» / «искать торренты» | `MoreTilePresenter(cardScale)` в `MoreTile.kt` | Размер плитки равен карточке: подставляй тот же `cardScale` |
-| Кнопка-«чип» над рядами | `CatalogButtonPresenter` (`CatalogButtons.kt`) | Фильтры, сортировка и подобное над рядами |
+| **Кнопка** (единая) | `chipButton(context, scale, caption, icon?)` в `CatalogButtons.kt` | Любая кнопка: фильтры, сортировка (`CatalogButtonPresenter`), кнопки в шапке страницы поиска. Плашка `#39423D`, скругление 6, высота 52, жирный 19, фокус зелёный. Свои кнопки не рисовать. Исключение — полоса кнопок под баннером на экране фильма (`DetailsActivity.button`): пять кнопок должны уместиться в одну строку, там плоские кнопки меньшего размера; их не менять на `chipButton` (2026-11-03, владелец) |
 | Плитка раздела настроек | `SettingsSectionPresenter` (`MainFragment.kt`) | Страница «Настройки» |
-| Кнопка в шапке страницы | `button(icon, caption)` в `SearchPageFragment` | Если нужна на втором экране — вынести в общий файл, не копировать |
 | Сетка «весь список» | `TitlesGridActivity`, `SearchPageFragment`: 5 колонок, `cardScale = 0.82` | Тот же размер на всех страницах-сетках |
 | Фон страницы | `calmBackground()` (`Background.kt`) | Все экраны, кроме плеера |
 | Рамка при фокусе | `focusShape(scale, normal)` (`SearchBar.kt`) | Любой фокусируемый элемент вне Leanback-рядов |

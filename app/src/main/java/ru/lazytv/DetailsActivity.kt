@@ -42,6 +42,7 @@ class DetailsActivity : Activity() {
             if (bold) typeface = Typeface.DEFAULT_BOLD
         }
 
+    /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
     private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
         text = label.uppercase()
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
@@ -66,6 +67,8 @@ class DetailsActivity : Activity() {
         super.onCreate(savedInstanceState)
         val name = intent.getStringExtra("name").orEmpty()
         posterPath = intent.getStringExtra("poster")
+        // "recently opened": the card is put into the list when it is opened, not only when watching starts
+        if (savedInstanceState == null) History.add(this, historyTitle())
         val baseRows = listOf(
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
             "Год" to intent.getStringExtra("year").orEmpty(),
@@ -192,10 +195,10 @@ class DetailsActivity : Activity() {
             // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
             variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)
             if (d == null) {
-                runOnUiThread { bannerSpinner.visibility = View.GONE }
+                onUi { bannerSpinner.visibility = View.GONE }
                 return@Thread
             }
-            runOnUiThread {
+            onUi {
                 if (posterPath == null && d.poster.isNotEmpty()) {
                     posterPath = d.poster
                     Glide.with(this).load("https://image.tmdb.org/t/p/w500${d.poster}").into(posterView)
@@ -324,7 +327,7 @@ class DetailsActivity : Activity() {
         watchButton.text = "ЗАГРУЖАЕМ…"
         Thread {
             val episodes = runCatching { Sources.all.first { it.id == v.sourceId }.episodes(v) }.getOrNull()
-            runOnUiThread {
+            onUi {
                 opening = false
                 watchButton.text = caption
                 if (episodes != null && episodes.size == 1) playEpisode(this, v, episodes, 0)
@@ -373,7 +376,7 @@ class DetailsActivity : Activity() {
             val key = runCatching { Tmdb.trailerKey(applicationContext, title.id, title.tv) }.getOrNull()
             val link = if (key != null) "https://www.youtube.com/watch?v=$key"
             else "https://www.youtube.com/results?search_query=" + Uri.encode("${title.name} трейлер")
-            runOnUiThread {
+            onUi {
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
                     .onFailure { toast("Не найдено приложение для открытия YouTube") }
             }

@@ -11,6 +11,7 @@ import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -36,7 +37,26 @@ data class TorrentQuery(val query: String)
  * The cards are the ones of the rest of the app ([CardPresenter], [MoreTilePresenter]), not their own copies.
  */
 class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
-    private val pageAdapter = BrowseSupportFragment.MainFragmentAdapter<SearchPageFragment>(this)
+    private val pageAdapter = object : BrowseSupportFragment.MainFragmentAdapter<SearchPageFragment>(this) {
+        // while the menu slides, the page is a flat picture that is only moved: no redrawing of dozens of cards per frame
+        override fun onTransitionStart() {
+            super.onTransitionStart()
+            view?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        }
+
+        override fun onTransitionEnd() {
+            super.onTransitionEnd()
+            view?.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
+
+        // the rows pages are dimmed while the menu has the focus; this page does the same, so that the move from one page
+        // to another looks the same whichever page it is
+        // (expand = the page is expanded, the menu is away)
+        override fun setExpand(expand: Boolean) {
+            super.setExpand(expand)
+            view?.animate()?.alpha(if (expand) 1f else 0.55f)?.setDuration(200)?.start()
+        }
+    }
     override fun getMainFragmentAdapter() = pageAdapter.also {
         // the same as the rows pages: the page is squeezed into what the menu leaves, instead of lying under it
         it.isScalingEnabled = true
@@ -77,32 +97,25 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         if (bold) typeface = Typeface.DEFAULT_BOLD
     }
 
-    private fun focusBackground(normal: Int, radius: Float = 3f, circle: Boolean = false) = focusShape(scale, normal, radius, circle)
-
-    /** Chip with a small vector icon and a caption; focus turns it bright green. */
-    private fun button(icon: String, caption: String, action: () -> Unit) = LinearLayout(requireContext()).apply {
-        gravity = Gravity.CENTER
-        isFocusable = true
-        isClickable = true
-        background = focusBackground(0x66000000)
-        addView(ImageView(requireContext()).apply {
-            setImageDrawable(PathDrawable(icon).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-        }, LinearLayout.LayoutParams(px(18), px(18)))
-        addView(label(caption, 15f).apply { setPadding(px(10), 0, 0, 0) })
-        setPadding(px(16), 0, px(18), 0)
-        setOnClickListener { action() }
-    }
+    /** The button of the design system ([chipButton], the same as "Фильтры"), with an icon. */
+    private fun button(icon: String, caption: String, action: () -> Unit) =
+        chipButton(requireContext(), scale, caption, icon).apply { setOnClickListener { action() } }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val page = LinearLayout(requireContext())
         page.orientation = LinearLayout.VERTICAL
         // the page sits to the right of the icon rail; the top margin matches the rows of the other pages
         // (the left edge is where the cards of the rows start, to the right of the icon rail)
-        page.setPadding(px(75), px(24), px(48), px(16))
+        page.setPadding(px(92), px(24), px(48), px(16))
+        // the focused card grows past its cell: the page must not cut it
+        page.clipChildren = false
+        page.clipToPadding = false
 
         // microphone and the input
         searchBar = SearchBar(requireActivity(), scale) { submit(it) }
         input = searchBar.input
+        // the browse screen does not pass the ids of the next view, so down and up between the field, the buttons and the cards are taken here
+        searchBar.onDown = { (if (showingRecent && recentActions.childCount > 0) recentActions.getChildAt(0) else grid).requestFocus() }
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 pending?.let { ui.removeCallbacks(it) }
@@ -119,16 +132,16 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         historyBlock.orientation = LinearLayout.VERTICAL
         historyBlock.addView(label("История поиска", 22f).apply { setPadding(0, px(20), 0, px(10)) })
         history = LinearLayout(requireContext())
-        historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(44)))
+        historyBlock.addView(history, LinearLayout.LayoutParams(-1, px(52)))
         page.addView(historyBlock)
 
         recentHeader = LinearLayout(requireContext())
         recentHeader.gravity = Gravity.CENTER_VERTICAL
         recentHeader.setPadding(0, px(18), 0, px(4))
         recentHeader.visibility = View.GONE
-        recentHeader.addView(label("Недавно просмотренное", 22f), LinearLayout.LayoutParams(0, -2, 1f))
+        recentHeader.addView(label("Недавно открытое", 22f), LinearLayout.LayoutParams(-2, -2))
         recentActions = LinearLayout(requireContext())
-        recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(44)))
+        recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(52)).apply { leftMargin = px(8) })
         page.addView(recentHeader)
 
         message = label("", 16f, 0xFFAFC4B6.toInt())
@@ -147,14 +160,27 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                 (viewHolder.itemView as? TitleCard)?.setPicked(title != null && showingRecent && editing && key(title) in picked)
             }
         })
+        // the focused card grows a little, as on the overview, so it is clear at once which one is chosen
+        androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
         grid = VerticalGridView(requireContext())
+        grid.id = View.generateViewId()
         grid.setNumColumns(COLUMNS)
         grid.setPadding(0, px(8), 0, px(16))
         grid.clipToPadding = false
+        grid.clipChildren = false
         grid.setItemSpacing(px(6))
         grid.adapter = bridge
+        // up from the first row of the history goes to its buttons: the nearest view above the card is not the button, which sits to the side
+        grid.setOnKeyInterceptListener { event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
+                showingRecent && grid.selectedPosition in 0 until COLUMNS && recentActions.childCount > 0
+            ) recentActions.getChildAt(0).requestFocus() else false
+        }
         page.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
         showHistory()
+        // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
+        // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
+        page.layoutParams = FrameLayout.LayoutParams(resources.displayMetrics.widthPixels, ViewGroup.LayoutParams.MATCH_PARENT)
         return page
     }
 
@@ -228,7 +254,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         Thread {
             val found = runCatching { Tmdb.search(requireContext().applicationContext, phrase) }
             activity?.runOnUiThread {
-                if (input.text.toString().trim() != phrase) return@runOnUiThread
+                if (!isAdded || input.text.toString().trim() != phrase) return@runOnUiThread
                 val titles = found.getOrDefault(emptyList())
                 phraseShown = phrase
                 setCards(listOf<Any>(MoreTile("Искать торренты")) + titles)
@@ -257,9 +283,11 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         if (recent.any { it.poster == null }) Thread {
             val fixed = History.withPosters(requireContext().applicationContext, recent)
             activity?.runOnUiThread {
-                if (showingRecent && fixed != recent) {
+                if (isAdded && showingRecent && fixed != recent) {
                     recent = fixed
-                    setCards(fixed)
+                    // replaced one by one: clearing the grid would take the remote focus off the cards
+                    if (cards.size() == fixed.size) fixed.forEachIndexed { i, t -> if (cards.get(i) != t) cards.replace(i, t) }
+                    else setCards(fixed)
                 }
             }
         }.start()
@@ -268,7 +296,17 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     /** "Редактировать" turns into the buttons of the edit mode; the one that deletes the chosen sits next to "Готово". */
     private fun renderRecentActions() {
         recentActions.removeAllViews()
-        fun add(view: View) = recentActions.addView(view, LinearLayout.LayoutParams(-2, -1).apply { leftMargin = px(12) })
+        fun add(view: View) {
+            // the remote goes from the buttons straight down to the cards
+            view.nextFocusDownId = grid.id
+            // and up to the input: the field is wider than the button and the search for the nearest view above may miss it
+            if (input.id == View.NO_ID) input.id = View.generateViewId()
+            view.nextFocusUpId = input.id
+            view.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.action == KeyEvent.ACTION_DOWN) input.requestFocus() else false
+            }
+            recentActions.addView(view, LinearLayout.LayoutParams(-2, -1).apply { leftMargin = px(12) })
+        }
         if (editing) {
             add(button(MenuIcons.DELETE, "Очистить всё") { askClearRecent() })
             if (picked.isNotEmpty()) add(button(MenuIcons.DELETE, "Удалить (${picked.size})") { removePicked() })
@@ -295,7 +333,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private fun askClearRecent() {
         android.app.AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog_Alert)
             .setTitle("Очистить весь список?")
-            .setMessage("Недавно просмотренное будет удалено.")
+            .setMessage("Недавно открытое будет удалено.")
             .setPositiveButton("Очистить") { _, _ ->
                 History.clear(requireContext())
                 picked.clear()
