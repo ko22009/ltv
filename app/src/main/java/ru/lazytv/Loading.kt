@@ -41,6 +41,15 @@ class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFF8FB39
 
     override fun onAttachedToWindow() { super.onAttachedToWindow(); animator.start() }
     override fun onDetachedFromWindow() { animator.cancel(); super.onDetachedFromWindow() }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (visibility == VISIBLE) {
+            if (!animator.isStarted) animator.start()
+        } else {
+            animator.cancel()
+        }
+    }
 }
 
 /** Centered spinner with a caption; `scale` is the 1280-wide design scale of the host screen. */

@@ -101,8 +101,6 @@ class DetailsActivity : Activity() {
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44))
-        // the details are already known (prefetched in the list): the frame comes from the cache, no spinner needed
-        if (Tmdb.isCached(this, title.id, title.tv)) bannerSpinner.visibility = View.GONE
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
@@ -261,9 +259,11 @@ class DetailsActivity : Activity() {
                         posterPath = d.poster
                         posterView.showPoster(d.poster, posterSpinner)
                     }
-                    if (d.backdrop.isNotEmpty()) {
-                        // the spinner is already turning: it stays until the frame is there, and goes away when there is none
-                        Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
+                    val backdropPath = d.backdrop.ifEmpty { d.backdrops.firstOrNull().orEmpty() }
+                    if (backdropPath.isNotEmpty()) {
+                        bannerSpinner.visibility = View.VISIBLE
+                        // the spinner turns until the frame is there, and goes away when there is none
+                        Glide.with(this).load("https://image.tmdb.org/t/p/original$backdropPath")
                             .listener(object : RequestListener<Drawable> {
                                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                                     bannerSpinner.visibility = View.GONE
