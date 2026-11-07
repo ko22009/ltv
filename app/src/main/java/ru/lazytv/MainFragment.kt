@@ -540,6 +540,7 @@ fun titleFrom(extras: android.os.Bundle) = Title(
     extras.getLong("id"), extras.getString("name").orEmpty(), extras.getString("overview").orEmpty(),
     extras.getString("poster"), extras.getBoolean("tv"), extras.getString("year").orEmpty(),
     extras.getString("rating").orEmpty(),
+    backdrop = extras.getString("backdrop"),
 )
 
 fun Title.toExtras() = android.os.Bundle().apply {
@@ -550,6 +551,7 @@ fun Title.toExtras() = android.os.Bundle().apply {
     putBoolean("tv", tv)
     putString("year", year)
     putString("rating", rating)
+    putString("backdrop", backdrop)
 }
 
 /** Rating over the poster: just large text with a shadow, no filled plate behind it. */
@@ -627,9 +629,10 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         // it waits a moment and only runs if the cursor stays on the card: scrolling through a row loads nothing
         val warmUp = Runnable {
             if (card.isFocused && card.shownId == title.id) runtimePool.execute {
-                val backdrop = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).backdrop }.getOrDefault("")
+                val backdrop = title.backdrop?.ifEmpty { null }
+                    ?: runCatching { Tmdb.detailsCached(appContext, title.id, title.tv).backdrop }.getOrDefault("")
                 if (backdrop.isNotEmpty()) card.post {
-                    Glide.with(appContext).load("https://image.tmdb.org/t/p/original$backdrop").preload()
+                    Glide.with(appContext).load("https://image.tmdb.org/t/p/w1280$backdrop").preload()
                 }
             }
         }

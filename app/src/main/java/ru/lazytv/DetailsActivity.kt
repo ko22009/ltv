@@ -106,6 +106,25 @@ class DetailsActivity : Activity() {
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
+        val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
+        if (!passedBackdrop.isNullOrEmpty()) {
+            currentBackdrop = passedBackdrop
+            bannerSpinner.visibility = View.VISIBLE
+            Glide.with(this).load("https://image.tmdb.org/t/p/w1280$passedBackdrop")
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                        bannerSpinner.visibility = View.GONE
+                        return false
+                    }
+
+                    override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                        bannerSpinner.visibility = View.GONE
+                        backdrop.animate().alpha(1f).setDuration(250).start()
+                        return false
+                    }
+                }).into(backdrop)
+        }
+
         val appName = ImageView(this).apply {
             setImageResource(R.drawable.logo)
             scaleType = ImageView.ScaleType.FIT_END
@@ -315,58 +334,62 @@ class DetailsActivity : Activity() {
             try {
                 val d = runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
                 originalTitle = d?.originalTitle.orEmpty()
-                // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
-                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
                 if (d == null) {
                     onUi { bannerSpinner.visibility = View.GONE }
-                    return@Thread
-                }
-                onUi {
-                    if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
-                        posterPath = d.poster
-                        posterView.showPoster(d.poster, posterSpinner)
-                    }
-                    val backdropPath = d.backdrop.ifEmpty { d.backdrops.firstOrNull().orEmpty() }
-                    if (backdropPath.isNotEmpty()) {
-                        bannerSpinner.visibility = View.VISIBLE
-                        // the spinner turns until the frame is there, and goes away when there is none
-                        Glide.with(this).load("https://image.tmdb.org/t/p/original$backdropPath")
-                            .listener(object : RequestListener<Drawable> {
-                                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                                    bannerSpinner.visibility = View.GONE
-                                    return false
-                                }
+                } else {
+                    onUi {
+                        if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
+                            posterPath = d.poster
+                            posterView.showPoster(d.poster, posterSpinner)
+                        }
+                        val backdropPath = d.backdrop.ifEmpty { d.backdrops.firstOrNull().orEmpty() }
+                        if (backdropPath.isNotEmpty()) {
+                            if (backdropPath != currentBackdrop) {
+                                currentBackdrop = backdropPath
+                                bannerSpinner.visibility = View.VISIBLE
+                                Glide.with(this).load("https://image.tmdb.org/t/p/w1280$backdropPath")
+                                    .listener(object : RequestListener<Drawable> {
+                                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                                            bannerSpinner.visibility = View.GONE
+                                            return false
+                                        }
 
-                                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                                    bannerSpinner.visibility = View.GONE
-                                    backdrop.animate().alpha(1f).setDuration(250).start()
-                                    return false
-                                }
-                            }).into(backdrop)
-                    } else bannerSpinner.visibility = View.GONE
-                    if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
-                    if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
-                    fillTable(table, baseRows + listOf(
-                        "Длительность" to (formatRuntime(d.runtime)),
-                        "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
-                        "Следующая серия" to d.nextEpisode,
-                        "Возраст" to d.age,
-                        "Жанр" to d.genres.joinToString(", "),
-                        "Страна" to d.countries.joinToString(", "),
-                        "Режиссёр" to d.director,
-                    ), d.directors, scroll)
-                    val info = table.parent as? LinearLayout
-                    // directors already stand in the table above as links: the cast block holds the actors only
-                    val mergedPeople = d.castPeople
-                    if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
-                        val row = castRow(mergedPeople, false, scroll)
-                        row.tag = "cast"
-                        info.addView(row)
+                                        override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                                            bannerSpinner.visibility = View.GONE
+                                            backdrop.animate().alpha(1f).setDuration(250).start()
+                                            return false
+                                        }
+                                    }).into(backdrop)
+                            }
+                        } else if (currentBackdrop.isEmpty()) {
+                            bannerSpinner.visibility = View.GONE
+                        }
+                        if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
+                        if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
+                        fillTable(table, baseRows + listOf(
+                            "Длительность" to (formatRuntime(d.runtime)),
+                            "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
+                            "Следующая серия" to d.nextEpisode,
+                            "Возраст" to d.age,
+                            "Жанр" to d.genres.joinToString(", "),
+                            "Страна" to d.countries.joinToString(", "),
+                            "Режиссёр" to d.director,
+                        ), d.directors, scroll)
+                        val info = table.parent as? LinearLayout
+                        // directors already stand in the table above as links: the cast block holds the actors only
+                        val mergedPeople = d.castPeople
+                        if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
+                            val row = castRow(mergedPeople, false, scroll)
+                            row.tag = "cast"
+                            info.addView(row)
+                        }
+                        galleryPosters = d.posters
+                        galleryBackdrops = d.allBackdrops
+                        startBackdrops(d.backdrops)
                     }
-                    galleryPosters = d.posters
-                    galleryBackdrops = d.allBackdrops
-                    startBackdrops(d.backdrops)
                 }
+                // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
+                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
             } finally {
                 detailsReady.countDown()
             }
@@ -470,6 +493,7 @@ class DetailsActivity : Activity() {
     private lateinit var posterSpinner: Spinner
     private lateinit var backdrop: ImageView
     private lateinit var bannerSpinner: Spinner
+    private var currentBackdrop = ""
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
     private lateinit var overviewView: TextView
@@ -519,7 +543,7 @@ class DetailsActivity : Activity() {
     private fun startBackdropSlideshow(items: List<String>) {
         if (backdropsStarted) return
         val all = items.map {
-            if (it.startsWith("http")) it else "https://image.tmdb.org/t/p/original$it"
+            if (it.startsWith("http")) it else "https://image.tmdb.org/t/p/w1280$it"
         }.distinct().take(5)
         if (all.size < 2) return
         backdropsStarted = true
@@ -693,10 +717,11 @@ class DetailsActivity : Activity() {
         )
     }
 
-    /** The history record: with the poster found through TMDB, when the list did not pass one to the card. */
+    /** The history record: with the poster and backdrop found through TMDB, when the list did not pass them to the card. */
     private fun historyTitle(): Title {
         val title = titleFrom(intent.extras ?: Bundle())
-        return if (title.poster == null && posterPath != null) title.copy(poster = posterPath) else title
+        val withPoster = if (title.poster == null && posterPath != null) title.copy(poster = posterPath) else title
+        return if (withPoster.backdrop == null && currentBackdrop.isNotEmpty()) withPoster.copy(backdrop = currentBackdrop) else withPoster
     }
 
     /** Opens the trailer found through TMDB; falls back to a YouTube search when there is none. */

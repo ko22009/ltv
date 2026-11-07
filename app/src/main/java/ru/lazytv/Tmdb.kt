@@ -15,6 +15,7 @@ data class Title(
     val rating: String = "",
     /** Up to two genre names taken from the list answer; empty when the list carries none. */
     val genre: String = "",
+    val backdrop: String? = null,
 )
 
 /** A list or a service category: what to ask TMDB for. */
@@ -118,6 +119,7 @@ object Tmdb {
             item.str("poster_path").ifEmpty { null }, tv,
             date.take(4), String.format(java.util.Locale.US, "%.1f", item.optDouble("vote_average", 0.0)),
             genreText(item.optJSONArray("genre_ids")),
+            item.str("backdrop_path").ifEmpty { null },
         )
     }
 
@@ -361,6 +363,7 @@ object Tmdb {
                 c.optLong("id"), name, c.str("overview"), c.str("poster_path").takeIf { it.isNotEmpty() }, tv,
                 date.take(4), String.format(java.util.Locale.US, "%.1f", c.optDouble("vote_average", 0.0)),
                 genreText(c.optJSONArray("genre_ids")),
+                c.str("backdrop_path").takeIf { it.isNotEmpty() },
             )
             return Credit(title, role) to (c.optDouble("popularity", 0.0) * weightBoost)
         }
