@@ -1,43 +1,194 @@
 package ru.lazytv
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.leanback.app.GuidedStepSupportFragment
 import androidx.leanback.widget.GuidanceStylist
 import androidx.leanback.widget.GuidedAction
+import androidx.leanback.widget.GuidedActionsStylist
 
 /**
- * Settings screens: one section per screen, opened from a card on the settings page. The options of the section
- * follow each other, a choice shows its values as rows under it, and a change is saved at once — screens pick it up
- * when shown.
+ * Settings screens: one section per screen, opened from a card on the settings page. Choices open as compact
+ * dropdowns, and the Help section uses a full-width card page so multi-line answers fit without clipping.
  */
 class SettingsActivity : FragmentActivity() {
+    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private fun px(value: Int) = (value * scale).toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val section = intent.getStringExtra("section").orEmpty()
+        if (section == "Помощь") {
+            buildHelpScreen()
+            return
+        }
         if (savedInstanceState == null) {
-            val section = intent.getStringExtra("section").orEmpty()
             val screen = SettingsScreen().apply {
                 arguments = Bundle().apply { putString("section", section) }
             }
             GuidedStepSupportFragment.addAsRoot(this, screen, android.R.id.content)
         }
     }
+
+    private fun buildHelpScreen() {
+        val root = FrameLayout(this).apply { background = calmBackground() }
+        val page = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(64), px(36), px(64), px(24))
+        }
+        val back = backButton(this, scale) { finish() }
+        val header = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+            addView(TextView(this@SettingsActivity).apply {
+                text = "Помощь"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, 34f * scale)
+                typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            })
+        }
+        page.addView(header)
+
+        val retuneBtn = chipButton(this, scale, "Подобрать приём обхода").apply {
+            setOnClickListener {
+                com.lmd.dpi.DpiBypass.retune()
+                android.widget.Toast.makeText(this@SettingsActivity, "Подбор запущен, занимает до минуты", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+        val dateBtn = chipButton(this, scale, "Настройки даты и времени").apply {
+            setOnClickListener { Errors.openDateSettings(this@SettingsActivity) }
+        }
+        val actionsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(retuneBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+            addView(dateBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
+        }
+        page.addView(actionsRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(16); bottomMargin = px(14) })
+
+        val topics = listOf(
+            "Сайт не открывается" to
+                "Включите обход блокировок в разделе «Сеть» или нажмите «Подобрать приём обхода» выше. Если показ закрыт для вашего региона, используйте торренты.",
+            "Видео не запускается или нет звука" to
+                "Если встроенный плеер не поддерживает кодек раздачи, выберите внешний плеер в разделе «Воспроизведение» или удерживайте OK на серии для выбора другого качества.",
+            "Торренты и TorrServe" to
+                "LazyTV не скачивает торренты сам: нужна программа TorrServe на приставке или другом устройстве в домашней сети. Выбирайте раздачи с большим числом сидов (▲).",
+            "Управление плеером, звук и субтитры" to
+                "При скрытой панели стрелки влево и вправо перематывают ролик на 10 секунд. Стрелки вверх, вниз или кнопка OK открывают нижнюю панель с выбором звуковой дорожки, субтитров, качества и скорости.",
+            "Дата и время на приставке" to
+                "Если после отключения питания на приставке сбились часы, защищённые сайты (HTTPS) перестают открываться. Проверьте системные часы кнопкой «Настройки даты и времени» выше.",
+            "Старые приставки (Android 6 и ниже)" to
+                "На старых прошивках истекли системные сертификаты безопасности: часть HTTPS-сайтов не открывается без обновления сертификатов системы.",
+        )
+
+        val scroll = ScrollView(this).apply {
+            isFocusable = false
+            isVerticalScrollBarEnabled = false
+        }
+        val cardsList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val cards = mutableListOf<View>()
+        topics.forEachIndexed { index, (topicTitle, body) ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(px(22), px(14), px(22), px(14))
+                background = focusShape(scale, 0x33000000, radius = 6f)
+                isFocusable = true
+                isClickable = true
+                addView(TextView(this@SettingsActivity).apply {
+                    text = topicTitle
+                    setTextColor(Color.WHITE)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
+                    typeface = Typeface.DEFAULT_BOLD
+                })
+                addView(TextView(this@SettingsActivity).apply {
+                    text = body
+                    setTextColor(0xFFDCE8E0.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
+                    setLineSpacing(0f, 1.2f)
+                    setPadding(0, px(6), 0, 0)
+                })
+                setOnClickListener {
+                    android.app.AlertDialog.Builder(this@SettingsActivity, android.R.style.Theme_Material_Dialog_Alert)
+                        .setTitle(topicTitle)
+                        .setMessage(body)
+                        .setPositiveButton("Закрыть", null)
+                        .show()
+                }
+                setOnKeyListener { _, code, event ->
+                    if (event.action != KeyEvent.ACTION_DOWN) false
+                    else when (code) {
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (index == 0) {
+                                scroll.smoothScrollTo(0, 0)
+                                retuneBtn.requestFocus()
+                            } else cards[index - 1].requestFocus()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            cards.getOrNull(index + 1)?.requestFocus()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                        else -> false
+                    }
+                }
+            }
+            cards.add(card)
+            cardsList.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(10) })
+        }
+        scroll.addView(cardsList)
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(page, FrameLayout.LayoutParams(-1, -1))
+
+        back.setOnKeyListener { _, code, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (code) {
+                KeyEvent.KEYCODE_DPAD_DOWN -> retuneBtn.requestFocus()
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> true
+                else -> false
+            }
+        }
+        val topButtons = listOf(retuneBtn, dateBtn)
+        topButtons.forEachIndexed { i, btn ->
+            btn.setOnKeyListener { _, code, event ->
+                if (event.action != KeyEvent.ACTION_DOWN) false
+                else when (code) {
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        val step = if (code == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                        topButtons.getOrNull(i + step)?.requestFocus()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> back.requestFocus()
+                    KeyEvent.KEYCODE_DPAD_DOWN -> cards.firstOrNull()?.requestFocus() ?: true
+                    else -> false
+                }
+            }
+        }
+        setContentView(root)
+        cards.firstOrNull()?.requestFocus() ?: back.requestFocus()
+    }
 }
 
 class SettingsScreen : GuidedStepSupportFragment() {
-    /** Value rows of choices: row id → setting key (the description shows the chosen value). */
-    private val valueRows = HashMap<Long, String>()
-
-    /** Option rows: row id → (setting key, value); and the reverse map to uncheck the rest of a group. */
-    private val optionRows = HashMap<Long, Pair<String, String>>()
-    private val groupRows = HashMap<String, MutableList<Long>>()
+    /** Sub-option rows inside dropdown choices: sub-action id → (parent row id, setting key, value). */
+    private val subOptionRows = HashMap<Long, Triple<Long, String, String>>()
     private val checkRows = HashMap<Long, String>()
     private val editRows = HashMap<Long, String>()
     private val buttons = HashMap<Long, () -> Unit>()
     private val sectionIds = HashMap<String, Long>()
     private var nextId = 1L
+    private var nextCheckSetId = 10
 
     /** Request codes of the two file dialogs: a backup is written to the picked file, or read from it. */
     private val requestSave = 7001
@@ -46,7 +197,18 @@ class SettingsScreen : GuidedStepSupportFragment() {
     override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
         val section = arguments?.getString("section").orEmpty()
         val title = section.ifEmpty { "Настройки" }
-        return GuidanceStylist.Guidance(title, "Изменения применяются сразу", if (section.isEmpty()) "LazyTV" else "Настройки", null)
+        val subtitle = if (title == "О приложении") "Сведения о программе" else "Изменения применяются сразу"
+        return GuidanceStylist.Guidance(title, subtitle, if (section.isEmpty()) "LazyTV" else "Настройки", null)
+    }
+
+    override fun onCreateActionsStylist(): GuidedActionsStylist = object : GuidedActionsStylist() {
+        override fun onBindViewHolder(vh: ViewHolder, action: GuidedAction) {
+            super.onBindViewHolder(vh, action)
+            vh.descriptionView?.apply {
+                maxLines = 10
+                isVerticalScrollBarEnabled = false
+            }
+        }
     }
 
     override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
@@ -93,18 +255,21 @@ class SettingsScreen : GuidedStepSupportFragment() {
     private fun choice(
         actions: MutableList<GuidedAction>, title: String, key: String, default: String, options: List<Pair<String, String>>,
     ) {
-        val current = Settings.string(requireContext(), key, default)
-        val valueId = newId()
-        valueRows[valueId] = key
-        actions.add(GuidedAction.Builder(requireContext()).id(valueId).title(title)
-            .description(options.firstOrNull { it.first == current }?.second ?: current)
-            .infoOnly(true).focusable(false).build())
-        options.forEach { (value, label) ->
-            val id = newId()
-            optionRows[id] = key to value
-            groupRows.getOrPut(key) { mutableListOf() }.add(id)
-            actions.add(GuidedAction.Builder(requireContext()).id(id).title(label).checked(value == current).build())
+        val ctx = requireContext()
+        val current = Settings.string(ctx, key, default)
+        val parentId = newId()
+        val setId = nextCheckSetId++
+        val subs = options.map { (value, label) ->
+            val subId = newId()
+            subOptionRows[subId] = Triple(parentId, key, value)
+            GuidedAction.Builder(ctx).id(subId).title(label).checkSetId(setId).checked(value == current).build()
         }
+        actions.add(
+            GuidedAction.Builder(ctx).id(parentId).title(title)
+                .description(options.firstOrNull { it.first == current }?.second ?: current)
+                .subActions(subs)
+                .build()
+        )
     }
 
     private fun editable(actions: MutableList<GuidedAction>, title: String, key: String, default: String) {
@@ -130,7 +295,8 @@ class SettingsScreen : GuidedStepSupportFragment() {
 
     override fun onCreateActions(actions: MutableList<GuidedAction>, savedInstanceState: Bundle?) {
         nextId = 1L
-        valueRows.clear(); optionRows.clear(); groupRows.clear(); checkRows.clear(); editRows.clear(); buttons.clear()
+        nextCheckSetId = 10
+        subOptionRows.clear(); checkRows.clear(); editRows.clear(); buttons.clear()
         val ctx = requireContext()
 
         section(actions, "Списки")
@@ -173,7 +339,9 @@ class SettingsScreen : GuidedStepSupportFragment() {
         editable(actions, "Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
         choice(actions, "Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
             Settings.MIN_SEEDS.map { it.toString() to if (it == 0) "Любое количество" else "От $it" })
-        check(actions, "Экспериментальный Searchtor", "Обычный запрос без обхода проверки: если сервер пустит, покажет раздачи", Settings.SEARCHTOR, false)
+        check(actions, "Экспериментальный Searchtor",
+            "Дополнительный индекс торрентов (searchtor.to): работает только в сетях, где сайт пускает без проверки Cloudflare",
+            Settings.SEARCHTOR, false)
         editable(actions, "Серверы JacRed (пусто: из конфига)", Settings.JACRED_SERVERS, "")
         editable(actions, "Свой Jackett: адрес", Settings.JACKETT_URL, "")
         editable(actions, "Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
@@ -243,25 +411,6 @@ class SettingsScreen : GuidedStepSupportFragment() {
                 .show()
         }
 
-        section(actions, "Помощь")
-        info(actions, "Сайт не открывается",
-            "Включите обход блокировок в разделе «Сеть» или нажмите «Подобрать приём обхода». Если показ закрыт для вашего региона, используйте торренты")
-        info(actions, "Видео не запускается или нет звука",
-            "Если встроенный плеер не поддерживает кодек раздачи, выберите внешний плеер в разделе «Воспроизведение» или удерживайте OK на серии для выбора другого качества")
-        info(actions, "Торренты и TorrServe",
-            "LazyTV не скачивает торренты сам: нужна программа TorrServe на приставке или другом устройстве в домашней сети. Выбирайте раздачи с большим числом сидов (▲)")
-        info(actions, "Звук и субтитры",
-            "Во время просмотра нажмите любую кнопку пульта: в нижней строке плеера есть выбор звуковой дорожки, субтитров и пропорций кадра")
-        info(actions, "Дата и время на приставке",
-            "Если после отключения питания на приставке сбились часы, защищённые сайты (HTTPS) перестают открываться. Проверьте дату и время в настройках приставки")
-        info(actions, "Старые приставки (Android 6 и ниже)",
-            "На старых прошивках истекли системные сертификаты безопасности: часть HTTPS-сайтов не открывается без обновления сертификатов системы")
-        button(actions, "Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
-        button(actions, "Подобрать приём обхода", "Перебирает приёмы ByeDPI, запоминает рабочий для этой сети") {
-            com.lmd.dpi.DpiBypass.retune()
-            toast("Подбор запущен, занимает до минуты")
-        }
-
         section(actions, "О приложении")
         info(actions, "Версия", BuildConfig.VERSION_NAME)
         info(actions, "Как работает приложение",
@@ -289,19 +438,19 @@ class SettingsScreen : GuidedStepSupportFragment() {
             onCheck(key, action.isChecked)
             return
         }
-        optionRows[id]?.let { (key, value) ->
-            Settings.setString(requireContext(), key, value)
-            groupRows[key]?.forEach { row ->
-                findActionById(row)?.isChecked = row == id
-                notifyActionChanged(findActionPositionById(row))
-            }
-            valueRows.entries.firstOrNull { it.value == key }?.key?.let { valueId ->
-                findActionById(valueId)?.description = action.title
-                notifyActionChanged(findActionPositionById(valueId))
-            }
-            return
-        }
         buttons[id]?.invoke()
+    }
+
+    override fun onSubGuidedActionClicked(action: GuidedAction): Boolean {
+        val (parentId, key, value) = subOptionRows[action.id] ?: return true
+        Settings.setString(requireContext(), key, value)
+        findActionById(parentId)?.let { parent ->
+            parent.description = action.title
+            parent.subActions?.forEach { sub -> sub.isChecked = sub.id == action.id }
+            val pos = findActionPositionById(parentId)
+            if (pos >= 0) notifyActionChanged(pos)
+        }
+        return true
     }
 
     /** Side effects of the switches that do something at once, not only when a screen reads them. */
