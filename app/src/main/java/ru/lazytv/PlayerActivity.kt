@@ -913,6 +913,22 @@ class PlayerActivity : Activity() {
         getSharedPreferences("positions", 0).edit().remove(positionKey()).remove(url).apply()
     }
 
+    /** Everything needed to start this playback again: the stream, the episode list and the place in it (see ContinueWatching.resumeIntent). */
+    private fun resumeData(): String {
+        val list = org.json.JSONArray()
+        queue.forEach { item ->
+            val streams = org.json.JSONArray()
+            item.streams.forEach { (q, u) -> streams.put(org.json.JSONObject().put("q", q).put("u", u)) }
+            list.put(org.json.JSONObject().put("u", item.url).put("t", item.title).put("m", item.meta)
+                .put("e", item.label).put("k", item.watchKey).put("s", streams))
+        }
+        return org.json.JSONObject()
+            .put("url", url).put("name", intent.getStringExtra("name").orEmpty()).put("meta", intent.getStringExtra("meta").orEmpty())
+            .put("playlist", if (queue.isEmpty()) "" else list.toString()).put("index", queueIndex)
+            .put("mediaTitle", mediaTitle).put("originalTitle", originalTitle).put("year", mediaYear)
+            .put("tv", isTv).put("poster", posterPath.orEmpty()).put("tmdbId", tmdbId).toString()
+    }
+
     private fun save() {
         val exo = player ?: return
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
@@ -928,7 +944,8 @@ class PlayerActivity : Activity() {
                 if (tmdbId > 0L && known) {
                     // the row of the home screen: the provider is written off the main thread
                     val title = Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear)
-                    Thread { ContinueWatching.update(appContext, title, pos, dur) }.start()
+                    val resume = resumeData()
+                    Thread { ContinueWatching.update(appContext, title, pos, dur, resume) }.start()
                 }
             }
         }
@@ -951,6 +968,13 @@ class PlayerActivity : Activity() {
         val cause = error.cause ?: error
         if (Errors.isSsl(cause)) {
             builder.setNeutralButton("Настройки даты") { _, _ -> Errors.openDateSettings(this) }
+        } else if (intent.getBooleanExtra("resumed", false) && tmdbId > 0L) {
+            // started from "continue watching": the saved stream may be gone (an old address, TorrServe off), the card offers other sources
+            builder.setNeutralButton("Открыть карточку") { _, _ ->
+                startActivity(android.content.Intent(this, DetailsActivity::class.java)
+                    .putExtras(Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear).toExtras()))
+                finish()
+            }
         }
         errorDialog = builder.show()
     }

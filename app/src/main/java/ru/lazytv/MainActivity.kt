@@ -45,6 +45,14 @@ class MainActivity : FragmentActivity() {
         val extras = source.extras ?: return
         source.removeExtra(OPEN_TITLE)
         val title = titleFrom(extras)
+        // "continue watching": straight into the player; without a saved stream the title card opens as before
+        if (source.getBooleanExtra(RESUME_PLAY, false) && title.id > 0L) {
+            source.removeExtra(RESUME_PLAY)
+            ContinueWatching.resumeIntent(this, title.tv, title.id)?.let {
+                startActivity(it)
+                return
+            }
+        }
         if (title.id > 0L) startActivity(Intent(this, DetailsActivity::class.java).putExtras(title.toExtras()))
     }
 
@@ -53,5 +61,7 @@ class MainActivity : FragmentActivity() {
         const val RESTORE = "restore"
         /** Extra of a home-screen recommendation intent: open the title card on top of the main screen. */
         const val OPEN_TITLE = "open_title"
+        /** With [OPEN_TITLE]: start the player on the stream the title was left on instead of opening the card. */
+        const val RESUME_PLAY = "resume_play"
     }
 }

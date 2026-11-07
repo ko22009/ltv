@@ -12,15 +12,39 @@ import org.json.JSONArray
 
 /**
  * The "Продолжить просмотр" entries of the system "Смотреть далее" row: one card per film or series that was started
- * in the player and not finished, with the progress bar. A card opens the title card of the app; the player itself
- * restores the position when the same stream is started again.
+ * in the player and not finished, with the progress bar. A film card starts the player on the saved stream (the
+ * player restores the position); a series card opens the title card of the app to choose the season and the episode.
  */
 object ContinueWatching {
     private fun key(tv: Boolean, id: Long) = "continue_watching_${tv}_$id"
+    private fun resumeKey(tv: Boolean, id: Long) = "continue_play_${tv}_$id"
 
-    /** Adds the title to the row or moves its progress. Runs the provider calls on the caller's thread: call it off the main thread. */
-    fun update(context: Context, title: Title, positionMs: Long, durationMs: Long) {
+    /**
+     * The intent that starts the player on the stream the title was left on (the position comes from the player's own
+     * memory); null when nothing was saved, then the card of the title is opened instead.
+     */
+    fun resumeIntent(context: Context, tv: Boolean, id: Long): Intent? {
+        // a series needs its season and episode to be chosen: its card opens, only a film starts at once
+        if (tv) return null
+        val raw = Settings.string(context, resumeKey(tv, id), "").ifEmpty { return null }
+        val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return null
+        if (o.optString("url").isEmpty()) return null
+        return Intent(context, PlayerActivity::class.java)
+            .putExtra("url", o.optString("url")).putExtra("name", o.optString("name")).putExtra("meta", o.optString("meta"))
+            .putExtra("playlist", o.optString("playlist")).putExtra("index", o.optInt("index"))
+            .putExtra("mediaTitle", o.optString("mediaTitle")).putExtra("originalTitle", o.optString("originalTitle"))
+            .putExtra("year", o.optString("year")).putExtra("tv", o.optBoolean("tv"))
+            .putExtra("poster", o.optString("poster").ifEmpty { null }).putExtra("tmdbId", o.optLong("tmdbId"))
+            .putExtra("resumed", true)
+    }
+
+    /**
+     * Adds the title to the row or moves its progress. [resume] is what the player needs to start the same stream again
+     * (see [resumeIntent]). Runs the provider calls on the caller's thread: call it off the main thread.
+     */
+    fun update(context: Context, title: Title, positionMs: Long, durationMs: Long, resume: String) {
         if (!Settings.bool(context, Settings.RECOMMENDATIONS) || title.id <= 0L || durationMs <= 0L) return
+        if (!title.tv) Settings.setString(context, resumeKey(title.tv, title.id), resume)
         val builder = androidx.tvprovider.media.tv.WatchNextProgram.Builder()
             .setWatchNextType(TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
             .setLastEngagementTimeUtcMillis(System.currentTimeMillis())
@@ -31,10 +55,11 @@ object ContinueWatching {
             .setLastPlaybackPositionMillis(positionMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
             .setDurationMillis(durationMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
             .setInternalProviderId("${title.tv}:${title.id}")
-            // the same way as the recommendations: through the exported MainActivity, which opens the title card
+            // through the exported MainActivity: it starts the player on the saved stream, or opens the title card if that is gone
             .setIntentUri(Uri.parse(Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(MainActivity.OPEN_TITLE, true).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
+                .putExtra(MainActivity.OPEN_TITLE, true).putExtra(MainActivity.RESUME_PLAY, true)
+                .putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
         if (!title.poster.isNullOrEmpty()) builder.setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
         val helper = PreviewChannelHelper(context)
         val saved = Settings.string(context, key(title.tv, title.id), "").toLongOrNull()
@@ -53,6 +78,7 @@ object ContinueWatching {
         val saved = Settings.string(context, key(tv, id), "").toLongOrNull() ?: return
         runCatching { context.contentResolver.delete(TvContractCompat.buildWatchNextProgramUri(saved), null, null) }
         Settings.remove(context, key(tv, id))
+        Settings.remove(context, resumeKey(tv, id))
     }
 }
 
