@@ -67,7 +67,10 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
 /** Hands a background result to the screen, but only while it is alive: a closed screen gets nothing (Glide throws on a destroyed one). */
 fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinishing && !isDestroyed) block() }
 
-private val failedPosters = HashSet<String>()
+private val failedPosters = java.util.concurrent.ConcurrentHashMap<String, Long>()
+private const val FAILED_POSTER_TTL_MS = 2 * 60 * 1000L
+
+fun clearFailedPosters() = failedPosters.clear()
 
 /**
  * Loads a TMDB poster into the view; the spinner shows until the picture is there.
@@ -76,8 +79,9 @@ private val failedPosters = HashSet<String>()
 fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", stub: Int = R.drawable.no_poster) {
     val glide = com.bumptech.glide.Glide.with(context)
     glide.clear(this)
-    // a poster that already failed to load once is not requested again (the list and the card share this)
-    if (path.isNullOrEmpty() || path in failedPosters) {
+    val failedAt = if (path.isNullOrEmpty()) null else failedPosters[path]
+    // a poster that failed moments ago is not requested on every scroll step, while a later retry after network recovery works
+    if (path.isNullOrEmpty() || (failedAt != null && System.currentTimeMillis() - failedAt < FAILED_POSTER_TTL_MS)) {
         spinner?.visibility = View.GONE
         setImageResource(stub)
         return
@@ -87,12 +91,13 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
             spinner?.visibility = View.GONE
-            failedPosters.add(path)
+            failedPosters[path] = System.currentTimeMillis()
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
                                      dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
             spinner?.visibility = View.GONE
+            failedPosters.remove(path)
             return false
         }
     }

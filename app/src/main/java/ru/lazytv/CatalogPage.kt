@@ -128,7 +128,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
 
         message = TextView(requireContext()).apply {
             setTextColor(0xFFAFC4B6.toInt())
-            textSize = 16f
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setPadding(0, px(10), 0, 0)
             visibility = View.GONE
         }
@@ -165,11 +165,15 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         for (chip in listOf(resetChip, filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                val visible = (0 until buttons.childCount).map { buttons.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
                 val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                val next = buttons.getChildAt(buttons.indexOfChild(view) + step)
+                val next = visible.getOrNull(visible.indexOf(view) + step)
                 if (next != null) next.requestFocus()
                 // right of the last button there is nothing to go to; left of the first the menu opens as usual
                 next != null || step > 0
+            } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (cards.size() > 0 && !skeletons) grid.requestFocus()
+                true
             } else false
         }
 
@@ -193,7 +197,9 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
 
     /** The button above the focused card (or the closest one to it): the first cards go up to the filters, the next ones to the sort. */
     private fun nearestChip(): View {
-        val card = grid.focusedChild ?: return filterChip
+        val visible = listOf(resetChip, filterChip, sortChip).filter { it.isShown }
+        if (visible.isEmpty()) return filterChip
+        val card = grid.focusedChild ?: return visible.first()
         val at = IntArray(2)
         card.getLocationOnScreen(at)
         val x = at[0] + card.width / 2
@@ -201,7 +207,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             chip.getLocationOnScreen(at)
             return if (x < at[0]) at[0] - x else if (x > at[0] + chip.width) x - (at[0] + chip.width) else 0
         }
-        return if (gap(sortChip) < gap(filterChip)) sortChip else filterChip
+        return visible.minBy { gap(it) }
     }
 
     /** The captions of the buttons after a choice on the filters or sort screens. */
@@ -224,6 +230,8 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         CatalogFilter.save(ctx, category.id, CatalogFilter())
         signature = CatalogFilter.signature(ctx, category.id)
         renderButtons()
+        // resetChip hides itself here: hand focus to filterChip so it does not jump back to the menu
+        filterChip.requestFocus()
         startOver()
     }
 

@@ -47,12 +47,27 @@ object Recommendations {
                 .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3)
                 // w500 was upscaled by the launcher and looked soft; w780 is sharp on a 4K screen too
                 .setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
-                .setIntentUri(Uri.parse(Intent(context, DetailsActivity::class.java).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
+                // routed through exported MainActivity so non-exported DetailsActivity works in release builds too
+                .setIntentUri(Uri.parse(Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(MainActivity.OPEN_TITLE, true).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
                 .setWeight(LIMIT - index)
                 .build()
             runCatching { helper.publishPreviewProgram(program) }.getOrNull()?.takeIf { it > 0 }?.let { ids.put(it) }
         }
         Settings.setString(context, KEY_IDS, ids.toString())
+    }
+
+    /** Removes the home-screen channel and its programs when the user switches recommendations off. */
+    fun clear(context: Context) {
+        val helper = PreviewChannelHelper(context)
+        val old = runCatching { JSONArray(Settings.string(context, KEY_IDS, "[]")) }.getOrDefault(JSONArray())
+        for (i in 0 until old.length()) runCatching { helper.deletePreviewProgram(old.getLong(i)) }
+        Settings.remove(context, KEY_IDS)
+        Settings.string(context, KEY_CHANNEL, "").toLongOrNull()?.let {
+            runCatching { helper.deletePreviewChannel(it) }
+            Settings.remove(context, KEY_CHANNEL)
+        }
     }
 
     private fun channel(context: Context, helper: PreviewChannelHelper): Long? {

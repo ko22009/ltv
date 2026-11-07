@@ -116,9 +116,14 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         // the browse screen does not pass the ids of the next view, so down and up between the field, the buttons and the cards are taken here
         // down from the input goes to the nearest thing below: the "clear" of the search history, then the buttons of the viewing history
         searchBar.onDown = {
-            (if (historyBlock.isShown) clearHistory
-            else if (showingRecent && recentActions.childCount > 0) recentActions.getChildAt(0)
-            else grid).requestFocus()
+            val target = when {
+                historyBlock.isShown -> clearHistory
+                showingRecent && recentActions.childCount > 0 -> recentActions.getChildAt(0)
+                cards.size() > 0 -> grid
+                else -> null
+            }
+            target?.requestFocus()
+            true
         }
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -205,11 +210,18 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             }
         })
         grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS)
-        // up from the first row of the history goes to its buttons: the nearest view above the card is not the button, which sits to the side
+        // up from the first row goes to the nearest controls above instead of getting stuck inside the grid
         grid.setOnKeyInterceptListener { event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
-                showingRecent && grid.selectedPosition in 0 until COLUMNS && recentActions.childCount > 0
-            ) recentActions.getChildAt(0).requestFocus() else false
+                grid.selectedPosition in 0 until COLUMNS
+            ) {
+                val upTarget = when {
+                    showingRecent && recentActions.childCount > 0 -> recentActions.getChildAt(0)
+                    historyBlock.isShown && history.childCount > 0 -> history.getChildAt(0)
+                    else -> input
+                }
+                upTarget.requestFocus()
+            } else false
         }
         loader = LoadingView(requireContext(), scale, "")
         loader.visibility = View.GONE
@@ -304,7 +316,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     // --- viewing history -----------------------------------------------------------------------
 
     private fun showRecent() {
-        if (input.text.toString().trim().length >= 2) return
+        if (input.text.toString().trim().length >= 2) {
+            if (cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
+            return
+        }
         loader.visibility = View.GONE
         recent = History.all(requireContext())
         showingRecent = recent.isNotEmpty()
@@ -417,6 +432,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     }
 
     private fun showHistory() {
+        val hadFocus = history.hasFocus()
         history.removeAllViews()
         val items = saved()
         historyBlock.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
@@ -442,10 +458,20 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                     // the "clear" stands right above the phrases: up goes to it, as the eye expects
                     clearHistory.requestFocus()
                     true
+                } else if (code == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    val downTarget = when {
+                        showingRecent && recentActions.childCount > 0 -> recentActions.getChildAt(0)
+                        cards.size() > 0 -> grid
+                        else -> null
+                    }
+                    downTarget?.requestFocus()
+                    true
                 } else false
             }
             history.addView(chip, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         }
+        // rebuilding the chips after clicking one must not drop focus back onto the input (which reopens the keyboard)
+        if (hadFocus) history.getChildAt(0)?.requestFocus()
     }
 
     /** Scrolls the phrase row so the focused chip is fully seen, not cut by the row's edge. */

@@ -66,9 +66,10 @@ class MainFragment : BrowseSupportFragment() {
     private val headers = ArrayObjectAdapter(ListRowPresenter())
     private val pages = HashMap<String, ArrayObjectAdapter>()
     private var shown = ""
-    /** Adapter of the page that changes when an episode is marked watched or starred. */
+    /** Adapter of the page that changes when a title or episode is bookmarked. */
     private var favoritesRows: ArrayObjectAdapter? = null
-    private var episodeRevision = ""
+    private var favoritesSignature = ""
+    private var torrentsSignature = ""
     private var watchedMarks = ""
     /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
     private var rail: LinearLayout? = null
@@ -318,18 +319,38 @@ class MainFragment : BrowseSupportFragment() {
         cornerRadius = size / 4f
     }
 
+    private fun menuSignature(ctx: android.content.Context): String =
+        Tmdb.visibleCategories(ctx).joinToString(",") { it.id } + "|" +
+            Settings.string(ctx, Settings.LANGUAGE, "ru-RU") + "|" + ClockCheck.skewed
+
+    private fun favoritesState(ctx: android.content.Context): String =
+        Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx)
+
     /** Settings are applied when the screen comes back: lists appear and disappear without a restart. */
     override fun onResume() {
         super.onResume()
         val ctx = requireContext()
         if (pageToRestore.isEmpty()) LastScreen.rememberPage(ctx, currentPage)
-        val revision = EpisodeState.revision(ctx)
-        if (revision != episodeRevision) {
-            episodeRevision = revision
-            // the episode marks change the bookmarks while the player screen was open
-            favoritesRows?.let { fillFavorites(it, ctx) }
+        if (shown != menuSignature(ctx)) {
+            showHeaders()
+            return
         }
-        if (shown != Settings.snapshot(ctx)) showHeaders()
+        val favNow = favoritesState(ctx)
+        if (favNow != favoritesSignature) {
+            favoritesSignature = favNow
+            favoritesRows?.let { rows ->
+                fillFavorites(rows, ctx)
+                // when the last bookmark is removed while the menu is hidden, reopen it so focus is not stranded
+                if (currentPage == FAVORITES && !isShowingHeaders() && Favorites.all(ctx).isEmpty() && EpisodeState.favorites(ctx).isEmpty()) {
+                    startHeadersTransition(true)
+                }
+            }
+        }
+        val torNow = Settings.string(ctx, "favorite_torrents", "[]")
+        if (torNow != torrentsSignature) {
+            torrentsSignature = torNow
+            pages[OVERVIEW]?.let { syncFavoriteTorrents(it, ctx) }
+        }
         // a title marked watched on its card: the cards of every opened page are drawn again, dimmed or not
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
@@ -345,7 +366,8 @@ class MainFragment : BrowseSupportFragment() {
 
     private fun showHeaders() {
         val ctx = requireContext()
-        shown = Settings.snapshot(ctx)
+        shown = menuSignature(ctx)
+        watchedMarks = Watched.revision(ctx)
         headers.clear()
         pages.clear()
         pendingLoads.clear()
@@ -358,7 +380,11 @@ class MainFragment : BrowseSupportFragment() {
         Tmdb.visibleCategories(ctx).forEach { headers.add(PageRow(HeaderItem(it.title.uppercase()))) }
         headers.add(PageRow(HeaderItem(SETTINGS)))
         // (the view does not exist yet when this runs from onCreate: onViewCreated sets it then)
-        if (view != null) setSelectedPosition(0, false)
+        if (view != null) {
+            val keep = (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == currentPage }
+            setSelectedPosition(if (keep >= 0) keep else 0, false)
+            if (rail?.visibility == View.VISIBLE) refreshRail()
+        }
     }
 
     /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
@@ -403,6 +429,7 @@ class MainFragment : BrowseSupportFragment() {
         when (name) {
             OVERVIEW -> {
                 if (ClockCheck.skewed) rows.add(PageNoteRow(ClockCheck.MESSAGE))
+                torrentsSignature = Settings.string(ctx, "favorite_torrents", "[]")
                 val favTorrents = FavoriteTorrents.all(ctx)
                 if (favTorrents.isNotEmpty()) {
                     rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
@@ -413,6 +440,7 @@ class MainFragment : BrowseSupportFragment() {
             }
             FAVORITES -> {
                 favoritesRows = rows
+                favoritesSignature = favoritesState(ctx)
                 fillFavorites(rows, ctx)
             }
             SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEachIndexed { index, chunk ->
@@ -422,6 +450,21 @@ class MainFragment : BrowseSupportFragment() {
             else -> Unit
         }
         rows
+    }
+
+    private fun syncFavoriteTorrents(rows: ArrayObjectAdapter, ctx: android.content.Context) {
+        val existingIndex = (0 until rows.size()).indexOfFirst { (rows.get(it) as? ListRow)?.headerItem?.name == "Избранные раздачи" }
+        val favTorrents = FavoriteTorrents.all(ctx)
+        if (favTorrents.isEmpty()) {
+            if (existingIndex >= 0) rows.removeItems(existingIndex, 1)
+        } else if (existingIndex >= 0) {
+            val adapter = (rows.get(existingIndex) as ListRow).adapter as ArrayObjectAdapter
+            adapter.clear()
+            adapter.addAll(0, favTorrents)
+        } else {
+            val insertAt = if (rows.size() > 0 && rows.get(0) is PageNoteRow) 1 else 0
+            rows.add(insertAt, ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
+        }
     }
 
     private fun fillFavorites(rows: ArrayObjectAdapter, ctx: android.content.Context) {
@@ -435,7 +478,7 @@ class MainFragment : BrowseSupportFragment() {
                 addAll(0, episodes)
             }))
         }
-        if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или через ⋮ у серии"))
+        if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"))
     }
 
     /** A row of title cards; the "show all" tile closes it, and it opens the whole list as a page. */

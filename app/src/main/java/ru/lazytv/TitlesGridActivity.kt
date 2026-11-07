@@ -58,6 +58,7 @@ class TitlesGridActivity : Activity() {
             background = focusShape(scale, 0x66000000, circle = true)
             isFocusable = true
             isClickable = true
+            id = View.generateViewId()
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
@@ -81,6 +82,11 @@ class TitlesGridActivity : Activity() {
             }
         })
         grid = titleCardGrid(this, scale, bridge, COLUMNS)
+        back.nextFocusDownId = grid.id
+        grid.setOnKeyInterceptListener { event ->
+            val up = event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
+            if (up && grid.selectedPosition < COLUMNS) { back.requestFocus(); true } else false
+        }
         grid.setOnChildViewHolderSelectedListener(object : androidx.leanback.widget.OnChildViewHolderSelectedListener() {
             override fun onChildViewHolderSelected(parent: androidx.recyclerview.widget.RecyclerView, child: androidx.recyclerview.widget.RecyclerView.ViewHolder?, position: Int, subposition: Int) {
                 // two rows before the end: the next page is asked for
@@ -94,7 +100,7 @@ class TitlesGridActivity : Activity() {
         page.addView(body, titleGridParams(scale))
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
-        loadNext()
+        loadNext(back)
     }
 
     /** A title marked watched on its card comes back dimmed in this grid too. */
@@ -103,33 +109,37 @@ class TitlesGridActivity : Activity() {
         if (::bridge.isInitialized && cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
     }
 
-    private fun loadNext() {
+    private fun loadNext(fallbackFocus: View? = null) {
         if (busy || finished) return
         busy = true
         val page = nextPage
         val appContext = applicationContext
         Thread {
             val result = runCatching { more.loadPage(appContext, page) }
-            runOnUiThread {
+            onUi {
                 busy = false
                 loadingMore.visibility = View.GONE
                 result.onSuccess { loaded ->
                     // titles already shown are not added twice when TMDB repeats one on the next page
                     val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
-                    if (loaded.ended) finished = true
-                    else {
-                        nextPage = page + 1
-                        val first = cards.size() == 0
-                        cards.addAll(cards.size(), fresh)
-                        if (first && fresh.isNotEmpty()) grid.requestFocus()
+                    if (loaded.ended) finished = true else nextPage = page + 1
+                    val first = cards.size() == 0
+                    if (fresh.isNotEmpty()) cards.addAll(cards.size(), fresh)
+                    if (first && cards.size() > 0) grid.requestFocus()
+                    if (loaded.ended && cards.size() == 0) {
+                        message.text = "Ничего не найдено"
+                        message.visibility = View.VISIBLE
+                        fallbackFocus?.requestFocus()
+                    } else if (fresh.isEmpty() && !loaded.ended) {
                         // a page that held only watched titles adds nothing: the next one is asked for at once
-                        if (fresh.isEmpty()) loadNext()
+                        loadNext(fallbackFocus)
                     }
                 }.onFailure {
                     finished = true
                     if (cards.size() == 0) {
                         message.text = Errors.explain(it)
                         message.visibility = View.VISIBLE
+                        fallbackFocus?.requestFocus()
                     }
                 }
             }

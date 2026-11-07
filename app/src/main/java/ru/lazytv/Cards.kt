@@ -256,9 +256,9 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         genre.text = title.genre
         genre.visibility = if (title.genre.isEmpty()) View.GONE else View.VISIBLE
         showYear()
-        val value = title.rating.toDoubleOrNull()
+        val value = title.rating.replace(',', '.').toDoubleOrNull()
         if (value != null && value > 0) {
-            rating.text = "★ %.1f".format(value)
+            rating.text = String.format(java.util.Locale.US, "★ %.1f", value)
             rating.setTextColor(when {
                 value >= 7.5 -> 0xFFB9F6CA.toInt()
                 value >= 6.0 -> 0xFFFFE082.toInt()

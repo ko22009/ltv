@@ -77,7 +77,12 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.nextFocusRightId = input.id
         // the browse screen answers the search for the next view itself and passes over the ids above: the keys are taken here
         mic.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN) input.requestFocus() else false
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> input.requestFocus()
+                KeyEvent.KEYCODE_DPAD_DOWN -> onDown?.invoke() ?: false
+                else -> false
+            }
         }
         input.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) false
