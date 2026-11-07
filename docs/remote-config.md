@@ -29,7 +29,8 @@
     "nnm":         { "base": "https://nnmclub.to/forum/" },
     "videoplenka": { "base": "https://lafa.site" },
     "bitsearch":   { "base": "https://bitsearch.to" },
-    "yts":         { "base": "https://yts.am" },
+    "snowfl":      { "base": "https://snowfl.com" },
+    "yts":         { "base": "https://yts.am", "alt": ["https://movies-api.accel.li"] },
     "tpb":         { "base": "https://apibay.org" },
     "nyaa":        { "base": "https://nyaa.si" },
     "jacred":      { "base": "https://jr.maxvol.pro", "alt": ["https://jacred.freebie.tom.ru", "https://jac.stull.xyz"] }

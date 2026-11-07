@@ -331,9 +331,6 @@ class SettingsScreen : GuidedStepSupportFragment() {
         editable(actions, "Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
         choice(actions, "Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
             Settings.MIN_SEEDS.map { it.toString() to if (it == 0) "Любое количество" else "От $it" })
-        check(actions, "Экспериментальный Searchtor",
-            "Дополнительный индекс торрентов (searchtor.to): работает только в сетях, где сайт пускает без проверки Cloudflare",
-            Settings.SEARCHTOR, false)
         editable(actions, "Серверы JacRed (пусто: из конфига)", Settings.JACRED_SERVERS, "")
         editable(actions, "Свой Jackett: адрес", Settings.JACKETT_URL, "")
         editable(actions, "Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")

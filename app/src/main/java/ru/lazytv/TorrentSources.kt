@@ -3,8 +3,6 @@ package ru.lazytv
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 /** Torrent sources besides rutor. They index original (mostly English) titles, so they are asked with the original name. */
@@ -46,7 +44,7 @@ object ExtraTorrents {
         if (name.isNotBlank()) jobs.add("TorrentKino" to { torrentKino(name) })
         if (name.isNotBlank() || original.isNotBlank()) jobs.add("Jackett" to { jackett(context, name.ifBlank { original }, original) })
         if (query.isNotBlank()) jobs.add("Bitsearch" to { related(bitsearch(query)) })
-        if (query.isNotBlank() && Settings.bool(context, Settings.SEARCHTOR)) jobs.add("Searchtor" to { related(searchtor(query)) })
+        if (query.isNotBlank()) jobs.add("Snowfl" to { related(snowfl(query)) })
         // NNM-Club titles carry both names; a Japanese or Chinese original cannot be searched, so the Russian name goes then
         val latin = Regex("[A-Za-z\\p{IsCyrillic}]").containsMatchIn(original)
         val phrase = if (latin) original else name
@@ -295,7 +293,7 @@ object ExtraTorrents {
             .distinctBy { it.magnet }
 
     private fun bitsearchCategory(query: String, category: Int): List<Torrent> {
-        val html = Sources.get(RemoteConfig.url("bitsearch", "/search?q=${Sources.encode(query)}&category=$category"))
+        val html = Sources.getAny("bitsearch") { "$it/search?q=${Sources.encode(query)}&category=$category" }.value
         return html.split("<div class=\"torrent-result-card").drop(1).take(30).mapNotNull { block ->
             val title = Regex("<h3[^>]*>\\s*<a[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).find(block)?.groupValues?.get(1)
                 ?.let { htmlText(it) }.orEmpty()
@@ -312,50 +310,42 @@ object ExtraTorrents {
         }
     }
 
-    /**
-     * Experimental Searchtor: a plain GET of /r/<phrase>, at most a few redirects, no challenge solving and no
-     * special headers. If Cloudflare answers with a page, the usual magnet links are taken from it; if it answers
-     * with a redirect loop or a challenge, the source simply adds nothing.
-     */
-    private fun searchtor(query: String): List<Torrent> {
-        var current = "https://searchtor.to/r/" + Sources.encode(query)
-        var html: String? = null
-        for (i in 0 until 4) {
-            val connection = URL(current).openConnection() as HttpURLConnection
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = 7000
-            connection.readTimeout = 7000
-            val code = runCatching { connection.responseCode }.getOrElse { connection.disconnect(); return emptyList() }
-            if (code in 300..399) {
-                val location = connection.getHeaderField("Location") ?: run { connection.disconnect(); return emptyList() }
-                val next = URL(URL(current), location).toString()
-                connection.disconnect()
-                if (next == current) return emptyList()
-                current = next
-                continue
-            }
-            if (code in 200..299) {
-                html = runCatching { connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) } }
-                    .getOrElse { connection.disconnect(); return emptyList() }
-                connection.disconnect()
-                break
-            }
-            connection.disconnect()
-            return emptyList()
+    @Volatile
+    private var snowflEndpoint: Pair<String, String>? = null
+
+    private fun loadSnowflEndpoint(): Pair<String, String> {
+        val home = Sources.getAny("snowfl") { "$it/" }
+        val jsPath = Regex("src=\"(b\\.min\\.js[^\"]*)\"").find(home.value)?.groupValues?.get(1) ?: "b.min.js"
+        val js = Sources.get("${home.base.trimEnd('/')}/$jsPath")
+        val token = Regex("\"([A-Za-z0-9]{25,50})\"").find(js)?.groupValues?.get(1)
+            ?: error("snowfl token not found")
+        return (home.base.trimEnd('/') to token).also { snowflEndpoint = it }
+    }
+
+    /** Snowfl: public meta-search returning video releases with magnet links, size and seeders as JSON. */
+    private fun snowfl(query: String): List<Torrent> {
+        val nonce = java.lang.Long.toString(kotlin.random.Random.nextLong(100_000_000L, 2_000_000_000L), 36)
+        fun request(ep: Pair<String, String>): String =
+            Sources.get("${ep.first}/${ep.second}/${Sources.encode(query)}/$nonce/0/SEED/NONE/1")
+        val cached = snowflEndpoint
+        val raw = if (cached != null) {
+            runCatching { request(cached) }.getOrElse { request(loadSnowflEndpoint()) }
+        } else {
+            request(loadSnowflEndpoint())
         }
-        val page = html ?: return emptyList()
-        val magnetLink = Regex("magnet:\\?xt=urn:btih:([0-9A-Za-z]{32,40})[^\"'<>\\s]*")
-        return magnetLink.findAll(page).mapNotNull { match ->
-            val before = page.substring(maxOf(0, match.range.first - 800), match.range.first)
-            val title = Regex("<a[^>]*>([^<]{4,})</a>").findAll(before).lastOrNull()
-                ?.groupValues?.get(1)?.let { htmlText(it) }.orEmpty()
-            if (title.isEmpty()) return@mapNotNull null
-            val size = Regex("([0-9]+(?:[.,][0-9]+)?\\s*(?:TB|GB|MB|KB|ТБ|ГБ|МБ|КБ))", RegexOption.IGNORE_CASE)
-                .find(before)?.value.orEmpty()
-            val seeds = Regex("(?:seeders?|сид[а-я]*)[^0-9]{0,20}(\\d+)", RegexOption.IGNORE_CASE)
-                .find(before)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            Torrent(title, size, seeds, 0, match.value.replace("&amp;", "&"), "Searchtor")
-        }.distinctBy { it.magnet }.toList()
+        val array = JSONArray(raw)
+        return (0 until array.length()).mapNotNull { i ->
+            val o = array.getJSONObject(i)
+            if (o.optBoolean("nsfw")) return@mapNotNull null
+            val type = o.optString("type")
+            if (type.isNotEmpty() && !type.contains("Video", true) && !type.contains("Movie", true) &&
+                !type.contains("TV", true) && !type.contains("Anime", true)
+            ) return@mapNotNull null
+            val title = o.optString("name")
+            val magnetLink = o.optString("magnet")
+            if (title.isEmpty() || !magnetLink.startsWith("magnet:")) return@mapNotNull null
+            Torrent(title, o.optString("size"), o.optInt("seeder"), o.optInt("leecher"), magnetLink, "Snowfl")
+        }
     }
 
     /** The magnet link of a row: ready for most sources, taken from the topic page for NNM-Club, from a .torrent file for Jackett. */
@@ -383,7 +373,7 @@ object ExtraTorrents {
 
     /** YTS through its open JSON API: a movie carries one entry per quality, the magnet is built from the hash. */
     private fun yts(query: String): List<Torrent> {
-        val obj = JSONObject(Sources.get(RemoteConfig.url("yts", "/api/v2/list_movies.json?query_term=${Sources.encode(query)}&limit=20")))
+        val obj = JSONObject(Sources.getAny("yts") { "$it/api/v2/list_movies.json?query_term=${Sources.encode(query)}&limit=20" }.value)
         val movies = obj.optJSONObject("data")?.optJSONArray("movies") ?: return emptyList()
         val result = ArrayList<Torrent>()
         for (i in 0 until movies.length()) {
@@ -408,7 +398,7 @@ object ExtraTorrents {
 
     /** The Pirate Bay through its public JSON interface. */
     private fun pirateBay(query: String): List<Torrent> {
-        val array = JSONArray(Sources.get(RemoteConfig.url("tpb", "/q.php?q=${Sources.encode(query)}&cat=200")))
+        val array = JSONArray(Sources.getAny("tpb") { "$it/q.php?q=${Sources.encode(query)}&cat=200" }.value)
         return (0 until array.length()).mapNotNull { i ->
             val o = array.getJSONObject(i)
             val hash = o.optString("info_hash")
@@ -420,7 +410,7 @@ object ExtraTorrents {
 
     /** Nyaa (anime) through its RSS feed. */
     private fun nyaa(query: String): List<Torrent> {
-        val rss = Sources.get(RemoteConfig.url("nyaa", "/?page=rss&q=${Sources.encode(query)}&s=seeders&o=desc"))
+        val rss = Sources.getAny("nyaa") { "$it/?page=rss&q=${Sources.encode(query)}&s=seeders&o=desc" }.value
         val item = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL)
         fun tag(block: String, name: String) =
             Regex("<$name>(.*?)</$name>", RegexOption.DOT_MATCHES_ALL).find(block)?.groupValues?.get(1)?.trim().orEmpty()
