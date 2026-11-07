@@ -90,17 +90,13 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1B2E23.toInt())
     }
 
-    private var posterTask: Runnable? = null
-
-    /** Cancels pending debounced poster load if the card is recycled or unbounds before delay expires. */
+    /** Cancels pending poster load if the card is recycled or unbound. */
     fun cancelPoster() {
-        posterTask?.let { removeCallbacks(it) }
-        posterTask = null
         poster.cancelPosterLoad()
     }
 
-    /** Shows the poster; debounced so fast scrolling skips requests. */
-    fun showPoster(path: String?, debounceMs: Long = 80L) {
+    /** Shows the poster. */
+    fun showPoster(path: String?) {
         cancelPoster()
         if (path.isNullOrEmpty()) {
             poster.showPoster(null)
@@ -110,21 +106,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         if (poster.getTag(R.id.tag_poster_url) == url && poster.drawable != null) {
             return
         }
-        if (debounceMs <= 0L) {
-            poster.showPoster(path)
-        } else {
-            val task = Runnable {
-                posterTask = null
-                poster.showPoster(path)
-            }
-            posterTask = task
-            postDelayed(task, debounceMs)
-        }
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        cancelPoster()
+        poster.showPoster(path)
     }
 
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
