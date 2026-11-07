@@ -19,6 +19,7 @@ import android.widget.TextView
  */
 const val TITLE_POSTER_HEIGHT = 300f
 const val TITLE_INFO_HEIGHT = 86f
+const val CARD_SCALE = 0.82f
 
 /** Stand-in for a card of a row that is still loading: it keeps the row's height, so nothing jumps when the real cards come. */
 object SkeletonCard
@@ -105,6 +106,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         posterSpinner.visibility = View.GONE
         if (path.isNullOrEmpty()) {
             poster.showPoster(null, posterSpinner)
+            return
+        }
+        val url = "https://image.tmdb.org/t/p/w500$path"
+        if (poster.getTag(R.id.tag_poster_url) == url && poster.drawable != null) {
             return
         }
         if (debounceMs <= 0L) {
@@ -281,6 +286,11 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     fun bind(title: Title) {
+        if (shownId != title.id) {
+            cancelPoster()
+            poster.setImageDrawable(null)
+            poster.setTag(R.id.tag_poster_url, null)
+        }
         name.text = title.name
         shownId = title.id
         shown = title
@@ -403,11 +413,7 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
         adapter = bridge
         addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
-                val glide = com.bumptech.glide.Glide.with(context)
-                if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
-                    glide.pauseRequests()
-                } else {
-                    glide.resumeRequests()
+                if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                     clearFailedPosters()
                 }
             }

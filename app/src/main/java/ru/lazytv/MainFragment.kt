@@ -513,12 +513,7 @@ class MainFragment : Fragment() {
                 grid.tag = "glide_scroll"
                 grid.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
                     override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
-                        val ctx = recyclerView.context ?: return
-                        val glide = Glide.with(ctx)
-                        if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
-                            glide.pauseRequests()
-                        } else {
-                            glide.resumeRequests()
+                        if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                             clearFailedPosters()
                         }
                     }
@@ -690,7 +685,7 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
 
 private const val SKELETONS = 7
 
-class SkeletonPresenter(private val cardScale: Float = 1f) : Presenter() {
+class SkeletonPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
         ViewHolder(SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
 
@@ -699,7 +694,7 @@ class SkeletonPresenter(private val cardScale: Float = 1f) : Presenter() {
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
+class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     private companion object {
         val runtimePool: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
     }
@@ -752,8 +747,6 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         card.runtimeTask?.cancel(false)
         card.runtimeTask = null
         card.cancelPoster()
-        Glide.with(card.context).clear(card.poster)
-        card.poster.setImageDrawable(null)
     }
 }
 
@@ -1034,12 +1027,7 @@ class TitledRowsFragment : RowsSupportFragment() {
         showNote()
         verticalGridView?.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
-                val ctx = context ?: return
-                val glide = Glide.with(ctx)
-                if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
-                    glide.pauseRequests()
-                } else {
-                    glide.resumeRequests()
+                if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                     clearFailedPosters()
                 }
             }

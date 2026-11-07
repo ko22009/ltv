@@ -78,6 +78,7 @@ fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinish
 
 private val failedPosters = java.util.concurrent.ConcurrentHashMap<String, Long>()
 private const val FAILED_POSTER_TTL_MS = 8 * 1000L
+private const val SPINNER_DELAY_MS = 600L
 
 fun clearFailedPosters() = failedPosters.clear()
 
@@ -117,7 +118,7 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
             spinner.visibility = View.VISIBLE
         }
         setTag(R.id.tag_spinner_task, task)
-        postDelayed(task, 200L)
+        postDelayed(task, SPINNER_DELAY_MS)
     }
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
@@ -136,6 +137,7 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
         }
     }
     glide.load(url)
+        .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
         .error(stub)
         .listener(done)
