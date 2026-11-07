@@ -511,7 +511,8 @@ class DetailsActivity : Activity() {
                     FrameLayout.LayoutParams(-1, -1))
                 val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 addView(image, FrameLayout.LayoutParams(-1, -1))
-                if (person.photo.isNotEmpty()) Glide.with(this@DetailsActivity).load("https://image.tmdb.org/t/p/w185${person.photo}").into(image)
+                if (person.photo.isNotEmpty()) Glide.with(this@DetailsActivity).load("https://image.tmdb.org/t/p/w185${person.photo}")
+                    .transition(DrawableTransitionOptions.withCrossFade()).into(image)
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             card.addView(text(person.name, 14f).apply {

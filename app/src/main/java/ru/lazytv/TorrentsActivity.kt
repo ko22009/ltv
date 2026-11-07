@@ -163,9 +163,14 @@ class TorrentsActivity : Activity() {
             val image = ImageView(this)
             image.scaleType = ImageView.ScaleType.CENTER_CROP
             image.setBackgroundColor(0xFF12201A.toInt())
-            image.showPoster(poster, null, "w342")
+            val posterSpinner = Spinner(this, px(40))
+            image.showPoster(poster, posterSpinner, "w342")
+            val posterSlot = FrameLayout(this).apply {
+                addView(image, FrameLayout.LayoutParams(-1, -1))
+                addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+            }
             val split = LinearLayout(this)
-            split.addView(image, LinearLayout.LayoutParams(px(170), px(256)).apply { leftMargin = px(64); topMargin = px(36) })
+            split.addView(posterSlot, LinearLayout.LayoutParams(px(170), px(256)).apply { leftMargin = px(64); topMargin = px(36) })
             page.setPadding(px(32), px(36), px(64), px(20))
             split.addView(page, LinearLayout.LayoutParams(0, -1, 1f))
             root.addView(split, FrameLayout.LayoutParams(-1, -1))

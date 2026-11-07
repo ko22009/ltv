@@ -105,6 +105,14 @@ class TitlesGridActivity : Activity() {
         busy = true
         val page = nextPage
         val appContext = applicationContext
+        if (cards.size() == 0) {
+            loadingMore.caption("Загружаем…")
+            loadingMore.layoutParams = FrameLayout.LayoutParams(-1, -1)
+        } else {
+            loadingMore.caption("")
+            loadingMore.layoutParams = FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = px(16) }
+        }
+        loadingMore.visibility = View.VISIBLE
         Thread {
             val result = runCatching { more.loadPage(appContext, page) }
             onUi {

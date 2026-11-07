@@ -16,6 +16,12 @@ import android.widget.TextView
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.leanback.widget.ItemBridgeAdapter
 import com.bumptech.glide.Glide
+import android.graphics.drawable.Drawable
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 
 /**
  * Actor page: the round Back and the name on top (as on the other pages), a short band with the photo, facts
@@ -139,7 +145,22 @@ class PersonActivity : Activity() {
             addView(label(initials, 40f, 0xFFB9F6CA.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
-            if (!person.photo.isNullOrEmpty()) Glide.with(this@PersonActivity).load("https://image.tmdb.org/t/p/w342${person.photo}").into(image)
+            if (!person.photo.isNullOrEmpty()) {
+                val photoSpinner = Spinner(this@PersonActivity, px(32))
+                addView(photoSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+                Glide.with(this@PersonActivity).load("https://image.tmdb.org/t/p/w342${person.photo}")
+                    .transition(DrawableTransitionOptions.withCrossFade())
+                    .listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                            photoSpinner.visibility = View.GONE
+                            return false
+                        }
+                        override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                            photoSpinner.visibility = View.GONE
+                            return false
+                        }
+                    }).into(image)
+            }
         }
         band.addView(photo, LinearLayout.LayoutParams(px(110), px(150)).apply { rightMargin = px(24) })
         val texts = LinearLayout(this)
