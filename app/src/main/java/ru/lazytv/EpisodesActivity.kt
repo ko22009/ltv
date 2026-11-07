@@ -74,19 +74,25 @@ class EpisodesActivity : Activity() {
         val status = label("", 15f, 0xFFDCE8E0.toInt())
         status.visibility = View.GONE
         page.addView(status)
+        val errorRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            visibility = View.GONE
+        }
         geoButton = actionButton().apply {
             chipCaption = "Искать торренты"
-            visibility = View.GONE
             setOnClickListener { openTorrents() }
         }
-        page.addView(geoButton, LinearLayout.LayoutParams(-2, px(56)).apply { topMargin = px(6) })
+        val fixButton = actionButton().apply { visibility = View.GONE }
+        errorRow.addView(geoButton, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+        errorRow.addView(fixButton, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
+        page.addView(errorRow, LinearLayout.LayoutParams(-2, px(56)).apply { topMargin = px(6) })
         actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
         actions.visibility = View.GONE
         actionFavorite = actionButton().apply { setOnClickListener { toggleFavorite() } }
         actionWatched = actionButton().apply { setOnClickListener { toggleWatched() } }
         actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionWatched, LinearLayout.LayoutParams(-2, -1))
+        actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2 })
         page.addView(actions, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
         list = ListView(this)
         list.divider = null
@@ -106,9 +112,10 @@ class EpisodesActivity : Activity() {
                 result.onSuccess { loaded ->
                     episodes = loaded
                     if (episodes.isEmpty()) {
-                        status.text = "Нет доступных серий"
+                        status.text = "Нет доступных серий. Попробуйте торренты"
                         status.visibility = View.VISIBLE
-                        geoButton.visibility = View.VISIBLE
+                        errorRow.visibility = View.VISIBLE
+                        geoButton.requestFocus()
                         return@onSuccess
                     }
                     adapter = object : ArrayAdapter<Episode>(this, 0, episodes) {
@@ -130,10 +137,16 @@ class EpisodesActivity : Activity() {
                     actions.visibility = View.VISIBLE
                     updateActions()
                     list.requestFocus()
-                }.onFailure {
-                    status.text = "Не удалось загрузить: ${it.message}"
+                }.onFailure { err ->
+                    status.text = Errors.explain(err)
                     status.visibility = View.VISIBLE
-                    geoButton.visibility = View.VISIBLE
+                    Errors.actionOf(err)?.let { action ->
+                        fixButton.chipCaption = action.caption
+                        fixButton.visibility = View.VISIBLE
+                        fixButton.setOnClickListener { action.run(this) }
+                    }
+                    errorRow.visibility = View.VISIBLE
+                    geoButton.requestFocus()
                 }
             }
         }.start()

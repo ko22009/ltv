@@ -16,7 +16,10 @@ data class Torrent(val title: String, val size: String, val seeds: Int, val leec
  */
 fun Torrent.identity(): String {
     val hash = Regex("btih:([0-9A-Za-z]+)", RegexOption.IGNORE_CASE).find(magnet)?.groupValues?.get(1)?.lowercase()
-    return if (hash != null) "btih:$hash" else "url:" + magnet.trim() + "|" + title.lowercase() + "|" + size
+    if (hash != null) return "btih:$hash"
+    val cleanTitle = title.lowercase().replace('ё', 'е').replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+    val mb = TorrentOrder.sizeBytes(size) shr 20
+    return if (mb > 0) "title:$cleanTitle|$mb" else "url:${magnet.trim()}|$cleanTitle"
 }
 
 /** How the torrent list is ordered; the choice is kept in [Settings.TORRENT_SORT]. */
@@ -188,7 +191,10 @@ object TorrentSearch {
         connection.connectTimeout = 15000
         connection.readTimeout = 25000
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
-        val bytes = connection.inputStream.use { it.readBytes() }
+        val bytes = connection.inputStream.use {
+            ClockCheck.observe(connection.date)
+            it.readBytes()
+        }
         // the mirrors declare UTF-8 but some pages are windows-1251: use UTF-8 only when the bytes are valid UTF-8
         val strict = Charsets.UTF_8.newDecoder()
         return try {

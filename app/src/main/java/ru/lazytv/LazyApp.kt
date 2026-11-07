@@ -32,6 +32,7 @@ class LazyApp : Application() {
             DpiBypass.strategyFile = java.io.File(filesDir, "dpi_strategy")
             DpiBypass.start(applicationInfo.nativeLibraryDir)
         }
+        Thread { ClockCheck.checkOnce() }.start()
         Thread { runCatching { Recommendations.refresh(this) } }.start()
         // the addresses file is renewed once a day in the background; without it the built-in ones stay
         Thread { RemoteConfig.refreshIfStale(this) }.start()

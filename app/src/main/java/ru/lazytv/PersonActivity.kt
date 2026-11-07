@@ -106,10 +106,20 @@ class PersonActivity : Activity() {
                         button.nextFocusDownId = grid.id
                     }
                     grid.requestFocus()
-                }.onFailure {
-                    page.addView(label("Не удалось загрузить страницу: ${it.message}", 16f, 0xFFAFC4B6.toInt()).apply {
+                }.onFailure { err ->
+                    page.addView(label(Errors.explain(err), 16f, 0xFFAFC4B6.toInt()).apply {
                         setPadding(0, px(12), 0, 0)
                     })
+                    Errors.actionOf(err)?.let { action ->
+                        val fix = chipButton(this, scale, action.caption).apply {
+                            this.id = View.generateViewId()
+                            nextFocusUpId = back.id
+                            setOnClickListener { action.run(this@PersonActivity) }
+                        }
+                        back.nextFocusDownId = fix.id
+                        page.addView(fix, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { topMargin = px(12) })
+                        fix.requestFocus()
+                    }
                 }
             }
         }.start()

@@ -295,7 +295,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                 loader.visibility = View.GONE
                 val titles = found.getOrDefault(emptyList())
                 setCards(titles)
-                message.text = if (found.isFailure) "Нет связи с каталогом" else if (titles.isEmpty()) "В каталоге ничего не найдено" else ""
+                message.text = if (found.isFailure) Errors.explain(found.exceptionOrNull()!!) else if (titles.isEmpty()) "В каталоге ничего не найдено" else ""
                 message.visibility = if (message.text.isEmpty()) View.GONE else View.VISIBLE
             }
         }.start()

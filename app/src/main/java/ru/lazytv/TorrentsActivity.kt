@@ -184,7 +184,11 @@ class TorrentsActivity : Activity() {
             runOnUiThread {
                 if (token != searchId) return@runOnUiThread
                 loading.visibility = View.GONE
-                status.text = if (all.isEmpty()) "Ничего не найдено по запросу «$query»" else ""
+                status.text = when {
+                    all.isNotEmpty() -> ""
+                    ClockCheck.skewed -> ClockCheck.MESSAGE
+                    else -> "Ничего не найдено по запросу «$query»"
+                }
             }
         }
         Thread {
@@ -356,7 +360,7 @@ class TorrentsActivity : Activity() {
                     magnet.onSuccess {
                         runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
                             .onFailure { Toast.makeText(this, "Нет приложения для magnet-ссылок", Toast.LENGTH_LONG).show() }
-                    }.onFailure { Toast.makeText(this, "Не удалось получить magnet-ссылку: ${it.message}", Toast.LENGTH_LONG).show() }
+                    }.onFailure { Toast.makeText(this, "Не удалось получить magnet-ссылку: ${Errors.explain(it)}", Toast.LENGTH_LONG).show() }
                 }
             }.start()
             return
@@ -399,7 +403,7 @@ class TorrentsActivity : Activity() {
                         dialog?.dismiss()
                         preloading = false
                         status.text = if (offline) "TorrServe не отвечает по адресу $address"
-                        else "TorrServe: ${e.message}"
+                        else "TorrServe: ${Errors.explain(e)}"
                         if (offline) showMissingTorrServe(address)
                     }
                 }
@@ -417,7 +421,7 @@ class TorrentsActivity : Activity() {
         val sameDevice = address.startsWith("127.") || address.startsWith("localhost")
         val where = if (sameDevice) "На этом устройстве он не установлен или не запущен."
             else "По адресу $address он не отвечает: не запущен или недоступен по сети."
-        val message = "LazyTV не качает торренты сам — их раздаёт отдельная программа TorrServe (TorrServer). $where\n\n" +
+        val message = "LazyTV не качает торренты сам: их раздаёт отдельная программа TorrServe (TorrServer). $where\n\n" +
             "Поставьте TorrServe на это устройство (APK ставится как обычное приложение) или, если он уже " +
             "работает на другом устройстве в сети (приставка, компьютер, NAS), укажите его адрес.\n\n" +
             "Сейчас в настройках указан $address."
@@ -442,7 +446,7 @@ class TorrentsActivity : Activity() {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(8), px(24), 0)
-            addView(label("Например 192.168.1.10:8090 — приставка или компьютер с TorrServe", 13f, 0xFF8FB39D.toInt()))
+            addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, 0xFF8FB39D.toInt()))
             addView(input, LinearLayout.LayoutParams(-1, px(52)).apply { topMargin = px(8) })
         }
         AlertDialog.Builder(this)

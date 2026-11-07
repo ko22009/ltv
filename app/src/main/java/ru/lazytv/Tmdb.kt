@@ -335,7 +335,10 @@ object Tmdb {
         val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 15000
         connection.readTimeout = 20000
-        val body = connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        val body = connection.inputStream.use {
+            ClockCheck.observe(connection.date)
+            it.readBytes().toString(Charsets.UTF_8)
+        }
         runCatching { file.apply { parentFile?.mkdirs(); writeText(body) } }
         return body
     }

@@ -128,7 +128,7 @@ class TitlesGridActivity : Activity() {
                 }.onFailure {
                     finished = true
                     if (cards.size() == 0) {
-                        message.text = "Не удалось загрузить: ${it.message}"
+                        message.text = Errors.explain(it)
                         message.visibility = View.VISIBLE
                     }
                 }

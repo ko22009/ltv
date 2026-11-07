@@ -159,7 +159,10 @@ object Sources {
         c.setRequestProperty("Content-Type", "application/json")
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
         c.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-        return c.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+        return c.inputStream.use {
+            ClockCheck.observe(c.date)
+            it.readBytes().toString(Charsets.UTF_8)
+        }
     }
 
     /** Binary answer (a .torrent file, for example) with the same timeouts and UA as [get]. */
@@ -168,7 +171,10 @@ object Sources {
         c.connectTimeout = 15000
         c.readTimeout = 25000
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
-        return c.inputStream.use { it.readBytes() }
+        return c.inputStream.use {
+            ClockCheck.observe(c.date)
+            it.readBytes()
+        }
     }
 
     fun encode(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
@@ -308,7 +314,7 @@ object Seasonvar : VideoSource {
                 result += Episode(prefix + caption, listOf((if (address.contains(".m3u8")) "HLS" else "SD/HD") to address))
             }
         }
-        if (result.isEmpty() && blocked) throw IllegalStateException("Сезон недоступен в вашем регионе: показ ограничил правообладатель")
+        if (result.isEmpty() && blocked) throw IllegalStateException(Errors.GEO_BLOCKED)
         return result
     }
 
