@@ -90,9 +90,16 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1C2029.toInt())
     }
 
+    /** Shown over the poster while it loads (after 150 ms: a poster from the memory or disk cache arrives sooner and never flashes it, a network one is waited for). */
+    private val posterSpinner = Spinner(context, px(36f)).apply {
+        visibility = View.GONE
+        isFocusable = false
+        isClickable = false
+    }
+
     /** Cancels pending poster load if the card is recycled or unbound. */
     fun cancelPoster() {
-        poster.cancelPosterLoad()
+        poster.cancelPosterLoad(posterSpinner)
     }
 
     /** Shows the poster. */
@@ -106,7 +113,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         if (poster.getTag(R.id.tag_poster_url) == url && poster.drawable != null) {
             return
         }
-        poster.showPoster(path)
+        poster.showPoster(path, posterSpinner, spinnerDelayMs = 150L)
     }
 
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
@@ -207,6 +214,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
         addView(android.widget.FrameLayout(context).apply {
             addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(posterSpinner, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.CENTER))
             addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)

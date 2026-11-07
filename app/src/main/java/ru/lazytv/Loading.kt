@@ -105,6 +105,7 @@ fun ImageView.showPoster(
     size: String = "w500",
     stub: Int = R.drawable.no_poster,
     retryCount: Int = 0,
+    spinnerDelayMs: Long = SPINNER_DELAY_MS,
 ) {
     cancelPosterLoad(spinner)
     val url = if (path.isNullOrEmpty()) "" else "https://image.tmdb.org/t/p/$size$path"
@@ -132,7 +133,7 @@ fun ImageView.showPoster(
             }
         }
         setTag(R.id.tag_spinner_task, task)
-        postDelayed(task, SPINNER_DELAY_MS)
+        postDelayed(task, spinnerDelayMs)
     }
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
@@ -143,7 +144,7 @@ fun ImageView.showPoster(
                 val nextRetry = retryCount + 1
                 val retryTask = Runnable {
                     setTag(R.id.tag_retry_task, null)
-                    showPoster(path, spinner, size, stub, nextRetry)
+                    showPoster(path, spinner, size, stub, nextRetry, spinnerDelayMs)
                 }
                 setTag(R.id.tag_retry_task, retryTask)
                 postDelayed(retryTask, 1200L * nextRetry)
