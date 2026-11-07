@@ -118,10 +118,19 @@ class FiltersActivity : Activity() {
             .filter { it.first in filter.countries }.joinToString(", ") { it.second }.ifEmpty { "все" }) { showCountries() }
         rows += row("Годы", yearsText()) { showYears() }
         rows += ratingRow()
-        if (!category.tv) rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { showAges() }
+        if (!category.tv) rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { shown ->
+            val marks = listOf("") + CatalogOptions.ages.map { it.first }
+            val labels = listOf("Любой") + CatalogOptions.ages.map { "${it.second}  (${it.first})" }
+            pickLabel("Возрастной рейтинг", labels, marks.indexOf(filter.age)) { which ->
+                save(filter.copy(age = marks[which]))
+                shown.text = filter.age.ifEmpty { "любой" }
+            }
+        }
         rows += row("Скрывать просмотренное", if (filter.hideWatched) "да" else "нет") { shown ->
-            save(filter.copy(hideWatched = !filter.hideWatched))
-            shown.text = if (filter.hideWatched) "да" else "нет"
+            pickLabel("Скрывать просмотренное", listOf("Да", "Нет"), if (filter.hideWatched) 0 else 1) { which ->
+                save(filter.copy(hideWatched = which == 0))
+                shown.text = if (filter.hideWatched) "да" else "нет"
+            }
         }
         val view = listOfRows(*rows.toTypedArray())
         screen("Фильтры", view) {
@@ -140,13 +149,18 @@ class FiltersActivity : Activity() {
         setOnClickListener { onClick(this) }
     }
 
+    /** The system dialog with one choice of several captions, the current one marked; the pick closes it. */
+    private fun pickLabel(title: String, labels: List<String>, current: Int, onPick: (Int) -> Unit) {
+        android.app.AlertDialog.Builder(this).setTitle(title)
+            .setSingleChoiceItems(labels.toTypedArray(), current) { dialog, which ->
+                dialog.dismiss()
+                onPick(which)
+            }.show()
+    }
+
     /** A dropdown of whole numbers, the current one marked; the pick closes it. */
     private fun pickNumber(title: String, values: List<Int>, label: (Int) -> String, current: Int, onPick: (Int) -> Unit) {
-        android.app.AlertDialog.Builder(this).setTitle(title)
-            .setSingleChoiceItems(values.map(label).toTypedArray(), values.indexOf(current)) { dialog, which ->
-                dialog.dismiss()
-                onPick(values[which])
-            }.show()
+        pickLabel(title, values.map(label), values.indexOf(current)) { onPick(values[it]) }
     }
 
     /** One line for the whole rating range: the name, then "от N" and "до N" side by side; left and right walk between them. */
@@ -305,18 +319,6 @@ class FiltersActivity : Activity() {
         column.addView(presets)
         val view = ScrollView(this).apply { addView(column) }
         screen("Годы", view) { save(filter.copy(yearFrom = 0, yearTo = 0)); showMain() }
-        focusFirst(view)
-    }
-
-    private fun showAges() {
-        onMain = false
-        val view = grid(1) { g ->
-            g.addCell(choice("Любой", filter.age.isEmpty(), true) { save(filter.copy(age = "")); showMain() })
-            CatalogOptions.ages.forEach { (mark, name) ->
-                g.addCell(choice("$name  ($mark)", filter.age == mark, true) { save(filter.copy(age = mark)); showMain() })
-            }
-        }
-        screen("Возрастной рейтинг", view) { save(filter.copy(age = "")); showMain() }
         focusFirst(view)
     }
 
