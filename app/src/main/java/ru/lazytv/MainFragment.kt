@@ -238,33 +238,10 @@ class MainFragment : Fragment() {
                 Tmdb.visibleCategories(warmContext).forEach { category ->
                     if (!CatalogFilter.supports(category.id)) return@forEach
                     val filter = CatalogFilter.load(warmContext, category.id)
-                    val list = Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
-                    list.take(10).forEach { title ->
-                        val poster = title.poster
-                        if (!poster.isNullOrEmpty()) {
-                            Glide.with(warmContext)
-                                .load("https://image.tmdb.org/t/p/w500$poster")
-                                .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
-                                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-                                .preload()
-                        }
-                    }
+                    // only the lists: posters are requested by the cards when they come on screen
+                    Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
                 }
-                Tmdb.overview.take(4).forEach { col ->
-                    runCatching {
-                        val list = Tmdb.loadCollection(warmContext, col)
-                        list.take(6).forEach { title ->
-                            val poster = title.poster
-                            if (!poster.isNullOrEmpty()) {
-                                Glide.with(warmContext)
-                                    .load("https://image.tmdb.org/t/p/w500$poster")
-                                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
-                                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-                                    .preload()
-                            }
-                        }
-                    }
-                }
+                Tmdb.overview.take(4).forEach { col -> runCatching { Tmdb.loadCollection(warmContext, col) } }
             }
         }.start()
     }
