@@ -78,7 +78,6 @@ fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinish
 
 private val failedPosters = java.util.concurrent.ConcurrentHashMap<String, Long>()
 private const val FAILED_POSTER_TTL_MS = 8 * 1000L
-private const val SPINNER_DELAY_MS = 600L
 
 fun clearFailedPosters() = failedPosters.clear()
 
@@ -105,7 +104,6 @@ fun ImageView.showPoster(
     size: String = "w500",
     stub: Int = R.drawable.no_poster,
     retryCount: Int = 0,
-    spinnerDelayMs: Long = SPINNER_DELAY_MS,
 ) {
     cancelPosterLoad(spinner)
     val url = if (path.isNullOrEmpty()) "" else "https://image.tmdb.org/t/p/$size$path"
@@ -123,18 +121,6 @@ fun ImageView.showPoster(
         setImageResource(stub)
         return
     }
-    if (spinner != null && retryCount == 0) {
-        val task = Runnable {
-            setTag(R.id.tag_spinner_task, null)
-            if (drawable == null) {
-                spinner.visibility = View.VISIBLE
-            } else {
-                spinner.visibility = View.GONE
-            }
-        }
-        setTag(R.id.tag_spinner_task, task)
-        postDelayed(task, spinnerDelayMs)
-    }
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
@@ -144,7 +130,7 @@ fun ImageView.showPoster(
                 val nextRetry = retryCount + 1
                 val retryTask = Runnable {
                     setTag(R.id.tag_retry_task, null)
-                    showPoster(path, spinner, size, stub, nextRetry, spinnerDelayMs)
+                    showPoster(path, spinner, size, stub, nextRetry)
                 }
                 setTag(R.id.tag_retry_task, retryTask)
                 postDelayed(retryTask, 1200L * nextRetry)
@@ -161,10 +147,43 @@ fun ImageView.showPoster(
             return false
         }
     }
+    fun fromNetwork() {
+        glide.load(url)
+            .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+            .error(stub)
+            .listener(done)
+            .into(this)
+    }
+    if (spinner == null || retryCount > 0) {
+        fromNetwork()
+        return
+    }
+    // the cache is asked first: a poster that is there is shown without a spinner (it never flashes), a miss shows the spinner
+    // at once and goes to the network
     glide.load(url)
         .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-        .error(stub)
-        .listener(done)
+        .onlyRetrieveFromCache(true)
+        .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+            override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
+                                      target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
+                if (drawable == null) spinner.visibility = View.VISIBLE
+                // cancelPosterLoad removes this task when the card is bound to another title meanwhile
+                val go = Runnable {
+                    setTag(R.id.tag_retry_task, null)
+                    fromNetwork()
+                }
+                setTag(R.id.tag_retry_task, go)
+                post(go)
+                return true
+            }
+            override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                                         dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
+                setTag(R.id.tag_poster_url, url)
+                failedPosters.remove(path)
+                return false
+            }
+        })
         .into(this)
 }
