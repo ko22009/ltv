@@ -76,6 +76,8 @@ class DetailsActivity : Activity() {
         super.onCreate(savedInstanceState)
         val name = intent.getStringExtra("name").orEmpty()
         val title = titleFrom(intent.extras ?: Bundle())
+        currentName = name
+        currentTitle = title
         posterPath = intent.getStringExtra("poster")
         // "recently opened": the card is put into the list when it is opened, not only when watching starts
         if (savedInstanceState == null && (title.id > 0L || name.isNotEmpty())) History.add(this, historyTitle())
@@ -132,7 +134,29 @@ class DetailsActivity : Activity() {
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
-        root.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
+        val gallery = ImageView(this).apply {
+            setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            background = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF2F7D57.toInt()))
+                addState(intArrayOf(), softDisc(0x99000000.toInt()))
+            }
+            isFocusable = true
+            isClickable = true
+            id = View.generateViewId()
+            contentDescription = "Галерея"
+            setOnClickListener { openGallery() }
+        }
+        back.nextFocusRightId = gallery.id
+        gallery.nextFocusLeftId = back.id
+        gallery.nextFocusRightId = gallery.id
+        val topButtons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(back, LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(12) })
+            addView(gallery, LinearLayout.LayoutParams(dp(56), dp(56)))
+        }
+        root.addView(topButtons, FrameLayout.LayoutParams(-2, dp(56), Gravity.START or Gravity.TOP).apply {
             topMargin = dp(32); leftMargin = dp(64)
         })
 
@@ -143,6 +167,8 @@ class DetailsActivity : Activity() {
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply { id = View.generateViewId() }
         back.nextFocusDownId = watchButton.id
+        gallery.nextFocusDownId = watchButton.id
+        watchButton.nextFocusUpId = back.id
         watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
             visibility = View.GONE
             isFocusable = false
@@ -295,6 +321,8 @@ class DetailsActivity : Activity() {
                         row.tag = "cast"
                         info.addView(row)
                     }
+                    galleryPosters = d.posters
+                    galleryBackdrops = d.allBackdrops
                     startBackdrops(d.backdrops)
                 }
             } finally {
@@ -381,6 +409,10 @@ class DetailsActivity : Activity() {
     private var variants: List<Variant> = emptyList()
     @Volatile
     private var originalTitle = ""
+    private var currentName = ""
+    private lateinit var currentTitle: Title
+    private var galleryPosters: List<String> = emptyList()
+    private var galleryBackdrops: List<String> = emptyList()
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
     private lateinit var posterSpinner: Spinner
@@ -388,6 +420,20 @@ class DetailsActivity : Activity() {
     private lateinit var bannerSpinner: Spinner
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
+
+    private fun openGallery() {
+        val title = currentTitle
+        val name = currentName.ifEmpty { title.name }
+        startActivity(
+            Intent(this, GalleryActivity::class.java)
+                .putExtra("id", title.id)
+                .putExtra("tv", title.tv)
+                .putExtra("name", name)
+                .putExtra("poster", posterPath)
+                .putStringArrayListExtra("posters", ArrayList(galleryPosters))
+                .putStringArrayListExtra("backdrops", ArrayList(galleryBackdrops))
+        )
+    }
 
     // Backdrop covers: up to 5 TMDB backdrops cycling every 20 seconds, next cover preloaded in advance
     private val backdropHandler = android.os.Handler(android.os.Looper.getMainLooper())

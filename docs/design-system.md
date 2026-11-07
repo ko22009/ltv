@@ -18,8 +18,9 @@
 | Фон страницы | `calmBackground()` (`Background.kt`) | Все экраны, кроме плеера |
 | Рамка при фокусе | `focusShape(scale, normal)` (`SearchBar.kt`) | Любой фокусируемый элемент вне Leanback-рядов |
 | Строка поиска | `SearchBar(activity, scale, onSubmit)` (`SearchBar.kt`) | Круглая кнопка микрофона и поле ввода на экранах поиска и торрентов; фоновая догрузка источников показывается спиннером в правом углу поля через `setLoading(true)`, без отдельной прыгающей строки под полем |
-| Иконки | `MenuIcons` (`MenuIcons.kt`) + `PathDrawable` | **Только Material или уже имеющиеся в проекте**, новые не рисовать. Корзина — `MenuIcons.DELETE` |
+| Иконки | `MenuIcons` (`MenuIcons.kt`) + `PathDrawable` | **Только Material или уже имеющиеся в проекте**, новые не рисовать. Корзина — `MenuIcons.DELETE`, галерея — `MenuIcons.GALLERY` |
 | Карусель актёров | `castRow` в `DetailsActivity` | Круглое фото, имя, роль |
+| Галерея (постеры и обложки) | `GalleryActivity`, иконка `MenuIcons.GALLERY` на баннере `DetailsActivity` | Просмотр всех постеров и обложек: лента миниатюр внизу, крупный предпросмотр по центру, переключение категорий по `chipButton`, полноэкранный просмотр по OK |
 
 ## Цвета и размеры
 

@@ -21,6 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".DetailsActivity" android:exported="false" />
+        <activity android:name=".GalleryActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" android:theme="@style/Theme.LazyTV.Guided" />
         <activity android:name=".EpisodesActivity" android:exported="false" />
         <activity android:name=".PersonActivity" android:exported="false" />

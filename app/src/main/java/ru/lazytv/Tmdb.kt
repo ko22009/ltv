@@ -166,6 +166,10 @@ object Tmdb {
         val directors: List<Person> = emptyList(),
         /** Up to 5 backdrops (covers) from TMDB for the rotating banner on the card. */
         val backdrops: List<String> = emptyList(),
+        /** All poster paths from TMDB for the gallery. */
+        val posters: List<String> = emptyList(),
+        /** All backdrop paths from TMDB for the gallery. */
+        val allBackdrops: List<String> = emptyList(),
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -302,13 +306,27 @@ object Tmdb {
                 if (path.isNotEmpty()) backdropList.add(path)
             }
         }
-        val distinctBackdrops = backdropList.distinct().take(5)
+        val posterList = mutableListOf<String>()
+        val mainPoster = o.str("poster_path")
+        if (mainPoster.isNotEmpty()) posterList.add(mainPoster)
+        val rawPosters = images?.optJSONArray("posters")
+        if (rawPosters != null) {
+            for (i in 0 until rawPosters.length()) {
+                val p = rawPosters.getJSONObject(i)
+                val path = p.str("file_path")
+                if (path.isNotEmpty()) posterList.add(path)
+            }
+        }
+        val allPosters = posterList.distinct()
+        val allBackdrops = backdropList.distinct()
+        val distinctBackdrops = allBackdrops.take(5)
         return Details(
             o.str("original_title").ifEmpty { o.str("original_name") }, o.str("tagline"),
             names("genres"), countries, runtime, age,
             o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
             o.optInt("number_of_seasons"), mainBackdrop, nextEpisode, castPeople,
             o.str("poster_path"), uniqueDirectors, distinctBackdrops,
+            allPosters, allBackdrops,
         )
     }
 
