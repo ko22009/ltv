@@ -129,19 +129,22 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         typeface = Typeface.DEFAULT_BOLD
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
+        includeFontPadding = false
     }
 
     private val year = TextView(context).apply {
-        setTextColor(0xFF9FB3A9.toInt())
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+        setTextColor(Color.WHITE)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         maxLines = 1
+        includeFontPadding = false
     }
 
     private val genre = TextView(context).apply {
-        setTextColor(0xFF9FB3A9.toInt())
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+        setTextColor(Color.WHITE)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
+        includeFontPadding = false
     }
 
     private var year0 = ""
@@ -152,27 +155,28 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** Pending runtime fetch for this card, cancelled when the card scrolls off screen or is rebound. */
     var runtimeTask: java.util.concurrent.Future<*>? = null
 
-    /** Same size as the year, at the right edge of its line; hidden when TMDB has no rating. */
+    /** Same size as the name and year, at the right edge of its line; hidden when TMDB has no rating. */
     private val rating = TextView(context).apply {
-        setTextColor(0xFFB9F6CA.toInt())
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+        setTextColor(Color.WHITE)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         gravity = Gravity.END
         visibility = View.GONE
+        includeFontPadding = false
     }
 
     private val info = LinearLayout(context).apply {
         orientation = VERTICAL
         // the same quiet plate the rows use, so the title and the year read on any poster
         setBackgroundColor(0xFF39423D.toInt())
-        setPadding(px(12f), px(8f), px(12f), px(10f))
+        setPadding(px(12f), px(7f), px(12f), px(7f))
         addView(name, LayoutParams(-1, -2))
-        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(4f) })
+        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(3f) })
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(year, LayoutParams(0, -2, 1f))
             addView(rating, LayoutParams(-2, -2))
-        }, LayoutParams(-1, -2).apply { topMargin = px(4f) })
+        }, LayoutParams(-1, -2).apply { topMargin = px(3f) })
     }
 
     init {
@@ -259,11 +263,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         val value = title.rating.replace(',', '.').toDoubleOrNull()
         if (value != null && value > 0) {
             rating.text = String.format(java.util.Locale.US, "★ %.1f", value)
-            rating.setTextColor(when {
-                value >= 7.5 -> 0xFFB9F6CA.toInt()
-                value >= 6.0 -> 0xFFFFE082.toInt()
-                else -> 0xFFFFAB91.toInt()
-            })
+            rating.setTextColor(if (value >= 6.0) Color.WHITE else 0x99FFFFFF.toInt())
             rating.visibility = View.VISIBLE
         } else rating.visibility = View.GONE
     }

@@ -247,7 +247,19 @@ class DetailsActivity : Activity() {
             setPadding(dp(12), dp(8), dp(12), dp(8))
             isFocusable = true
             isClickable = true
-            background = focusShape(scale, Color.TRANSPARENT, radius = 6f)
+            background = StateListDrawable().apply {
+                val focused = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = dp(6).toFloat()
+                    setStroke(dp(2), 0xFFB9F6CA.toInt())
+                }
+                val normal = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = dp(6).toFloat()
+                }
+                addState(intArrayOf(android.R.attr.state_focused), focused)
+                addState(intArrayOf(), normal)
+            }
             setOnClickListener {
                 if (text.isNotEmpty()) {
                     android.app.AlertDialog.Builder(this@DetailsActivity)
@@ -428,7 +440,9 @@ class DetailsActivity : Activity() {
                 }
                 row.addView(linksScroll, LinearLayout.LayoutParams(0, -2, 1f))
             } else if (caption == "Рейтинг") {
-                val ratingView = text("★ $value", 18f, 0xFFB9F6CA.toInt()).apply {
+                val ratingVal = value.replace(',', '.').toDoubleOrNull()
+                val color = if (ratingVal != null && ratingVal < 6.0) 0x99FFFFFF.toInt() else Color.WHITE
+                val ratingView = text("★ $value", 18f, color).apply {
                     typeface = Typeface.DEFAULT_BOLD
                 }
                 row.addView(ratingView, LinearLayout.LayoutParams(0, -2, 1f))
