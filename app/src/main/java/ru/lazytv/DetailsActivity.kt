@@ -429,8 +429,6 @@ class DetailsActivity : Activity() {
                 .putExtra("id", title.id)
                 .putExtra("tv", title.tv)
                 .putExtra("name", name)
-                .putExtra("poster", posterPath)
-                .putStringArrayListExtra("posters", ArrayList(galleryPosters))
                 .putStringArrayListExtra("backdrops", ArrayList(galleryBackdrops))
         )
     }
