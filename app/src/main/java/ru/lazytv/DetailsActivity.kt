@@ -252,7 +252,7 @@ class DetailsActivity : Activity() {
                 // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
                 variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
                 if (d == null) {
-                    onUi { bannerSpinner.visibility = View.GONE; startCovers() }
+                    onUi { bannerSpinner.visibility = View.GONE }
                     return@Thread
                 }
                 onUi {
@@ -299,7 +299,6 @@ class DetailsActivity : Activity() {
                         info.addView(row)
                     }
                 }
-                onUi { startCovers() }
             } finally {
                 detailsReady.countDown()
             }
@@ -391,65 +390,6 @@ class DetailsActivity : Activity() {
     private lateinit var bannerSpinner: Spinner
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
-
-    // Covers: the TMDB poster first, then the covers the video sites give the same title (five at most), turning every 20 s.
-    private val coverHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val covers = mutableListOf<String>()
-    private var coverIndex = 0
-    private var coversStarted = false
-    private val coverTick = object : Runnable {
-        override fun run() {
-            if (covers.size < 2) return
-            val next = (coverIndex + 1) % covers.size
-            val url = covers[next]
-            Glide.with(this@DetailsActivity).load(url).centerCrop()
-                .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
-                .listener(object : RequestListener<Drawable> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                        // a cover that does not load is dropped from the cycle; the current one stays on the screen
-                        covers.remove(url)
-                        if (coverIndex >= covers.size) coverIndex = 0
-                        return true
-                    }
-
-                    override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                        coverIndex = covers.indexOf(url).coerceAtLeast(0)
-                        return false
-                    }
-                }).into(posterView)
-            // the cover after the next one is fetched while this one is on the screen
-            val ahead = covers[(next + 1) % covers.size]
-            Glide.with(applicationContext).load(ahead).preload()
-            coverHandler.postDelayed(this, 20_000L)
-        }
-    }
-
-    /** Starts the cycle once the sites have answered; with fewer than two different covers the poster simply stays. */
-    private fun startCovers() {
-        if (coversStarted) return
-        val own = posterPath?.takeIf { it.isNotEmpty() }?.let { "https://image.tmdb.org/t/p/w500$it" }
-        val list = (listOfNotNull(own) + variants.map { it.poster }.filter { it.startsWith("http") }).distinct().take(5)
-        if (list.size < 2) return
-        coversStarted = true
-        covers.clear(); covers.addAll(list)
-        coverIndex = 0
-        // the second cover is fetched at once, so the first turn finds it ready
-        Glide.with(applicationContext).load(covers[1]).preload()
-        coverHandler.postDelayed(coverTick, 20_000L)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (coversStarted) {
-            coverHandler.removeCallbacks(coverTick)
-            coverHandler.postDelayed(coverTick, 20_000L)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        coverHandler.removeCallbacks(coverTick)
-    }
 
     /** Cast and directors of the film: a caption and a carousel of round photos with the name and role; OK opens PersonActivity. */
     private fun castRow(people: List<Tmdb.Person>, hasDirectors: Boolean, pageScroll: ScrollView): View {

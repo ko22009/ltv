@@ -29,10 +29,7 @@ object Zona : VideoSource {
                     ?.let { htmlText(it.groupValues[1]) }.orEmpty()
                 val kind = if (href.startsWith("/tvseries/")) "Сериал" else "Фильм"
                 val ref = if (href.startsWith("http")) href else answer.base + href
-                                // the cover sits in a <meta> just before the link of the result
-                val before = answer.value.substring(maxOf(0, m.range.first - 300), m.range.first)
-                val cover = Regex("itemprop=\"image\" content=\"([^\"]+)\"").findAll(before).lastOrNull()?.groupValues?.get(1).orEmpty()
-                if (seen.add(ref)) found += Variant(this.name, id, name, listOf(itemYear, kind).filter { it.isNotEmpty() }.joinToString(" • "), ref, poster = cover)
+                if (seen.add(ref)) found += Variant(this.name, id, name, listOf(itemYear, kind).filter { it.isNotEmpty() }.joinToString(" • "), ref)
             }
         }
         return Sources.relevant(found, listOf(title, original), year)

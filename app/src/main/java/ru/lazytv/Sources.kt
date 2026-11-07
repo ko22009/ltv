@@ -13,8 +13,6 @@ data class Variant(
     val alt: String = "",
     /** The site's own description, when it has one; shown apart from the titles. */
     val description: String = "",
-    /** The site's own cover (an absolute address), shown on the card next to the TMDB poster; empty when it has none. */
-    val poster: String = "",
 )
 
 /** One playable item of a variant (an episode or the whole film) with streams per quality, best first. */
@@ -92,8 +90,8 @@ object Sources {
             org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
         }.getOrDefault(0L)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants7_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants7_") }.associateWith { timeOf(it) }
+        keys.filter { !it.startsWith("variants6_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants6_") }.associateWith { timeOf(it) }
         current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
         val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
         if (alive.size > 80) {
@@ -105,16 +103,16 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String): String {
         val raw = enabled(context).joinToString(",") { it.id } + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants7_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants6_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
-        .put("t", v.title).put("n", v.note).put("r", v.ref).put("a", v.alt).put("d", v.description).put("p", v.poster)
+        .put("t", v.title).put("n", v.note).put("r", v.ref).put("a", v.alt).put("d", v.description)
 
     private fun variantFromJson(o: JSONObject) = o.getLong("t") to (0 until o.getJSONArray("v").length()).map { i ->
         val v = o.getJSONArray("v").getJSONObject(i)
         Variant(v.getString("s"), v.getString("i"), v.getString("t"), v.optString("n"), v.getString("r"),
-            v.optString("a"), v.optString("d"), v.optString("p"))
+            v.optString("a"), v.optString("d"))
     }
 
     /**
@@ -208,7 +206,6 @@ object Anilibria : VideoSource {
                     name, id, names.optString("main"),
                     r.optInt("year").toString().takeIf { it != "0" }.orEmpty(),
                     r.getInt("id").toString(), names.optString("english"),
-                    poster = r.optJSONObject("poster")?.optString("src").orEmpty().takeIf { it.startsWith("/") }?.let { answer.base + it }.orEmpty(),
                 )
             }
         }
@@ -276,7 +273,7 @@ object Seasonvar : VideoSource {
                 ?.let { if (it.startsWith("//")) "https:$it" else it }
             Variant(
                 this.name, "seasonvar", name, originalName,
-                if (href.startsWith("http")) href else base + href, originalName, description, poster.orEmpty(),
+                if (href.startsWith("http")) href else base + href, originalName, description,
             ) to poster
         }.toList()
     }
