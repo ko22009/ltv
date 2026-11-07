@@ -53,8 +53,11 @@ object Recommendations {
                     .putExtra(MainActivity.OPEN_TITLE, true).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
                 .setWeight(LIMIT - index)
                 .build()
-            runCatching { helper.publishPreviewProgram(program) }.getOrNull()?.takeIf { it > 0 }?.let { ids.put(it) }
+            runCatching { helper.publishPreviewProgram(program) }
+                .onFailure { android.util.Log.w("Recommendations", "program was not published: ${title.name}", it) }
+                .getOrNull()?.takeIf { it > 0 }?.let { ids.put(it) }
         }
+        android.util.Log.i("Recommendations", "published ${ids.length()} of ${titles.size} programs in channel $channelId")
         Settings.setString(context, KEY_IDS, ids.toString())
     }
 
@@ -83,8 +86,11 @@ object Recommendations {
                     .setAppLinkIntentUri(Uri.parse(Intent(context, MainActivity::class.java).toUri(Intent.URI_INTENT_SCHEME)))
                     .build()
             )
-        }.getOrNull() ?: return null
-        if (published <= 0) return null
+        }.onFailure { android.util.Log.w("Recommendations", "channel was not published", it) }.getOrNull() ?: return null
+        if (published <= 0) {
+            android.util.Log.w("Recommendations", "channel was not published: id $published")
+            return null
+        }
         Settings.setString(context, KEY_CHANNEL, published.toString())
         return published
     }
