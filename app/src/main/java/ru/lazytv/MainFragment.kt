@@ -266,8 +266,10 @@ class MainFragment : Fragment() {
         val iconSize = (28 * scale).toInt()
         val gap = (8 * scale).toInt()
 
-        val names = mutableListOf(OVERVIEW, SEARCH_HEADER, FAVORITES)
+        val names = mutableListOf(OVERVIEW)
         Tmdb.visibleCategories(ctx).forEach { names.add(it.title.uppercase()) }
+        names.add(SEARCH_HEADER)
+        names.add(FAVORITES)
         names.add(SETTINGS)
 
         names.forEachIndexed { index, name ->
@@ -1012,10 +1014,14 @@ class PageNotePresenter : RowPresenter() {
 }
 
 class TitledRowsFragment : RowsSupportFragment() {
+    private lateinit var titleLayout: LinearLayout
+    private lateinit var note: TextView
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val rows = super.onCreateView(inflater, container, savedInstanceState) ?: return null
         val scale = resources.displayMetrics.widthPixels / 1280f
         val compact = requireArguments().getBoolean("compact")
+        val headerHeight = ((if (compact) 39 else 72) * scale).toInt()
         val title = TextView(requireContext()).apply {
             text = requireArguments().getString("title")
             setTextColor(Color.WHITE)
@@ -1028,21 +1034,23 @@ class TitledRowsFragment : RowsSupportFragment() {
             setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (6 * scale).toInt(), 0, 0)
             visibility = View.GONE
         }
-        (rows as? ViewGroup)?.clipChildren = false
-        (rows as? ViewGroup)?.clipToPadding = false
+        titleLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(title, LinearLayout.LayoutParams(-1, -2))
+            addView(note, LinearLayout.LayoutParams(-1, -2))
+        }
+        (rows as? ViewGroup)?.apply {
+            clipChildren = false
+            clipToPadding = false
+            setPadding(0, headerHeight, 0, 0)
+        }
         return FrameLayout(requireContext()).apply {
             clipChildren = false
             clipToPadding = false
-            addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = ((if (compact) 39 else 72) * scale).toInt() })
-            addView(LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(title, LinearLayout.LayoutParams(-1, -2))
-                addView(note, LinearLayout.LayoutParams(-1, -2))
-            }, FrameLayout.LayoutParams(-1, -2))
+            addView(rows, FrameLayout.LayoutParams(-1, -1))
+            addView(titleLayout, FrameLayout.LayoutParams(-1, -2))
         }
     }
-
-    private lateinit var note: TextView
 
     private val noteWatcher = object : androidx.leanback.widget.ObjectAdapter.DataObserver() {
         override fun onChanged() = showNote()
@@ -1061,10 +1069,32 @@ class TitledRowsFragment : RowsSupportFragment() {
         super.onViewCreated(view, savedInstanceState)
         adapter?.registerObserver(noteWatcher)
         showNote()
+
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        val compact = requireArguments().getBoolean("compact")
+        val headerHeight = ((if (compact) 39 else 72) * scale).toInt()
+
+        fun updateHeaderTranslation() {
+            val grid = verticalGridView ?: return
+            val maxShift = titleLayout.height.takeIf { it > 0 } ?: headerHeight
+            val vh = grid.findViewHolderForAdapterPosition(0)
+            val shift = if (vh != null) {
+                (headerHeight - vh.itemView.top).coerceAtLeast(0)
+            } else {
+                maxShift
+            }
+            titleLayout.translationY = (-shift).coerceIn(-maxShift, 0).toFloat()
+        }
+
         verticalGridView?.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: androidx.recyclerview.widget.RecyclerView, dx: Int, dy: Int) {
+                updateHeaderTranslation()
+            }
+
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
                 if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                     clearFailedPosters()
+                    updateHeaderTranslation()
                 }
             }
         })
