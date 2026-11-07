@@ -1,10 +1,13 @@
 package ru.lazytv
 
 import android.app.Activity
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -32,6 +35,8 @@ class FiltersActivity : Activity() {
     private lateinit var filter: CatalogFilter
     private lateinit var heading: TextView
     private lateinit var body: FrameLayout
+    private lateinit var backBtn: View
+    private var searchBar: SearchBar? = null
     private lateinit var reset: android.view.View
     private var resetAction: () -> Unit = {}
     private var onMain = true
@@ -50,17 +55,23 @@ class FiltersActivity : Activity() {
             cornerRadius = px(12).toFloat()
         }
         root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { setMargins(px(40), px(40), px(40), px(40)) })
-        val back = backButton(this, scale) { onBackPressed() }
+        backBtn = backButton(this, scale) { onBackPressed() }
         heading = text("", 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
-        header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+        header.addView(backBtn, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
         header.addView(heading)
         page.addView(header)
         body = FrameLayout(this)
         page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(16) })
         setContentView(root)
         showMain()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        searchBar?.handleResult(requestCode, resultCode, data)
     }
 
     @Deprecated("Deprecated in Java")
@@ -111,6 +122,8 @@ class FiltersActivity : Activity() {
 
     private fun showMain() {
         onMain = true
+        searchBar = null
+        if (::backBtn.isInitialized) backBtn.setOnKeyListener(null)
         val genresName = (if (category.tv) CatalogOptions.tvGenres else CatalogOptions.movieGenres)
         val rows = mutableListOf<View>()
         rows += row("Жанры", genresName.filter { it.first in filter.genres }.joinToString(", ") { it.second }.ifEmpty { "все" }) { showGenres() }
@@ -254,6 +267,8 @@ class FiltersActivity : Activity() {
 
     private fun showGenres() {
         onMain = false
+        searchBar = null
+        if (::backBtn.isInitialized) backBtn.setOnKeyListener(null)
         val picked = filter.genres.toMutableSet()
         val view = grid(3) { g ->
             (if (category.tv) CatalogOptions.tvGenres else CatalogOptions.movieGenres).forEach { (id, name) ->
@@ -270,23 +285,109 @@ class FiltersActivity : Activity() {
     private fun showCountries() {
         onMain = false
         val picked = filter.countries.toMutableSet()
-        fun cell(g: GridLayout, code: String, name: String) = g.addCell(choice(name, code in picked, false) { on ->
-            if (on) picked += code else picked -= code
-            save(filter.copy(countries = picked.toSet()))
-        })
-        // one column: names of different length in a several-column grid line up crookedly and the arrows jump around
-        val view = grid(1) { g ->
-            g.addCaption("Популярные")
-            CatalogOptions.popularCountries.forEach { cell(g, it.first, it.second) }
-            g.addCaption("По алфавиту")
-            CatalogOptions.otherCountries.forEach { cell(g, it.first, it.second) }
+        val allCountries = (CatalogOptions.popularCountries + CatalogOptions.otherCountries)
+            .distinctBy { it.first }
+            .sortedBy { it.second }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
-        screen("Страны", view) { picked.clear(); save(filter.copy(countries = emptySet())); showCountries() }
-        focusFirst(view)
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        }
+
+        fun populateGrid(query: String) {
+            val q = query.trim().lowercase()
+            val g = GridLayout(this).apply {
+                columnCount = 1
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT)
+            }
+            fun cell(code: String, name: String) = g.addCell(choice(name, code in picked, false) { on ->
+                if (on) picked += code else picked -= code
+                save(filter.copy(countries = picked.toSet()))
+            })
+
+            if (q.isEmpty()) {
+                g.addCaption("Популярные")
+                CatalogOptions.popularCountries.forEach { cell(it.first, it.second) }
+                g.addCaption("По алфавиту")
+                CatalogOptions.otherCountries.forEach { cell(it.first, it.second) }
+            } else {
+                val matches = allCountries.filter { it.second.lowercase().contains(q) || it.first.lowercase().contains(q) }
+                if (matches.isEmpty()) {
+                    val emptyText = text("Ничего не найдено", 18f, 0xFF8FA597.toInt()).apply {
+                        setPadding(px(14), px(24), px(14), px(24))
+                    }
+                    val colSpec = GridLayout.spec(0, 1, GridLayout.FILL, 1f)
+                    val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
+                    g.addView(emptyText, GridLayout.LayoutParams(rowSpec, colSpec).apply {
+                        width = 0
+                        height = FrameLayout.LayoutParams.WRAP_CONTENT
+                    })
+                } else {
+                    matches.forEach { cell(it.first, it.second) }
+                }
+            }
+            scroll.removeAllViews()
+            scroll.addView(g)
+        }
+
+        fun focusFirstCountry(): Boolean {
+            fun firstFocusable(v: View): View? {
+                if (v.isFocusable && v !is ScrollView) return v
+                if (v is android.view.ViewGroup) for (i in 0 until v.childCount) firstFocusable(v.getChildAt(i))?.let { return it }
+                return null
+            }
+            return firstFocusable(scroll)?.requestFocus() ?: false
+        }
+
+        val bar = SearchBar(this, scale) { query ->
+            populateGrid(query)
+            val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            imm?.hideSoftInputFromWindow(currentFocus?.windowToken ?: window?.decorView?.windowToken, 0)
+            scroll.post { focusFirstCountry() }
+        }.apply {
+            input.hint = "Поиск страны"
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, px(56)).apply {
+                bottomMargin = px(12)
+            }
+            input.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    populateGrid(s?.toString().orEmpty())
+                }
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            })
+        }
+        searchBar = bar
+        bar.onDown = {
+            focusFirstCountry()
+        }
+        bar.onLeft = {
+            backBtn.requestFocus()
+        }
+
+        backBtn.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN && (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)) {
+                bar.mic.requestFocus()
+                true
+            } else false
+        }
+
+        container.addView(bar)
+        container.addView(scroll)
+        populateGrid("")
+
+        screen("Страны", container) { picked.clear(); save(filter.copy(countries = emptySet())); showCountries() }
+        focusFirst(scroll)
     }
 
     private fun showYears() {
         onMain = false
+        searchBar = null
+        if (::backBtn.isInitialized) backBtn.setOnKeyListener(null)
         val now = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
         // 0 stands for "no bound"; the list runs from the current year back to 1900
         val years = listOf(0) + (now downTo 1900).toList()
