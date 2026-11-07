@@ -54,7 +54,7 @@ class DetailsActivity : Activity() {
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
-        setPadding(dp(14), 0, dp(14), 0)
+        setPadding(dp(12), 0, dp(12), 0)
         setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
         compoundDrawablePadding = dp(8)
         isFocusable = true
@@ -134,29 +134,7 @@ class DetailsActivity : Activity() {
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
-        val gallery = ImageView(this).apply {
-            setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            setPadding(dp(10), dp(10), dp(10), dp(10))
-            background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF2F7D57.toInt()))
-                addState(intArrayOf(), softDisc(0x99000000.toInt()))
-            }
-            isFocusable = true
-            isClickable = true
-            id = View.generateViewId()
-            contentDescription = "Галерея"
-            setOnClickListener { openGallery() }
-        }
-        back.nextFocusRightId = gallery.id
-        gallery.nextFocusLeftId = back.id
-        gallery.nextFocusRightId = gallery.id
-        val topButtons = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(back, LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(12) })
-            addView(gallery, LinearLayout.LayoutParams(dp(56), dp(56)))
-        }
-        root.addView(topButtons, FrameLayout.LayoutParams(-2, dp(56), Gravity.START or Gravity.TOP).apply {
+        root.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
             topMargin = dp(32); leftMargin = dp(64)
         })
 
@@ -167,7 +145,6 @@ class DetailsActivity : Activity() {
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply { id = View.generateViewId() }
         back.nextFocusDownId = watchButton.id
-        gallery.nextFocusDownId = watchButton.id
         watchButton.nextFocusUpId = back.id
         watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
             visibility = View.GONE
@@ -179,6 +156,11 @@ class DetailsActivity : Activity() {
             addView(watchSpinner, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
         }
         bar.addView(watchSlot, LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
+
+        val galleryButton = button(MenuIcons.GALLERY, "Галерея") { openGallery() }
+        galleryButton.nextFocusUpId = back.id
+        bar.addView(galleryButton)
+
         lateinit var favorite: TextView
         // filled bookmark: the title is saved in a folder; outline: it is not
         fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
@@ -190,6 +172,7 @@ class DetailsActivity : Activity() {
             favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
             toast(if (saved) "Убрано из закладок" else "В закладках")
         }
+        favorite.nextFocusUpId = back.id
         favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
         bar.addView(favorite)
         // "watched": filled while marked; the lists show a marked title dimmed so it does not draw the eye
@@ -201,17 +184,19 @@ class DetailsActivity : Activity() {
             seen.setCompoundDrawables(seenIcon(), null, null, null)
             toast(if (Watched.has(this, title)) "Отмечено просмотренным" else "Отметка снята")
         }
+        seen.nextFocusUpId = back.id
         seen.setCompoundDrawables(seenIcon(), null, null, null)
         bar.addView(seen)
-        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }
-        val trailerButton = button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) }.apply {
+        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }.apply { nextFocusUpId = back.id }
+        val trailerButton = button(MenuIcons.TRAILER, "Трейлер") { openTrailer(title) }.apply {
             (layoutParams as LinearLayout.LayoutParams).rightMargin = 0
+            nextFocusUpId = back.id
         }
         bar.addView(torrentButton)
         bar.addView(trailerButton)
         // left and right walk the buttons of the bar: at the right end there is nothing to go to, the focus stays;
         // at the left end the key goes on to the back button as usual
-        val barButtons = listOf(watchButton, favorite, seen, torrentButton, trailerButton)
+        val barButtons = listOf(watchButton, galleryButton, favorite, seen, torrentButton, trailerButton)
         barButtons.forEachIndexed { index, btn ->
             btn.setOnKeyListener { _, code, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) false
@@ -221,7 +206,7 @@ class DetailsActivity : Activity() {
                     if (next != null) next.requestFocus()
                     next != null || step > 0
                 } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                    val target = firstDirectorLink ?: firstCastCard
+                    val target = firstDirectorLink ?: (if (overviewView.text.isNotEmpty()) overviewView else firstCastCard)
                     target?.requestFocus() ?: false
                 } else false
             }
@@ -240,6 +225,11 @@ class DetailsActivity : Activity() {
             leftMargin = dp(176); topMargin = dp(228)
         })
 
+        val scroll = ScrollView(this).apply {
+            isFocusable = false
+            isVerticalScrollBarEnabled = false
+        }
+
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
         info.addView(text(name, 34f))
@@ -247,15 +237,54 @@ class DetailsActivity : Activity() {
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
-        fillTable(table, baseRows)
+        fillTable(table, baseRows, pageScroll = scroll)
         info.addView(original)
         info.addView(table)
-        info.addView(text(intent.getStringExtra("overview").orEmpty(), 16f, 0xFFDCE8E0.toInt()).apply {
-            setLineSpacing(0f, 1.2f)
-        })
-        val scroll = ScrollView(this)
-        scroll.isFocusable = false
-        scroll.isVerticalScrollBarEnabled = false
+
+        val rawOverview = intent.getStringExtra("overview").orEmpty()
+        overviewView = text(rawOverview, 18f, 0xFFE6ECEA.toInt()).apply {
+            setLineSpacing(0f, 1.25f)
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            isFocusable = true
+            isClickable = true
+            background = focusShape(scale, Color.TRANSPARENT, radius = 6f)
+            setOnClickListener {
+                if (text.isNotEmpty()) {
+                    android.app.AlertDialog.Builder(this@DetailsActivity)
+                        .setTitle(name)
+                        .setMessage(text)
+                        .setPositiveButton("Закрыть", null)
+                        .show()
+                }
+            }
+            setOnKeyListener { _, code, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                else when (code) {
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (scroll.canScrollVertically(1)) {
+                            scroll.smoothScrollBy(0, dp(110))
+                            true
+                        } else {
+                            firstCastCard?.requestFocus() ?: false
+                        }
+                    }
+                    android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (scroll.canScrollVertically(-1)) {
+                            scroll.smoothScrollBy(0, -dp(110))
+                            true
+                        } else {
+                            val target = firstDirectorLink ?: watchButton
+                            target.requestFocus()
+                            true
+                        }
+                    }
+                    android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                    else -> false
+                }
+            }
+        }
+        info.addView(overviewView)
+
         scroll.addView(info)
         loadDetails(title, name, baseRows, original, table, scroll)
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
@@ -304,6 +333,7 @@ class DetailsActivity : Activity() {
                             }).into(backdrop)
                     } else bannerSpinner.visibility = View.GONE
                     if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
+                    if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
                     fillTable(table, baseRows + listOf(
                         "Длительность" to (formatRuntime(d.runtime)),
                         "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
@@ -344,7 +374,7 @@ class DetailsActivity : Activity() {
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
-            row.addView(text(caption, 15f, 0xFF8FB39D.toInt()), LinearLayout.LayoutParams(dp(150), -2))
+            row.addView(text(caption, 17f, 0xFFBDD4C7.toInt()), LinearLayout.LayoutParams(dp(160), -2))
             if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
                 val linksRow = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -354,7 +384,7 @@ class DetailsActivity : Activity() {
                 linkedDirectors.forEachIndexed { idx, dir ->
                     val link = TextView(this).apply {
                         text = dir.name
-                        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+                        setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                         setTextColor(android.content.res.ColorStateList(
                             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
                             intArrayOf(Color.WHITE, 0xFFB9F6CA.toInt()),
@@ -381,7 +411,7 @@ class DetailsActivity : Activity() {
                                     true
                                 }
                                 android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                    firstCastCard?.requestFocus() ?: false
+                                    (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else firstCastCard)?.requestFocus() ?: false
                                 }
                                 else -> false
                             }
@@ -397,8 +427,16 @@ class DetailsActivity : Activity() {
                     addView(linksRow)
                 }
                 row.addView(linksScroll, LinearLayout.LayoutParams(0, -2, 1f))
+            } else if (caption == "Рейтинг") {
+                val ratingView = text("★ $value", 18f, 0xFFB9F6CA.toInt()).apply {
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+                row.addView(ratingView, LinearLayout.LayoutParams(0, -2, 1f))
             } else {
-                row.addView(text(value, 16f, 0xFFDCE8E0.toInt()), LinearLayout.LayoutParams(0, -2, 1f))
+                val valueView = text(value, 18f, Color.WHITE).apply {
+                    if (caption in listOf("Год", "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
+                }
+                row.addView(valueView, LinearLayout.LayoutParams(0, -2, 1f))
             }
             table.addView(row)
         }
@@ -420,6 +458,7 @@ class DetailsActivity : Activity() {
     private lateinit var bannerSpinner: Spinner
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
+    private lateinit var overviewView: TextView
 
     private fun openGallery() {
         val title = currentTitle
@@ -536,7 +575,7 @@ class DetailsActivity : Activity() {
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
                             // ScrollView does not scroll back when focus leaves it upwards, so bring the facts back into view
                             pageScroll.smoothScrollTo(0, 0)
-                            (firstDirectorLink ?: watchButton).requestFocus()
+                            (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else (firstDirectorLink ?: watchButton)).requestFocus()
                             true
                         }
                         else -> false

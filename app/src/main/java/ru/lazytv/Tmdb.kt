@@ -170,6 +170,7 @@ object Tmdb {
         val posters: List<String> = emptyList(),
         /** All backdrop paths from TMDB for the gallery. */
         val allBackdrops: List<String> = emptyList(),
+        val overview: String = "",
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -326,7 +327,7 @@ object Tmdb {
             o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
             o.optInt("number_of_seasons"), mainBackdrop, nextEpisode, castPeople,
             o.str("poster_path"), uniqueDirectors, distinctBackdrops,
-            allPosters, allBackdrops,
+            allPosters, allBackdrops, o.str("overview"),
         )
     }
 
