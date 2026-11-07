@@ -106,7 +106,11 @@ class PersonActivity : Activity() {
                         button.nextFocusUpId = back.id
                         button.nextFocusDownId = grid.id
                     }
-                    grid.requestFocus()
+                    grid.selectedPosition = 0
+                    grid.post {
+                        grid.requestFocus()
+                        grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
+                    }
                 }.onFailure { err ->
                     page.addView(label(Errors.explain(err), 16f, 0xFFAFC4B6.toInt()).apply {
                         setPadding(0, px(12), 0, 0)
@@ -148,7 +152,7 @@ class PersonActivity : Activity() {
             if (!person.photo.isNullOrEmpty()) {
                 val photoSpinner = Spinner(this@PersonActivity, px(32))
                 addView(photoSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-                Glide.with(this@PersonActivity).load("https://image.tmdb.org/t/p/w342${person.photo}")
+                Glide.with(image).load("https://image.tmdb.org/t/p/w342${person.photo}")
                     .transition(DrawableTransitionOptions.withCrossFade())
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {

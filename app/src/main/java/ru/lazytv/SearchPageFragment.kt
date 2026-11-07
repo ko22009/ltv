@@ -68,6 +68,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private val ui = Handler(Looper.getMainLooper())
 
     private lateinit var searchBar: SearchBar
+    val micView: View? get() = if (::searchBar.isInitialized) searchBar.mic else null
     private lateinit var input: EditText
     private lateinit var history: LinearLayout
     private lateinit var historyBlock: LinearLayout
@@ -153,13 +154,14 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             showHistory()
             input.requestFocus()
         }
-        // right of "clear" there is nothing: the focus must not jump to the microphone; up goes back to the search field,
-        // down goes to the first phrase (the nearest search often lands on the second one)
+        // right of "clear" there is nothing: the focus must not jump to the microphone; up goes to the microphone,
+        // left goes to the menu, down goes to the first phrase
         clearHistory.setOnKeyListener { _, code, event ->
             if (event.action != KeyEvent.ACTION_DOWN) false
             else when (code) {
                 KeyEvent.KEYCODE_DPAD_RIGHT -> true
-                KeyEvent.KEYCODE_DPAD_UP -> { input.requestFocus(); true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> { focusMenu(); true }
+                KeyEvent.KEYCODE_DPAD_UP -> { searchBar.mic.requestFocus(); true }
                 KeyEvent.KEYCODE_DPAD_DOWN -> {
                     val first = history.getChildAt(0)
                     if (first != null) { first.requestFocus(); revealChip(first) }
@@ -255,6 +257,8 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     fun permissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (::searchBar.isInitialized) searchBar.handlePermissionsResult(requestCode, permissions, grantResults)
     }
+
+    private fun focusMenu(): Boolean = (parentFragment as? MainFragment)?.focusMenu() ?: false
 
     private fun key(title: Title) = title.tv to title.id
 
@@ -373,12 +377,19 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                         (first ?: input).requestFocus()
                         true
                     }
-                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                        val next = recentActions.getChildAt(recentActions.indexOfChild(view) + step)
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        val next = recentActions.getChildAt(recentActions.indexOfChild(view) + 1)
                         if (next != null) next.requestFocus()
-                        // right of the last button there is nothing to go to; left of the first the menu opens as usual
-                        next != null || step > 0
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        val prev = recentActions.getChildAt(recentActions.indexOfChild(view) - 1)
+                        if (prev != null) {
+                            prev.requestFocus()
+                        } else {
+                            focusMenu()
+                        }
+                        true
                     }
                     else -> false
                 }
@@ -459,9 +470,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
                     if (next != null) {
                         next.requestFocus()
                         revealChip(next)
+                    } else if (step < 0) {
+                        focusMenu()
                     }
-                    // right of the last phrase there is nothing to go to; left of the first the menu opens as usual
-                    next != null || step > 0
+                    true
                 } else if (code == KeyEvent.KEYCODE_DPAD_UP) {
                     // the "clear" stands right above the phrases: up goes to it, as the eye expects
                     clearHistory.requestFocus()

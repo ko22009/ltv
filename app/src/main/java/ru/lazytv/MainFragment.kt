@@ -315,6 +315,13 @@ class MainFragment : Fragment() {
     private fun requestContentFocus() {
         if (!::contentContainer.isInitialized) return
         if (contentContainer.findFocus() != null) return
+        if (currentPage == SEARCH_HEADER) {
+            val mic = searchPage?.micView
+            if (mic != null && mic.isShown) {
+                mic.requestFocus()
+                return
+            }
+        }
         val railItem = currentNavItem()
         val target = if (railItem != null) {
             FocusFinder.getInstance().findNextFocus(rootLayout, railItem, View.FOCUS_RIGHT)
@@ -461,6 +468,10 @@ class MainFragment : Fragment() {
         }
     }
 
+    fun focusMenu(): Boolean {
+        return currentNavItem()?.requestFocus() ?: false
+    }
+
     inner class RootLayout(context: Context) : FrameLayout(context) {
         override fun focusSearch(focused: View?, direction: Int): View? {
             if (direction == View.FOCUS_LEFT && focused != null) {
@@ -473,19 +484,36 @@ class MainFragment : Fragment() {
                     return currentNavItem()
                 }
             }
+            if (direction == View.FOCUS_RIGHT && focused != null && ::railContainer.isInitialized && isDescendant(railContainer, focused)) {
+                if (currentPage == SEARCH_HEADER) {
+                    val mic = searchPage?.micView
+                    if (mic != null && mic.isShown) return mic
+                }
+            }
             return super.focusSearch(focused, direction)
         }
 
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-            if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
-                val focused = findFocus()
-                if (content != null && focused != null && isDescendant(content, focused)) {
-                    val next = FocusFinder.getInstance().findNextFocus(content, focused, View.FOCUS_LEFT)
-                    if (next == null) {
-                        val target = currentNavItem()
-                        if (target != null) {
-                            target.requestFocus()
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
+                    val focused = findFocus()
+                    if (content != null && focused != null && isDescendant(content, focused)) {
+                        val next = FocusFinder.getInstance().findNextFocus(content, focused, View.FOCUS_LEFT)
+                        if (next == null) {
+                            val target = currentNavItem()
+                            if (target != null) {
+                                target.requestFocus()
+                                return true
+                            }
+                        }
+                    }
+                } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    val focused = findFocus()
+                    if (focused != null && ::railContainer.isInitialized && isDescendant(railContainer, focused) && currentPage == SEARCH_HEADER) {
+                        val mic = searchPage?.micView
+                        if (mic != null && mic.isShown) {
+                            mic.requestFocus()
                             return true
                         }
                     }

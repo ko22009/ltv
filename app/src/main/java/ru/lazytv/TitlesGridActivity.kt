@@ -64,11 +64,21 @@ class TitlesGridActivity : Activity() {
         }
         page.addView(message)
 
+        var pendingFirstFocus = true
         bridge = ItemBridgeAdapter(cards)
         bridge.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
             override fun onCreate(viewHolder: ItemBridgeAdapter.ViewHolder) {
                 viewHolder.itemView.setOnClickListener {
                     (viewHolder.item as? Title)?.let { startActivity(Intent(this@TitlesGridActivity, DetailsActivity::class.java).putExtras(it.toExtras())) }
+                }
+            }
+
+            override fun onAttachedToWindow(viewHolder: ItemBridgeAdapter.ViewHolder) {
+                if (pendingFirstFocus && viewHolder.absoluteAdapterPosition == 0) {
+                    pendingFirstFocus = false
+                    viewHolder.itemView.post {
+                        viewHolder.itemView.requestFocus()
+                    }
                 }
             }
         })
@@ -124,7 +134,13 @@ class TitlesGridActivity : Activity() {
                     if (loaded.ended) finished = true else nextPage = page + 1
                     val first = cards.size() == 0
                     if (fresh.isNotEmpty()) cards.addAll(cards.size(), fresh)
-                    if (first && cards.size() > 0) grid.requestFocus()
+                    if (first && cards.size() > 0) {
+                        grid.selectedPosition = 0
+                        grid.post {
+                            grid.requestFocus()
+                            grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
+                        }
+                    }
                     if (loaded.ended && cards.size() == 0) {
                         message.text = "Ничего не найдено"
                         message.visibility = View.VISIBLE
