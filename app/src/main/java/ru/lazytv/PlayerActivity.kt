@@ -365,7 +365,7 @@ class PlayerActivity : Activity() {
                         resetHideTimer()
                         true
                     }
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                         togglePlay()
                         resetHideTimer()
                         true
@@ -698,26 +698,33 @@ class PlayerActivity : Activity() {
                         }
                         return true
                     }
+                    // seek directly without opening the bar, so repeated Left/Right presses keep seeking instead of walking buttons
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        seekByStep(-seekStepMs(event.repeatCount))
-                        showControls()
+                        seekByStep(-10_000L)
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        seekByStep(seekStepMs(event.repeatCount))
-                        showControls()
+                        seekByStep(10_000L)
                         return true
                     }
-                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE -> {
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_SPACE -> {
                         togglePlay()
                         showControls()
                         return true
                     }
+                    KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE -> {
+                        return super.dispatchKeyEvent(event)
+                    }
                     else -> {
+                        if (KeyEvent.isModifierKey(event.keyCode)) return super.dispatchKeyEvent(event)
                         showControls()
                         return true
                     }
                 }
+            }
+        } else if (event.action == KeyEvent.ACTION_UP && overlay.visibility != View.VISIBLE) {
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                return true
             }
         }
         return super.dispatchKeyEvent(event)
