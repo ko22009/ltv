@@ -159,9 +159,11 @@ class GalleryActivity : Activity() {
 
         counterView.text = "${index + 1} из ${backdrops.size}"
 
+        val prev = mainImage.drawable
         imageSpinner.visibility = View.VISIBLE
         Glide.with(this)
             .load(imageUrl(path))
+            .let { if (prev != null) it.placeholder(prev) else it }
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
                     imageSpinner.visibility = View.GONE
