@@ -14,12 +14,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /** Rotating light-green arc: the preloader of lists, the card and the torrent screens. */
-class Spinner(context: Context, private val size: Int) : View(context) {
+class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFF8FB39D.toInt()) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
-        strokeWidth = size / 10f
-        color = 0xFF8FB39D.toInt()
+        strokeWidth = (size / 10f).coerceAtLeast(2.5f)
+        color = arcColor
     }
     private val track = Paint(paint).apply { color = 0x33FFFFFF }
     private var angle = 0f

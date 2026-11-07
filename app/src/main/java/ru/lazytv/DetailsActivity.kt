@@ -48,12 +48,14 @@ class DetailsActivity : Activity() {
     /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
     private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
         text = label.uppercase()
+        setSingleLine()
+        ellipsize = android.text.TextUtils.TruncateAt.END
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
-        setPadding(dp(20), 0, dp(20), 0)
+        setPadding(dp(14), 0, dp(14), 0)
         setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
-        compoundDrawablePadding = dp(10)
+        compoundDrawablePadding = dp(8)
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
@@ -66,7 +68,7 @@ class DetailsActivity : Activity() {
             // a quick double press on the card lands here: the first moments ignore clicks, so the video does not start by itself
             if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
         }
-        layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(12) }
+        layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -138,11 +140,20 @@ class DetailsActivity : Activity() {
         val bar = LinearLayout(this)
         bar.setBackgroundColor(0xFF1B2E23.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setPadding(dp(389), 0, 0, 0)
+        bar.setPadding(dp(389), 0, dp(24), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply { id = View.generateViewId() }
         back.nextFocusDownId = watchButton.id
-        bar.addView(watchButton)
+        watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
+            visibility = View.GONE
+            isFocusable = false
+            isClickable = false
+        }
+        val watchSlot = FrameLayout(this).apply {
+            addView(watchButton, FrameLayout.LayoutParams(-2, dp(44)))
+            addView(watchSpinner, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
+        }
+        bar.addView(watchSlot, LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
         lateinit var favorite: TextView
         // filled bookmark: the title is saved in a folder; outline: it is not
         fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
@@ -167,18 +178,25 @@ class DetailsActivity : Activity() {
         }
         seen.setCompoundDrawables(seenIcon(), null, null, null)
         bar.addView(seen)
-        bar.addView(button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) })
-        bar.addView(button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) })
+        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }
+        val trailerButton = button(MenuIcons.TRAILER, "Трейлер на YouTube") { openTrailer(title) }.apply {
+            (layoutParams as LinearLayout.LayoutParams).rightMargin = 0
+        }
+        bar.addView(torrentButton)
+        bar.addView(trailerButton)
         // left and right walk the buttons of the bar: at the right end there is nothing to go to, the focus stays;
         // at the left end the key goes on to the back button as usual
-        for (i in 0 until bar.childCount) bar.getChildAt(i).setOnKeyListener { view, code, event ->
-            if (event.action != android.view.KeyEvent.ACTION_DOWN) false
-            else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
-                val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                val next = bar.getChildAt(bar.indexOfChild(view) + step)
-                if (next != null) next.requestFocus()
-                next != null || step > 0
-            } else false
+        val barButtons = listOf(watchButton, favorite, seen, torrentButton, trailerButton)
+        barButtons.forEachIndexed { index, btn ->
+            btn.setOnKeyListener { _, code, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    val next = barButtons.getOrNull(index + step)
+                    if (next != null) next.requestFocus()
+                    next != null || step > 0
+                } else false
+            }
         }
         root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
 
@@ -217,7 +235,7 @@ class DetailsActivity : Activity() {
         })
 
         setContentView(root)
-        bar.getChildAt(0).requestFocus()
+        watchButton.requestFocus()
     }
 
     /** Fills in what the list does not carry: original title, runtime, age, genres, countries, director, cast. */
@@ -379,7 +397,16 @@ class DetailsActivity : Activity() {
 
     /** Starting to watch (a site variant or a torrent) puts the title into the history. */
     private lateinit var watchButton: TextView
+    private lateinit var watchSpinner: Spinner
     private var opening = false
+
+    /** Spins an overlay arc over "Смотреть" instead of changing its caption so the action bar never shifts width. */
+    private fun setWatchLoading(loading: Boolean) {
+        opening = loading
+        watchSpinner.visibility = if (loading) View.VISIBLE else View.GONE
+        watchButton.setTextColor(if (loading) 0x44FFFFFF else Color.WHITE)
+        watchButton.compoundDrawables[0]?.alpha = if (loading) 68 else 255
+    }
 
     /** Waits for the background site search if the user clicks "Смотреть" immediately on opening the card. */
     private fun startWatching(name: String) {
@@ -389,14 +416,11 @@ class DetailsActivity : Activity() {
             return
         }
         if (detailsReady.count > 0) {
-            opening = true
-            val caption = watchButton.text
-            watchButton.text = "ЗАГРУЖАЕМ…"
+            setWatchLoading(true)
             Thread {
                 detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
                 onUi {
-                    opening = false
-                    watchButton.text = caption
+                    setWatchLoading(false)
                     variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
                 }
             }.start()
@@ -411,15 +435,12 @@ class DetailsActivity : Activity() {
      */
     private fun openVariant(v: Variant) {
         if (opening) return
-        opening = true
+        setWatchLoading(true)
         History.add(this, historyTitle())
-        val caption = watchButton.text
-        watchButton.text = "ЗАГРУЖАЕМ…"
         Thread {
             val episodes = runCatching { Sources.all.firstOrNull { it.id == v.sourceId }?.episodes(v) }.getOrNull()
             onUi {
-                opening = false
-                watchButton.text = caption
+                setWatchLoading(false)
                 if (episodes != null && episodes.size == 1) playEpisode(this, v, episodes, 0)
                 else startActivity(
                     Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
