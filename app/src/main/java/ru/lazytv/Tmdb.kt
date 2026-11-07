@@ -164,6 +164,8 @@ object Tmdb {
         val poster: String = "",
         /** Directors (or series creators) with TMDB person ids, so the card can link to their pages too. */
         val directors: List<Person> = emptyList(),
+        /** Up to 5 backdrops (covers) from TMDB for the rotating banner on the card. */
+        val backdrops: List<String> = emptyList(),
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -211,8 +213,9 @@ object Tmdb {
     fun details(context: Context, id: Long, tv: Boolean): Details {
         val kind = if (tv) "tv" else "movie"
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
-        val extra = if (tv) "credits,content_ratings" else "credits,release_dates"
-        val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra"))
+        val extra = if (tv) "credits,content_ratings,images" else "credits,release_dates,images"
+        val langCode = language.take(2).lowercase()
+        val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra&include_image_language=$langCode,en,null"))
         fun names(key: String): List<String> {
             val a = o.optJSONArray(key) ?: return emptyList()
             return (0 until a.length()).map { a.getJSONObject(it).str("name") }.filter { it.isNotEmpty() }
@@ -287,12 +290,25 @@ object Tmdb {
                 next.str("name"), next.str("air_date"),
             ).filter { it.isNotEmpty() }.joinToString(" • ")
         }
+        val images = o.optJSONObject("images")
+        val backdropList = mutableListOf<String>()
+        val mainBackdrop = o.str("backdrop_path")
+        if (mainBackdrop.isNotEmpty()) backdropList.add(mainBackdrop)
+        val rawBackdrops = images?.optJSONArray("backdrops")
+        if (rawBackdrops != null) {
+            for (i in 0 until rawBackdrops.length()) {
+                val b = rawBackdrops.getJSONObject(i)
+                val path = b.str("file_path")
+                if (path.isNotEmpty()) backdropList.add(path)
+            }
+        }
+        val distinctBackdrops = backdropList.distinct().take(5)
         return Details(
             o.str("original_title").ifEmpty { o.str("original_name") }, o.str("tagline"),
             names("genres"), countries, runtime, age,
             o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
-            o.optInt("number_of_seasons"), o.str("backdrop_path"), nextEpisode, castPeople,
-            o.str("poster_path"), uniqueDirectors,
+            o.optInt("number_of_seasons"), mainBackdrop, nextEpisode, castPeople,
+            o.str("poster_path"), uniqueDirectors, distinctBackdrops,
         )
     }
 

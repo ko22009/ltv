@@ -21,6 +21,7 @@ import android.graphics.drawable.Drawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 
@@ -294,6 +295,7 @@ class DetailsActivity : Activity() {
                         row.tag = "cast"
                         info.addView(row)
                     }
+                    startBackdrops(d.backdrops)
                 }
             } finally {
                 detailsReady.countDown()
@@ -386,6 +388,70 @@ class DetailsActivity : Activity() {
     private lateinit var bannerSpinner: Spinner
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
+
+    // Backdrop covers: up to 5 TMDB backdrops cycling every 20 seconds, next cover preloaded in advance
+    private val backdropHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val backdrops = mutableListOf<String>()
+    private var backdropIndex = 0
+    private var backdropsStarted = false
+    private val backdropTick = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed || backdrops.size < 2) return
+            val next = (backdropIndex + 1) % backdrops.size
+            val url = backdrops[next]
+            Glide.with(this@DetailsActivity).load(url).centerCrop()
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                        backdrops.remove(url)
+                        if (backdropIndex >= backdrops.size) backdropIndex = 0
+                        return true
+                    }
+
+                    override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                        backdropIndex = backdrops.indexOf(url).coerceAtLeast(0)
+                        return false
+                    }
+                }).into(backdrop)
+            val ahead = backdrops[(next + 1) % backdrops.size]
+            Glide.with(applicationContext).load(ahead).preload()
+            backdropHandler.postDelayed(this, 20_000L)
+        }
+    }
+
+    private fun startBackdropSlideshow(items: List<String>) {
+        if (backdropsStarted) return
+        val all = items.map {
+            if (it.startsWith("http")) it else "https://image.tmdb.org/t/p/original$it"
+        }.distinct().take(5)
+        if (all.size < 2) return
+        backdropsStarted = true
+        backdrops.clear()
+        backdrops.addAll(all)
+        backdropIndex = 0
+        Glide.with(applicationContext).load(backdrops[1]).preload()
+        backdropHandler.postDelayed(backdropTick, 20_000L)
+    }
+
+    private fun startBackdrops(items: List<String>) = startBackdropSlideshow(items)
+
+    override fun onResume() {
+        super.onResume()
+        if (backdropsStarted && backdrops.size >= 2) {
+            backdropHandler.removeCallbacks(backdropTick)
+            backdropHandler.postDelayed(backdropTick, 20_000L)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        backdropHandler.removeCallbacks(backdropTick)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        backdropHandler.removeCallbacksAndMessages(null)
+    }
 
     /** Cast and directors of the film: a caption and a carousel of round photos with the name and role; OK opens PersonActivity. */
     private fun castRow(people: List<Tmdb.Person>, hasDirectors: Boolean, pageScroll: ScrollView): View {
