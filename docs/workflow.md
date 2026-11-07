@@ -48,6 +48,11 @@ APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 
 В сборке ответы TMDB кэшируются на устройстве на 12 часов (`cache/tmdb`): повторные открытия экранов не тратят запросы, а списки показываются сразу. Свежие данные: очистить кэш приложения.
 
+Эмулятор запускается как `emulator-5554`. Если он не запущен, агент запускает его в интерактивной сессии Windows без окна консоли через WMI:
+```powershell
+$v = "$env:TEMP\launch_tv.vbs"; [IO.File]::WriteAllText($v, 'CreateObject("WScript.Shell").Run """<Android SDK>\emulator\emulator.exe"" -avd tv -gpu host -feature -Vulkan", 0, False', [Text.Encoding]::ASCII); Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "wscript.exe `"$v`"" }
+```
+
 Обновление убивает процесс, и Android сам приложение не открывает. Поэтому после установки сразу открываем его:
 
 ```powershell
