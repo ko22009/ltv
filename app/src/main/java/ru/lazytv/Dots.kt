@@ -10,7 +10,7 @@ import android.graphics.drawable.Drawable
  * The dot pattern of the LazyMedia header: staggered rows of soft dots, fading out to the right.
  * Drawn on a 1280-wide grid and scaled to the view, so it looks the same on any TV.
  */
-class DotsDrawable(private val color: Int = 0x2E9BD3B1, private val fade: Boolean = true) : Drawable() {
+class DotsDrawable(private val color: Int = 0x2E818CF8, private val fade: Boolean = true) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
 
     override fun draw(canvas: Canvas) {

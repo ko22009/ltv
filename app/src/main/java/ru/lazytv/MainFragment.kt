@@ -495,12 +495,6 @@ class MainFragment : Fragment() {
                     return currentNavItem()
                 }
             }
-            if (direction == View.FOCUS_RIGHT && focused != null && ::railContainer.isInitialized && isDescendant(railContainer, focused)) {
-                if (currentPage == SEARCH_HEADER) {
-                    val mic = searchPage?.micView
-                    if (mic != null && mic.isShown) return mic
-                }
-            }
             return super.focusSearch(focused, direction)
         }
 
@@ -517,15 +511,6 @@ class MainFragment : Fragment() {
                                 target.requestFocus()
                                 return true
                             }
-                        }
-                    }
-                } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    val focused = findFocus()
-                    if (focused != null && ::railContainer.isInitialized && isDescendant(railContainer, focused) && currentPage == SEARCH_HEADER) {
-                        val mic = searchPage?.micView
-                        if (mic != null && mic.isShown) {
-                            mic.requestFocus()
-                            return true
                         }
                     }
                 }

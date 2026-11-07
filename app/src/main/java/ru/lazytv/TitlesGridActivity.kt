@@ -135,11 +135,8 @@ class TitlesGridActivity : Activity() {
                     val first = cards.size() == 0
                     if (fresh.isNotEmpty()) cards.addAll(cards.size(), fresh)
                     if (first && cards.size() > 0) {
+                        // the first card takes focus in onAttachedToWindow of the adapter listener
                         grid.selectedPosition = 0
-                        grid.post {
-                            grid.requestFocus()
-                            grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
-                        }
                     }
                     if (loaded.ended && cards.size() == 0) {
                         message.text = "Ничего не найдено"

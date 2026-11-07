@@ -129,6 +129,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 pending?.let { ui.removeCallbacks(it) }
+                if (::searchBar.isInitialized && searchBar.listening) return
                 val phrase = s?.toString().orEmpty().trim()
                 pending = Runnable { searchTitles(phrase) }.also { ui.postDelayed(it, 600) }
             }
@@ -258,6 +259,12 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         if (::searchBar.isInitialized) searchBar.handlePermissionsResult(requestCode, permissions, grantResults)
     }
 
+    /** Leaving the app (Home button) must not leave the microphone on. */
+    override fun onStop() {
+        super.onStop()
+        if (::searchBar.isInitialized) searchBar.cancelListening()
+    }
+
     private fun focusMenu(): Boolean = (parentFragment as? MainFragment)?.focusMenu() ?: false
 
     private fun key(title: Title) = title.tv to title.id
@@ -288,6 +295,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     }
 
     private fun submit(phrase: String) {
+        pending?.let { ui.removeCallbacks(it) }
         val text = phrase.trim()
         if (text.length < 2) return
         remember(text)

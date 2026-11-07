@@ -244,7 +244,7 @@ class DetailsActivity : Activity() {
 
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
-        posterView.setBackgroundColor(0xFF161920.toInt())
+        posterView.setBackgroundColor(0xFF1C2029.toInt())
         posterSpinner = Spinner(this, dp(40))
         posterView.showPoster(posterPath, posterSpinner)
         root.addView(FrameLayout(this).apply {

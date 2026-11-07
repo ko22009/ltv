@@ -52,7 +52,9 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     }
 
     private var recognizer: SpeechRecognizer? = null
-    private var listening = false
+    /** True while the recognizer listens: partial phrases fill the field, and the page must not search by them. */
+    var listening = false
+        private set
     private var previousQuery: String = ""
     private var pulseAnimator: ObjectAnimator? = null
 
@@ -224,6 +226,14 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
                 if (!hadText && previousQuery.isNotEmpty()) {
                     setPhrase(previousQuery)
                 }
+                val message = when (error) {
+                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Нет сети для распознавания речи"
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Речь не разобрана, попробуйте ещё раз"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Распознавание занято, попробуйте позже"
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Нет доступа к микрофону"
+                    else -> "Не удалось распознать речь"
+                }
+                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
             }
             override fun onResults(results: Bundle?) {
                 val phrase = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim()
@@ -310,7 +320,8 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         if (granted) {
             listen()
         } else {
-            Toast.makeText(activity, "Для голосового поиска нужен доступ к микрофону", Toast.LENGTH_SHORT).show()
+            // without the permission the system dialog of the recognizer still works
+            fallbackVoiceIntent()
         }
         return true
     }

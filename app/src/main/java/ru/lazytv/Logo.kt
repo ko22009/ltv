@@ -31,7 +31,8 @@ object Logo {
             span.setSpan(ForegroundColorSpan(textColorL), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             span.setSpan(ForegroundColorSpan(textColorTv), 1, 3, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             text = span
-            textSize = textSizeSp
+            // dp, not sp: the frame around the logo is counted in dp, and the system font scale must not push the text out of it
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, textSizeSp)
             typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
             letterSpacing = 0.12f
             gravity = Gravity.CENTER

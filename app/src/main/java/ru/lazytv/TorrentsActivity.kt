@@ -162,7 +162,7 @@ class TorrentsActivity : Activity() {
         else {
             val image = ImageView(this)
             image.scaleType = ImageView.ScaleType.CENTER_CROP
-            image.setBackgroundColor(0xFF161920.toInt())
+            image.setBackgroundColor(0xFF1C2029.toInt())
             val posterSpinner = Spinner(this, px(40))
             image.showPoster(poster, posterSpinner, "w342")
             val posterSlot = FrameLayout(this).apply {

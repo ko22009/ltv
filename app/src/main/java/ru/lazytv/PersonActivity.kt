@@ -145,7 +145,7 @@ class PersonActivity : Activity() {
         // initials on a calm indigo plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF3730A3.toInt(), 0xFF1E222A.toInt()))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
             addView(label(initials, 40f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
