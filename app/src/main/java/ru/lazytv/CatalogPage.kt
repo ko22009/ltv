@@ -271,6 +271,20 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         }
     }
 
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden && ::grid.isInitialized) {
+            val current = CatalogFilter.signature(requireContext(), category.id)
+            if (current != signature) {
+                signature = current
+                renderButtons()
+                startOver()
+            } else if (cards.size() > 0) {
+                cards.notifyArrayItemRangeChanged(0, cards.size())
+            }
+        }
+    }
+
     override fun onDestroyView() {
         loadJob?.cancel()
         super.onDestroyView()

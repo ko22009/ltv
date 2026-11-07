@@ -18,7 +18,10 @@ public final class LazyGlideModule extends AppGlideModule {
     @Override
     public void applyOptions(@NonNull Context context, @NonNull GlideBuilder builder) {
         builder.setDiskCache(new InternalCacheDiskCacheFactory(context, "image_cache", 256L * 1024L * 1024L));
-        MemorySizeCalculator calculator = new MemorySizeCalculator.Builder(context).build();
+        MemorySizeCalculator calculator = new MemorySizeCalculator.Builder(context)
+                .setMemoryCacheScreens(3.5f)
+                .setBitmapPoolScreens(3.5f)
+                .build();
         builder.setMemoryCache(new LruResourceCache(calculator.getMemoryCacheSize()));
         builder.setBitmapPool(new LruBitmapPool(calculator.getBitmapPoolSize()));
     }

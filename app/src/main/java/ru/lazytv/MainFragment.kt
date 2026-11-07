@@ -223,9 +223,33 @@ class MainFragment : Fragment() {
                 Tmdb.visibleCategories(warmContext).forEach { category ->
                     if (!CatalogFilter.supports(category.id)) return@forEach
                     val filter = CatalogFilter.load(warmContext, category.id)
-                    Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
+                    val list = Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
+                    list.take(10).forEach { title ->
+                        val poster = title.poster
+                        if (!poster.isNullOrEmpty()) {
+                            Glide.with(warmContext)
+                                .load("https://image.tmdb.org/t/p/w500$poster")
+                                .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                                .preload()
+                        }
+                    }
                 }
-                Tmdb.overview.take(4).forEach { runCatching { Tmdb.loadCollection(warmContext, it) } }
+                Tmdb.overview.take(4).forEach { col ->
+                    runCatching {
+                        val list = Tmdb.loadCollection(warmContext, col)
+                        list.take(6).forEach { title ->
+                            val poster = title.poster
+                            if (!poster.isNullOrEmpty()) {
+                                Glide.with(warmContext)
+                                    .load("https://image.tmdb.org/t/p/w500$poster")
+                                    .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
+                                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                                    .preload()
+                            }
+                        }
+                    }
+                }
             }
         }.start()
     }
@@ -262,6 +286,9 @@ class MainFragment : Fragment() {
         pendingLoads.clear()
         pagers.clear()
         favoritesRows = null
+        val tx = childFragmentManager.beginTransaction()
+        childFragmentManager.fragments.forEach { tx.remove(it) }
+        tx.commitAllowingStateLoss()
         buildNavRail()
         val target = if (navItems.any { it.name == currentPage }) currentPage else OVERVIEW
         openPage(target, requestContentFocus = false)
@@ -295,8 +322,8 @@ class MainFragment : Fragment() {
 
     private fun openPage(name: String, requestContentFocus: Boolean = false) {
         if (!isAdded) return
-        val currentFrag = childFragmentManager.findFragmentById(CONTENT_CONTAINER_ID)
-        if (name == currentPage && currentFrag != null) {
+        val currentFrag = childFragmentManager.findFragmentByTag(currentPage)
+        if (name == currentPage && currentFrag != null && currentFrag.isVisible) {
             if (requestContentFocus) requestContentFocus()
             return
         }
@@ -307,10 +334,19 @@ class MainFragment : Fragment() {
             LastScreen.rememberPage(requireContext(), name)
         }
 
-        val fragment = createPageFragment(name)
-        childFragmentManager.beginTransaction()
-            .replace(CONTENT_CONTAINER_ID, fragment, name)
-            .commitAllowingStateLoss()
+        val tx = childFragmentManager.beginTransaction()
+        childFragmentManager.fragments.forEach { f ->
+            if (f.isVisible) tx.hide(f)
+        }
+        val target = childFragmentManager.findFragmentByTag(name)
+        if (target != null) {
+            tx.show(target)
+            if (target is SearchPageFragment) searchPage = target
+        } else {
+            val fragment = createPageFragment(name)
+            tx.add(CONTENT_CONTAINER_ID, fragment, name)
+        }
+        tx.commitAllowingStateLoss()
         childFragmentManager.executePendingTransactions()
 
         if (requestContentFocus) {
