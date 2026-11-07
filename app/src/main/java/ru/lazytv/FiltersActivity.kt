@@ -213,7 +213,7 @@ class FiltersActivity : Activity() {
         cell.background = focusShape(scale, Color.TRANSPARENT)
         cell.isFocusable = true
         cell.isClickable = true
-        cell.addView(mark)
+        cell.addView(mark, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
         cell.setOnClickListener {
             if (!radio) mark.toggle() else mark.isChecked = true
             onChange(mark.isChecked)
@@ -234,13 +234,22 @@ class FiltersActivity : Activity() {
     }
 
     private fun GridLayout.addCell(view: View) {
-        val w = if (columnCount == 1) FrameLayout.LayoutParams.MATCH_PARENT else 0
-        addView(view, GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply { width = w })
+        val colSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 1f)
+        val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
+        addView(view, GridLayout.LayoutParams(rowSpec, colSpec).apply {
+            width = 0
+            height = FrameLayout.LayoutParams.WRAP_CONTENT
+        })
     }
 
     private fun GridLayout.addCaption(caption: String) {
+        val colSpec = GridLayout.spec(0, columnCount, GridLayout.FILL, 1f)
+        val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
         addView(text(caption, 16f, 0xFF8FD4AE.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
-            GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, columnCount)).apply { width = FrameLayout.LayoutParams.MATCH_PARENT })
+            GridLayout.LayoutParams(rowSpec, colSpec).apply {
+                width = 0
+                height = FrameLayout.LayoutParams.WRAP_CONTENT
+            })
     }
 
     private fun showGenres() {
