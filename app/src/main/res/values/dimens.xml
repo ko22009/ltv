@@ -1,9 +1,7 @@
 <resources>
     <!-- Leanback leaves 28dp under every row; rows (and the settings tiles) sit closer together -->
     <dimen name="lb_browse_expanded_row_no_hovercard_bottom_padding">6dp</dimen>
-    <!-- rows start this far from the page edge; the icon rail is 48dp wide, so the gap to it is about the gap to the open menu.
-         (lb_browse_rows_margin_start must stay: Leanback hides the menu by it) -->
-    <dimen name="lb_browse_padding_start">69dp</dimen>
-    <!-- the menu is a compact icon rail: 68dp width matching the collapsed rail -->
-    <dimen name="lb_browse_headers_width">68dp</dimen>
+
+    <!-- Content starts 92dp from the left screen edge: 68dp static icon rail + 24dp gap -->
+    <dimen name="lb_browse_padding_start">92dp</dimen>
 </resources>

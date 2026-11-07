@@ -1,32 +1,36 @@
 package ru.lazytv
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.TypedValue
+import android.view.FocusFinder
 import android.view.Gravity
+import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.util.TypedValue
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.app.RowsSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.ClassPresenterSelector
 import androidx.leanback.widget.FocusHighlight
 import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ImageCardView
 import androidx.leanback.widget.ListRow
 import androidx.leanback.widget.ListRowPresenter
 import androidx.leanback.widget.OnItemViewClickedListener
-import androidx.leanback.widget.ClassPresenterSelector
-import androidx.leanback.widget.DividerPresenter
-import androidx.leanback.widget.DividerRow
-import androidx.leanback.widget.PageRow
-import androidx.leanback.widget.RowHeaderPresenter
-import androidx.leanback.widget.SectionRow
+import androidx.leanback.widget.OnItemViewSelectedListener
 import androidx.leanback.widget.Presenter
 import androidx.leanback.widget.Row
 import androidx.leanback.widget.RowPresenter
@@ -39,9 +43,6 @@ import kotlinx.coroutines.withContext
 private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
-
-/** How long the menu slides (Leanback's lb_browse_headers_transition_duration): the rail and the page follow the same time, or the move looks cut short. */
-private const val MENU_SLIDE_MS = 250L
 
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
@@ -61,8 +62,9 @@ private val SETTINGS_SECTIONS = listOf(
 /** Opens the settings screen from the tile on the settings page. */
 object OpenSettings
 
-class MainFragment : BrowseSupportFragment() {
-    private val headers = ArrayObjectAdapter(ListRowPresenter())
+class MainFragment : Fragment() {
+    private val CONTENT_CONTAINER_ID = View.generateViewId()
+
     private val pages = HashMap<String, ArrayObjectAdapter>()
     private var shown = ""
     /** Adapter of the page that changes when a title or episode is bookmarked. */
@@ -70,14 +72,24 @@ class MainFragment : BrowseSupportFragment() {
     private var favoritesSignature = ""
     private var torrentsSignature = ""
     private var watchedMarks = ""
-    /** The strip of icons that stands in for the menu while it is collapsed, and the page it lights. */
-    private var rail: LinearLayout? = null
+
     private var currentPage = OVERVIEW
     /** The page the menu must open after an update; empty when the menu starts as usual (docs/workflow.md). */
     private var pageToRestore = ""
-    /** Whether the wide menu was open before the update; the rail stands in its place otherwise. */
-    private var menuToRestore = false
     private var searchPage: SearchPageFragment? = null
+
+    private lateinit var rootLayout: RootLayout
+    private lateinit var contentContainer: FrameLayout
+    private lateinit var railContainer: LinearLayout
+    private val navItems = mutableListOf<NavItemView>()
+
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val switchPageDebounce = Runnable {
+        val focusedItem = navItems.firstOrNull { it.isFocused }
+        if (focusedItem != null && focusedItem.name != currentPage) {
+            openPage(focusedItem.name, requestContentFocus = false)
+        }
+    }
 
     fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
         searchPage?.voiceResult(requestCode, resultCode, data)
@@ -106,26 +118,7 @@ class MainFragment : BrowseSupportFragment() {
         }
     }
 
-    override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        super.onCreate(savedInstanceState)
-        // the saved page is read before the overview opens and is saved over it (docs/workflow.md)
-        if (arguments?.getBoolean(RESTORE, false) == true) {
-            pageToRestore = LastScreen.page(requireContext())
-            menuToRestore = LastScreen.menuOpen(requireContext())
-        }
-        // no page title in the corner: the rows start at the top edge and would run under it
-        title = ""
-        headersState = HEADERS_ENABLED
-        isHeadersTransitionOnBackEnabled = true
-        brandColor = 0xFF1B2E23.toInt()
-        mainFragmentRegistry.registerFragment(PageRow::class.java, PageFactory())
-        adapter = headers
-        showHeaders()
-    }
-
     private val ROW_AHEAD = 6 // titles left in a row when the next page is asked for
-
-    private var spacingTries = 0
 
     /** The next pages of an overview row: asked for while the cursor nears the end of the row. */
     private class RowPager(val more: MoreTile, val cards: ArrayObjectAdapter) {
@@ -159,73 +152,70 @@ class MainFragment : BrowseSupportFragment() {
     /** Rows of the overview that wait to be loaded until they come near the screen. */
     private val pendingLoads = HashMap<ListRow, () -> Unit>()
 
-    /** The menu fragment exists only after the view is created, so its look is set here. */
-    override fun onViewCreated(view: android.view.View, savedInstanceState: android.os.Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        headersSupportFragment?.presenterSelector = ClassPresenterSelector()
-            .addClassPresenter(DividerRow::class.java, DividerPresenter())
-            .addClassPresenter(SectionRow::class.java, SectionHeaderPresenter())
-            .addClassPresenter(Row::class.java, IconHeaderPresenter())
-        buildRail(view)
-        // the menu list starts at the top and the cursor walks down it; it scrolls only when the cursor reaches the middle
-        // (Leanback pins the chosen item to one place by default). The pages share the sizes of Leanback, so the menu
-        // takes its own edges here. Leanback sets the alignment again after the view is made, so it is held on every layout pass.
-        val scale = resources.displayMetrics.widthPixels / 1280f
-        view.viewTreeObserver.addOnGlobalLayoutListener {
-            val menu = headersSupportFragment?.verticalGridView ?: return@addOnGlobalLayoutListener
-            if (menu.windowAlignment != androidx.leanback.widget.BaseGridView.WINDOW_ALIGN_BOTH_EDGE) {
-                menu.windowAlignment = androidx.leanback.widget.BaseGridView.WINDOW_ALIGN_BOTH_EDGE
-                menu.windowAlignmentOffsetPercent = 50f
-                menu.windowAlignmentOffset = 0
-            }
-            // the first item sits level with the search row of the page and the edges are not tight
-            val side = (12 * scale).toInt()
-            val top = (27 * scale).toInt()
-            val gap = (8 * scale).toInt()
-            if (menu.paddingLeft != side || menu.paddingTop != top) {
-                menu.clipToPadding = false
-                menu.setPadding(side, top, side, (16 * scale).toInt())
-            }
-            // Leanback leaves 28dp between the items of the menu; they stand closer. Just after the start Leanback keeps its own gap
-            // even when the value is already set, so the gap really laid out is compared and the value is forced through a change
-            val first = menu.getChildAt(0)
-            val second = menu.getChildAt(1)
-            if (first != null && second != null) {
-                if (Math.abs(second.top - first.bottom - gap) > 2 && spacingTries < 30) {
-                    spacingTries++
-                    menu.verticalSpacing = gap + 1
-                    menu.verticalSpacing = gap
-                    // the positions already laid out are not moved by the new value alone: the items are laid out again
-                    menu.adapter?.notifyDataSetChanged()
-                } else if (Math.abs(second.top - first.bottom - gap) <= 2) spacingTries = 0
-            }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (arguments?.getBoolean(RESTORE, false) == true) {
+            pageToRestore = LastScreen.page(requireContext())
         }
-        // Leanback may lay the menu out with its own gap after the first passes: the gap is checked again a little later
-        for (delay in listOf(600L, 1500L)) view.postDelayed({
-            spacingTries = 0
-            headersSupportFragment?.verticalGridView?.requestLayout()
-        }, delay)
-        setSelectedPosition(0, false)
-        setBrowseTransitionListener(object : BrowseTransitionListener() {
-            override fun onHeadersTransitionStart(withHeaders: Boolean) {
-                // the state is remembered for the install script: after an update the menu opens as it was (docs/workflow.md)
-                LastScreen.rememberMenu(requireContext(), withHeaders)
-                // Leanback lays the menu out with its own gap again when it opens: the check of the gap starts over
-                spacingTries = 0
-                headersSupportFragment?.verticalGridView?.requestLayout()
-                if (withHeaders) rail?.animate()?.alpha(0f)?.setDuration(MENU_SLIDE_MS)?.withEndAction { rail?.visibility = View.GONE }?.start()
-                else { refreshRail(); rail?.visibility = View.VISIBLE; rail?.animate()?.alpha(1f)?.setDuration(MENU_SLIDE_MS)?.start() }
-                shiftPage(withHeaders)
-            }
+    }
 
-            override fun onHeadersTransitionStop(withHeaders: Boolean) {
-                spacingTries = 0
-                headersSupportFragment?.verticalGridView?.requestLayout()
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val ctx = requireContext()
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        val railWidth = (68 * scale).toInt()
+        val cell = (44 * scale).toInt()
+        val sidePadding = (railWidth - cell) / 2
+        val topPadding = (27 * scale).toInt()
+        val bottomPadding = (16 * scale).toInt()
+
+        rootLayout = RootLayout(ctx)
+
+        contentContainer = FrameLayout(ctx).apply {
+            id = CONTENT_CONTAINER_ID
+            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
+        }
+        rootLayout.addView(contentContainer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+
+        val railScroll = object : ScrollView(ctx) {
+            init {
+                isVerticalScrollBarEnabled = false
+                clipChildren = false
+                clipToPadding = false
+            }
+        }.apply {
+            setBackgroundColor(0xFF1B2E23.toInt())
+        }
+
+        railContainer = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            setPadding(sidePadding, topPadding, sidePadding, bottomPadding)
+        }
+        railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        rootLayout.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START or Gravity.TOP))
+
+        return rootLayout
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        buildNavRail()
+
+        val initialPage = pageToRestore.ifEmpty { OVERVIEW }
+        pageToRestore = ""
+        openPage(initialPage, requestContentFocus = true)
+
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (handleBack()) return
+                isEnabled = false
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
             }
         })
-        // the page stands next to the open menu from the start, not only after the menu was closed and opened once
-        view.post { shiftPage(isShowingHeaders()) }
-        if (arguments?.getBoolean(RESTORE, false) != true) view.post { startHeadersTransition(false) }
+
         // the lists are warmed in the background: the pages and the rows open with the cards, not with skeletons
         val warmContext = requireContext().applicationContext
         Thread {
@@ -238,99 +228,249 @@ class MainFragment : BrowseSupportFragment() {
                 Tmdb.overview.take(4).forEach { runCatching { Tmdb.loadCollection(warmContext, it) } }
             }
         }.start()
-        // after an update the menu comes back to the page the user was on instead of the overview (docs/workflow.md)
-        if (arguments?.getBoolean(RESTORE, false) == true) view.post { restorePage() }
     }
 
-    /** Selects the page saved before the update; unknown pages stay on the overview. */
-    private fun restorePage() {
-        val name = pageToRestore
-        // from now on the page is saved as it is chosen again
-        pageToRestore = ""
-        val index = if (name.isEmpty() || name == OVERVIEW) 0 else
-            (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == name }
-        if (index > 0) setSelectedPosition(index, false)
-        else LastScreen.rememberPage(requireContext(), currentPage)
-        // the menu was closed before the update: the rail stands in its place, as it was
-        if (!menuToRestore) startHeadersTransition(false)
-    }
+    private fun buildNavRail() {
+        val ctx = requireContext()
+        shown = menuSignature(ctx)
+        watchedMarks = Watched.revision(ctx)
+        navItems.clear()
+        railContainer.removeAllViews()
 
-    /**
-     * The page keeps its wide left margin for the rail, but next to the open menu that margin is too much: the page moves
-     * left by the extra. It glides only when the menu opens or closes; moving the cursor from one page to another (the pages
-     * swap under it) must not slide the page.
-     */
-    private fun shiftPage(menuOpen: Boolean) {
-        val shift = if (!menuOpen) 0f else -resources.getDimension(androidx.leanback.R.dimen.lb_browse_rows_margin_start)
-        val frame = this.view?.findViewById<View>(androidx.leanback.R.id.scale_frame) ?: return
-        frame.animate().cancel()
-        if (menuOpen == menuWasOpen) frame.translationX = shift
-        else frame.animate().translationX(shift).setDuration(MENU_SLIDE_MS).start()
-        menuWasOpen = menuOpen
-    }
-
-    private var menuWasOpen = false
-
-    /**
-     * The menu shrinks to a narrow rail of icons while a page has the focus: the icons stay where the names were,
-     * the page under the cursor is lit. Leanback slides the wide menu out, and this strip takes its place.
-     */
-    private fun buildRail(root: View) {
-        val parent = root as? ViewGroup ?: return
-        val strip = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            alpha = 0f
-            // a solid panel in the colour of the menu: it also covers the bare edge Leanback leaves of the hidden one
-            setBackgroundColor(0xFF1B2E23.toInt())
-            setPadding(0, (28 * resources.displayMetrics.widthPixels / 1280f).toInt(), 0, 0)
-        }
-        // narrower than the free left edge of the page (cards start at about 98 px of 1920), so nothing is covered
-        val width = (64 * resources.displayMetrics.widthPixels / 1280f).toInt()
-        parent.addView(strip, FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.TOP or Gravity.START))
-        rail = strip
-    }
-
-    private fun refreshRail() {
-        val strip = rail ?: return
         val scale = resources.displayMetrics.widthPixels / 1280f
-        val names = (0 until headers.size()).mapNotNull { (headers.get(it) as? PageRow)?.headerItem?.name }
-        val room = resources.displayMetrics.heightPixels - (28 + 24) * scale
-        val cell = minOf(44 * scale, room / names.size.coerceAtLeast(1)).toInt()
-        val icon = (cell * 0.62f).toInt()
-        strip.removeAllViews()
-        names.forEach { name ->
-            val active = name == currentPage
-            strip.addView(ImageView(requireContext()).apply {
-                setImageDrawable(MenuIcons.forName(name).apply {
-                    setColorFilter(if (active) Color.WHITE else 0xFF94AFA1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-                })
-                setPadding((cell - icon) / 2, (cell - icon) / 2, (cell - icon) / 2, (cell - icon) / 2)
-                if (active) background = plate(0xFF2A5540.toInt(), cell)
-                contentDescription = name
-            }, LinearLayout.LayoutParams(cell, cell).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        val cell = (44 * scale).toInt()
+        val iconSize = (28 * scale).toInt()
+        val gap = (8 * scale).toInt()
+
+        val names = mutableListOf(OVERVIEW, SEARCH_HEADER, FAVORITES)
+        Tmdb.visibleCategories(ctx).forEach { names.add(it.title.uppercase()) }
+        names.add(SETTINGS)
+
+        names.forEachIndexed { index, name ->
+            val item = NavItemView(ctx, name, cell, iconSize)
+            navItems.add(item)
+            val lp = LinearLayout.LayoutParams(cell, cell).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                if (index < names.lastIndex) bottomMargin = gap
+            }
+            railContainer.addView(item, lp)
         }
     }
 
-    private fun plate(color: Int, size: Int) = android.graphics.drawable.GradientDrawable().apply {
+    private fun rebuildNavRail() {
+        pages.clear()
+        pendingLoads.clear()
+        pagers.clear()
+        favoritesRows = null
+        buildNavRail()
+        val target = if (navItems.any { it.name == currentPage }) currentPage else OVERVIEW
+        openPage(target, requestContentFocus = false)
+    }
+
+    private fun currentNavItem(): NavItemView? =
+        navItems.firstOrNull { it.name == currentPage } ?: navItems.firstOrNull()
+
+    private fun isDescendant(ancestor: View, descendant: View): Boolean {
+        var p = descendant.parent
+        while (p != null) {
+            if (p === ancestor) return true
+            p = p.parent
+        }
+        return false
+    }
+
+    private fun requestContentFocus() {
+        if (!::contentContainer.isInitialized) return
+        if (contentContainer.findFocus() != null) return
+        val railItem = currentNavItem()
+        val target = if (railItem != null) {
+            FocusFinder.getInstance().findNextFocus(rootLayout, railItem, View.FOCUS_RIGHT)
+        } else null
+        if (target != null && isDescendant(contentContainer, target)) {
+            target.requestFocus()
+            return
+        }
+        contentContainer.requestFocus(View.FOCUS_RIGHT)
+    }
+
+    private fun openPage(name: String, requestContentFocus: Boolean = false) {
+        if (!isAdded) return
+        val currentFrag = childFragmentManager.findFragmentById(CONTENT_CONTAINER_ID)
+        if (name == currentPage && currentFrag != null) {
+            if (requestContentFocus) requestContentFocus()
+            return
+        }
+        currentPage = name
+        navItems.forEach { it.updateState() }
+
+        if (pageToRestore.isEmpty()) {
+            LastScreen.rememberPage(requireContext(), name)
+        }
+
+        val fragment = createPageFragment(name)
+        childFragmentManager.beginTransaction()
+            .replace(CONTENT_CONTAINER_ID, fragment, name)
+            .commitAllowingStateLoss()
+        childFragmentManager.executePendingTransactions()
+
+        if (requestContentFocus) {
+            contentContainer.post {
+                requestContentFocus()
+            }
+        }
+    }
+
+    /**
+     * Back button handling:
+     * 1. If focus is in page content -> moves focus to the left rail.
+     * 2. If focus is already in rail and not on Overview -> switches to Overview and focuses it.
+     * 3. If focus is in rail and on Overview -> returns false to let system exit app.
+     */
+    fun handleBack(): Boolean {
+        if (!::contentContainer.isInitialized) return false
+        val focused = rootLayout.findFocus()
+        if (focused != null && isDescendant(contentContainer, focused)) {
+            currentNavItem()?.requestFocus()
+            return true
+        }
+        if (currentPage != OVERVIEW) {
+            openPage(OVERVIEW, requestContentFocus = false)
+            currentNavItem()?.requestFocus()
+            return true
+        }
+        return false
+    }
+
+    inner class NavItemView(
+        context: Context,
+        val name: String,
+        private val cell: Int,
+        iconSize: Int
+    ) : FrameLayout(context) {
+        private val iconView = ImageView(context).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setImageDrawable(MenuIcons.forName(name))
+        }
+
+        init {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            contentDescription = name
+            val iconLp = LayoutParams(iconSize, iconSize, Gravity.CENTER)
+            addView(iconView, iconLp)
+            updateState()
+
+            setOnFocusChangeListener { _, _ ->
+                updateState()
+                if (isFocused) {
+                    uiHandler.removeCallbacks(switchPageDebounce)
+                    uiHandler.postDelayed(switchPageDebounce, 200L)
+                }
+            }
+            setOnClickListener {
+                uiHandler.removeCallbacks(switchPageDebounce)
+                if (currentPage != name) {
+                    openPage(name, requestContentFocus = true)
+                } else {
+                    requestContentFocus()
+                }
+            }
+        }
+
+        fun updateState() {
+            val isCur = (name == currentPage)
+            val focused = isFocused
+            val bg = when {
+                focused -> 0xFF2F7D57.toInt()
+                isCur -> 0xFF2A5540.toInt()
+                else -> Color.TRANSPARENT
+            }
+            val iconColor = when {
+                focused || isCur -> Color.WHITE
+                else -> 0xFF94AFA1.toInt()
+            }
+            background = if (bg == Color.TRANSPARENT) null else plate(bg, cell)
+            iconView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
+        }
+
+        override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+            if (event?.action != KeyEvent.ACTION_DOWN) return super.onKeyDown(keyCode, event)
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    uiHandler.removeCallbacks(switchPageDebounce)
+                    if (currentPage != name) {
+                        openPage(name, requestContentFocus = true)
+                    } else {
+                        requestContentFocus()
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT -> return true
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    val index = navItems.indexOf(this)
+                    if (index == 0) return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    val index = navItems.indexOf(this)
+                    if (index == navItems.lastIndex) return true
+                }
+            }
+            return super.onKeyDown(keyCode, event)
+        }
+    }
+
+    inner class RootLayout(context: Context) : FrameLayout(context) {
+        override fun focusSearch(focused: View?, direction: Int): View? {
+            if (direction == View.FOCUS_LEFT && focused != null) {
+                val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
+                if (content != null && isDescendant(content, focused)) {
+                    val nextInContent = FocusFinder.getInstance().findNextFocus(content, focused, View.FOCUS_LEFT)
+                    if (nextInContent != null) {
+                        return nextInContent
+                    }
+                    return currentNavItem()
+                }
+            }
+            return super.focusSearch(focused, direction)
+        }
+
+        override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+            if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
+                val focused = findFocus()
+                if (content != null && focused != null && isDescendant(content, focused)) {
+                    val next = FocusFinder.getInstance().findNextFocus(content, focused, View.FOCUS_LEFT)
+                    if (next == null) {
+                        val target = currentNavItem()
+                        if (target != null) {
+                            target.requestFocus()
+                            return true
+                        }
+                    }
+                }
+            }
+            return super.dispatchKeyEvent(event)
+        }
+    }
+
+    private fun plate(color: Int, size: Int) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = size / 4f
     }
 
-    private fun menuSignature(ctx: android.content.Context): String =
+    private fun menuSignature(ctx: Context): String =
         Tmdb.visibleCategories(ctx).joinToString(",") { it.id } + "|" +
             Settings.string(ctx, Settings.LANGUAGE, "ru-RU") + "|" + ClockCheck.skewed
 
-    private fun favoritesState(ctx: android.content.Context): String =
+    private fun favoritesState(ctx: Context): String =
         Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx)
 
-    /** Settings are applied when the screen comes back: lists appear and disappear without a restart. */
     override fun onResume() {
         super.onResume()
         val ctx = requireContext()
         if (pageToRestore.isEmpty()) LastScreen.rememberPage(ctx, currentPage)
         if (shown != menuSignature(ctx)) {
-            showHeaders()
+            rebuildNavRail()
             return
         }
         val favNow = favoritesState(ctx)
@@ -338,10 +478,6 @@ class MainFragment : BrowseSupportFragment() {
             favoritesSignature = favNow
             favoritesRows?.let { rows ->
                 fillFavorites(rows, ctx)
-                // when the last bookmark is removed while the menu is hidden, reopen it so focus is not stranded
-                if (currentPage == FAVORITES && !isShowingHeaders() && Favorites.all(ctx).isEmpty() && EpisodeState.favorites(ctx).isEmpty()) {
-                    startHeadersTransition(true)
-                }
             }
         }
         val torNow = Settings.string(ctx, "favorite_torrents", "[]")
@@ -349,7 +485,6 @@ class MainFragment : BrowseSupportFragment() {
             torrentsSignature = torNow
             pages[OVERVIEW]?.let { syncFavoriteTorrents(it, ctx) }
         }
-        // a title marked watched on its card: the cards of every opened page are drawn again, dimmed or not
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
             watchedMarks = marks
@@ -362,33 +497,8 @@ class MainFragment : BrowseSupportFragment() {
         }
     }
 
-    private fun showHeaders() {
-        val ctx = requireContext()
-        shown = menuSignature(ctx)
-        watchedMarks = Watched.revision(ctx)
-        headers.clear()
-        pages.clear()
-        pendingLoads.clear()
-        pagers.clear()
-        favoritesRows = null
-        // the overview is the first entry and the page that opens, so the app does not start on the search and jump away
-        headers.add(PageRow(HeaderItem(OVERVIEW)))
-        headers.add(PageRow(HeaderItem(SEARCH_HEADER)))
-        headers.add(PageRow(HeaderItem(FAVORITES)))
-        Tmdb.visibleCategories(ctx).forEach { headers.add(PageRow(HeaderItem(it.title.uppercase()))) }
-        headers.add(PageRow(HeaderItem(SETTINGS)))
-        // (the view does not exist yet when this runs from onCreate: onViewCreated sets it then)
-        if (view != null) {
-            val keep = (0 until headers.size()).indexOfFirst { (headers.get(it) as? PageRow)?.headerItem?.name == currentPage }
-            setSelectedPosition(if (keep >= 0) keep else 0, false)
-            if (rail?.visibility == View.VISIBLE) refreshRail()
-        }
-    }
-
     /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
     private fun rowPresenter(dimOthers: Boolean) = object : ListRowPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM) {
-        // Leanback hides the captions of the rows while the menu has the focus, and they appear only after the page opens;
-        // here they are there at once, so the page does not change when it is opened
         override fun onRowViewExpanded(holder: RowPresenter.ViewHolder, expanded: Boolean) {
             super.onRowViewExpanded(holder, expanded)
             showCaption(holder)
@@ -404,7 +514,7 @@ class MainFragment : BrowseSupportFragment() {
                 grid.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
                     override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
                         val ctx = recyclerView.context ?: return
-                        val glide = com.bumptech.glide.Glide.with(ctx)
+                        val glide = Glide.with(ctx)
                         if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                             glide.pauseRequests()
                         } else {
@@ -421,7 +531,6 @@ class MainFragment : BrowseSupportFragment() {
             showCaption(holder)
         }
 
-        // the caption sits in a dock of the row container, which Leanback closes while the row is not expanded
         private fun showCaption(holder: RowPresenter.ViewHolder) {
             (holder.headerViewHolder?.view?.parent as? View)?.visibility = View.VISIBLE
         }
@@ -429,7 +538,6 @@ class MainFragment : BrowseSupportFragment() {
         selectEffectEnabled = dimOthers
     }
 
-    /** Rows of a page plus its title row: the title is a part of the page, so it moves, shrinks and dims together with it. */
     private fun pageRows(dimOthers: Boolean) = ClassPresenterSelector()
         .addClassPresenter(PageNoteRow::class.java, PageNotePresenter())
         .addClassPresenter(ListRow::class.java, rowPresenter(dimOthers))
@@ -437,7 +545,6 @@ class MainFragment : BrowseSupportFragment() {
     private fun pageTitle(name: String) = name.lowercase().replaceFirstChar { it.uppercase() }
 
     private fun pageFor(name: String): ArrayObjectAdapter = pages.getOrPut(name) {
-        // settings tiles keep one background in every row: no dimming of the rows under the focused one
         val rows = ArrayObjectAdapter(pageRows(dimOthers = name != SETTINGS))
         val ctx = requireContext()
         when (name) {
@@ -462,7 +569,7 @@ class MainFragment : BrowseSupportFragment() {
         rows
     }
 
-    private fun syncFavoriteTorrents(rows: ArrayObjectAdapter, ctx: android.content.Context) {
+    private fun syncFavoriteTorrents(rows: ArrayObjectAdapter, ctx: Context) {
         val existingIndex = (0 until rows.size()).indexOfFirst { (rows.get(it) as? ListRow)?.headerItem?.name == "Избранные раздачи" }
         val favTorrents = FavoriteTorrents.all(ctx)
         if (favTorrents.isEmpty()) {
@@ -477,9 +584,8 @@ class MainFragment : BrowseSupportFragment() {
         }
     }
 
-    private fun fillFavorites(rows: ArrayObjectAdapter, ctx: android.content.Context) {
+    private fun fillFavorites(rows: ArrayObjectAdapter, ctx: Context) {
         rows.clear()
-        // the bookmarks are one list: the folders are not chosen any more, the old ones are bookmarks too
         val saved = Favorites.all(ctx)
         if (saved.isNotEmpty()) rows.add(ListRow(ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }))
         val episodes = EpisodeState.favorites(ctx)
@@ -491,74 +597,63 @@ class MainFragment : BrowseSupportFragment() {
         if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"))
     }
 
-    /** A row of title cards; the "show all" tile closes it, and it opens the whole list as a page. */
-    private fun addRow(rows: ArrayObjectAdapter, title: String, more: MoreTile, load: (android.content.Context) -> List<Title>) {
+    private fun addRow(rows: ArrayObjectAdapter, title: String, more: MoreTile, load: (Context) -> List<Title>) {
         val presenters = ClassPresenterSelector()
             .addClassPresenter(Title::class.java, CardPresenter())
             .addClassPresenter(MoreTile::class.java, MoreTilePresenter())
             .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter())
         val cards = ArrayObjectAdapter(presenters)
-        // grey cards hold the place until the titles come
         repeat(SKELETONS) { cards.add(SkeletonCard) }
         val row = ListRow(HeaderItem(title), cards)
         rows.add(row)
         val ctx = requireContext().applicationContext
-        // lazy: the row is asked for only when the list binds it, that is when it comes to the screen or near it
         pendingLoads[row] = {
             lifecycleScope.launch {
                 val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
                 cards.clear()
-                // the tile goes first and takes the cursor when a row is entered
-                cards.addAll(0,if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
+                cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
                 if (loaded.isNotEmpty()) pagers[row] = RowPager(more, cards)
             }
         }
     }
 
-    private inner class PageFactory : FragmentFactory<Fragment>() {
-        override fun createFragment(row: Any?): Fragment {
-            val name = (row as Row).headerItem.name
-            currentPage = name
-            // the page can be opened after the menu has closed (the restore after an update): the icon rail lights it then
-            if (rail?.visibility == View.VISIBLE) refreshRail()
-            // the page is remembered for the install script: after an update the menu opens on it (docs/workflow.md)
-            if (pageToRestore.isEmpty()) LastScreen.rememberPage(requireContext(), name)
-            if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
-            if (name == SETTINGS) return SettingsPageFragment()
-            // films and series are one long grid with lazy loading, not rows of collections with a "Результаты" tile
-            val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
-            if (category != null) return CatalogPageFragment().apply {
-                arguments = android.os.Bundle().apply { putString("category", category.id) }
+    private fun createPageFragment(name: String): Fragment {
+        if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
+        if (name == SETTINGS) return SettingsPageFragment()
+        val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
+        if (category != null) {
+            return CatalogPageFragment().apply {
+                arguments = Bundle().apply { putString("category", category.id) }
             }
-            val page = TitledRowsFragment().apply {
-                arguments = android.os.Bundle().apply {
-                    putString("title", pageTitle(name))
-                    // the settings tiles stand as close under the title as the cards of "Фильмы"
-                    putBoolean("compact", name == SETTINGS)
-                }
-            }
-            val rows = pageFor(name)
-            page.adapter = rows
-            page.onItemViewClickedListener = onClick
-            page.onItemViewSelectedListener = androidx.leanback.widget.OnItemViewSelectedListener { _, item, _, row -> if (row is ListRow) loadMoreOf(row, item) }
-            return page
         }
+        val page = TitledRowsFragment().apply {
+            arguments = Bundle().apply {
+                putString("title", pageTitle(name))
+                putBoolean("compact", name == SETTINGS)
+            }
+        }
+        val rows = pageFor(name)
+        page.adapter = rows
+        page.onItemViewClickedListener = onClick
+        page.onItemViewSelectedListener = OnItemViewSelectedListener { _, item, _, row ->
+            if (row is ListRow) loadMoreOf(row, item)
+        }
+        return page
     }
 
     companion object {
-        /** Fragment argument: open the menu page the user was on before the update (docs/workflow.md). */
         const val RESTORE = "restore"
     }
 }
 
-fun titleFrom(extras: android.os.Bundle) = Title(
+fun titleFrom(extras: Bundle) = Title(
     extras.getLong("id"), extras.getString("name").orEmpty(), extras.getString("overview").orEmpty(),
     extras.getString("poster"), extras.getBoolean("tv"), extras.getString("year").orEmpty(),
     extras.getString("rating").orEmpty(),
     backdrop = extras.getString("backdrop"),
 )
 
-fun Title.toExtras() = android.os.Bundle().apply {
+fun Title.toExtras() = Bundle().apply {
     putLong("id", id)
     putString("name", name)
     putString("overview", overview)
@@ -595,7 +690,6 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
 
 private const val SKELETONS = 7
 
-/** [cardScale] is the one of the matching [CardPresenter]. */
 class SkeletonPresenter(private val cardScale: Float = 1f) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
         ViewHolder(SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
@@ -607,7 +701,6 @@ class SkeletonPresenter(private val cardScale: Float = 1f) : Presenter() {
 
 class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
     private companion object {
-        /** Runtimes are not in the lists: a few threads fetch them for the cards that are on the screen. */
         val runtimePool: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
     }
 
@@ -618,7 +711,6 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         val card = holder.view as TitleCard
         val title = item as Title
         card.bind(title)
-        // long press on OK marks the film watched (or takes the mark back)
         card.setOnLongClickListener {
             when (card.toggleWatched()) {
                 true -> android.widget.Toast.makeText(card.context, "Отмечено просмотренным", android.widget.Toast.LENGTH_SHORT).show()
@@ -635,13 +727,9 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
             if (card.shownId != title.id) return@submit
             val minutes = details?.runtime ?: 0
             if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }
-            // the saved records keep no genre: the card details fill the plate so it has no empty bottom
             val genres = details?.genres?.joinToString(", ").orEmpty()
             if (title.genre.isEmpty() && genres.isNotEmpty()) card.post { card.setGenre(title.id, genres) }
         }
-        // the chosen title is about to be opened: its wide backdrop is loaded into the cache now, so the card
-        // screen does not wait for it (the details are cached by the call above or this one)
-        // it waits a moment and only runs if the cursor stays on the card: scrolling through a row loads nothing
         val warmUp = Runnable {
             if (card.isFocused && card.shownId == title.id) runtimePool.execute {
                 val backdrop = title.backdrop?.ifEmpty { null }
@@ -656,8 +744,6 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
             card.postDelayed(warmUp, 300)
         }
         val poster = title.poster
-        // w500 stays sharp at the card's size on a 1080p screen; w342 was upscaled and looked soft
-        // no poster (or TMDB has none at all): the card says so instead of showing an empty plate
         card.showPoster(poster)
     }
 
@@ -666,12 +752,11 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         card.runtimeTask?.cancel(false)
         card.runtimeTask = null
         card.cancelPoster()
-        com.bumptech.glide.Glide.with(card.context).clear(card.poster)
+        Glide.with(card.context).clear(card.poster)
         card.poster.setImageDrawable(null)
     }
 }
 
-/** A calm line of plain text instead of an empty-state card. */
 class PlainTextPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
@@ -693,31 +778,8 @@ class PlainTextPresenter : Presenter() {
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-/**
- * Settings page as one three-column grid instead of separate horizontal rows, so Up/Down stays in the same column
- * and Right at the end of a row continues onto the first tile of the next row.
- */
-class SettingsPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
-    private val pageAdapter = object : BrowseSupportFragment.MainFragmentAdapter<SettingsPageFragment>(this) {
-        override fun onTransitionStart() {
-            super.onTransitionStart()
-            view?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        }
-
-        override fun onTransitionEnd() {
-            super.onTransitionEnd()
-            view?.setLayerType(View.LAYER_TYPE_NONE, null)
-        }
-
-        override fun setExpand(expand: Boolean) {
-            super.setExpand(expand)
-            view?.animate()?.alpha(if (expand) 1f else 0.55f)?.setDuration(200)?.start()
-        }
-    }
-
-    override fun getMainFragmentAdapter() = pageAdapter.also { it.isScalingEnabled = true }
-
-    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: android.os.Bundle?): View {
+class SettingsPageFragment : Fragment() {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val scale = resources.displayMetrics.widthPixels / 1280f
         fun px(v: Int) = (v * scale).toInt()
         val page = LinearLayout(requireContext()).apply {
@@ -753,29 +815,28 @@ class SettingsPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapt
             grid.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus()
         }
         grid.setOnKeyInterceptListener { event ->
-            if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyInterceptListener false
+            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyInterceptListener false
             val pos = grid.selectedPosition
             val count = SETTINGS_SECTIONS.size
             if (pos !in 0 until count) return@setOnKeyInterceptListener false
             when (event.keyCode) {
-                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     if (pos + 1 < count) moveTo(pos + 1)
                     true
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    // on the first column Left passes through so BrowseSupportFragment opens the side menu
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
                     if (pos % COLUMNS == 0) false
                     else {
                         moveTo(pos - 1)
                         true
                     }
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
                     val nextRowStart = (pos / COLUMNS + 1) * COLUMNS
                     if (nextRowStart < count) moveTo(minOf(pos + COLUMNS, count - 1))
                     true
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                KeyEvent.KEYCODE_DPAD_UP -> {
                     if (pos >= COLUMNS) moveTo(pos - COLUMNS)
                     true
                 }
@@ -789,18 +850,11 @@ class SettingsPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapt
         return page
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        pageAdapter.fragmentHost?.notifyViewCreated(pageAdapter)
-        pageAdapter.fragmentHost?.notifyDataReady(pageAdapter)
-    }
-
     private companion object {
         const val COLUMNS = 3
     }
 }
 
-/** One settings section as a compact card with a caption and a short explanation. */
 class SettingsSectionPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
@@ -809,8 +863,8 @@ class SettingsSectionPresenter : Presenter() {
         tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(124))
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
-        val texts = android.widget.LinearLayout(parent.context)
-        texts.orientation = android.widget.LinearLayout.VERTICAL
+        val texts = LinearLayout(parent.context)
+        texts.orientation = LinearLayout.VERTICAL
         texts.setPadding(dp(16), dp(14), dp(16), dp(14))
         val title = TextView(parent.context).apply {
             setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD; maxLines = 2
@@ -839,7 +893,6 @@ class SettingsSectionPresenter : Presenter() {
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-/** A starred episode: the series title and the episode on a dark tile; picking it opens the episode list. */
 class FavoriteEpisodePresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
@@ -848,8 +901,8 @@ class FavoriteEpisodePresenter : Presenter() {
         tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(190))
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
-        val texts = android.widget.LinearLayout(parent.context)
-        texts.orientation = android.widget.LinearLayout.VERTICAL
+        val texts = LinearLayout(parent.context)
+        texts.orientation = LinearLayout.VERTICAL
         texts.setPadding(dp(16), dp(14), dp(16), dp(14))
         val series = TextView(parent.context).apply {
             setTextColor(Color.WHITE); textSize = 16f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD
@@ -881,7 +934,6 @@ class FavoriteEpisodePresenter : Presenter() {
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-/** Tile of a starred torrent: title, size and source on a flat dark card (no poster — torrents have none). */
 class TorrentCardPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
@@ -890,8 +942,8 @@ class TorrentCardPresenter : Presenter() {
         tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(180))
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
-        val texts = android.widget.LinearLayout(parent.context)
-        texts.orientation = android.widget.LinearLayout.VERTICAL
+        val texts = LinearLayout(parent.context)
+        texts.orientation = LinearLayout.VERTICAL
         texts.setPadding(dp(14), dp(14), dp(14), dp(14))
         val title = TextView(parent.context).apply { setTextColor(Color.WHITE); textSize = 15f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD }
         val info = TextView(parent.context).apply { setTextColor(0xFF8FB39D.toInt()); textSize = 12f; setPadding(0, dp(8), 0, 0) }
@@ -916,19 +968,6 @@ class TorrentCardPresenter : Presenter() {
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-/** Section caption ("СПИСКИ") in a muted green instead of the bright default. */
-class SectionHeaderPresenter : RowHeaderPresenter(androidx.leanback.R.layout.lb_section_header, false) {
-    override fun onBindViewHolder(viewHolder: androidx.leanback.widget.Presenter.ViewHolder, item: Any?) {
-        super.onBindViewHolder(viewHolder, item)
-        (viewHolder.view as? android.widget.TextView)?.setTextColor(0xFF6FA487.toInt())
-    }
-}
-
-
-/**
- * A line of text for a page with nothing in it (the empty bookmarks). It is only a marker in the rows: the page
- * itself shows the text right under its title ([TitledRowsFragment]), so it does not depend on how the list aligns its rows.
- */
 class PageNoteRow(val text: String) : Row()
 
 class PageNotePresenter : RowPresenter() {
@@ -943,15 +982,10 @@ class PageNotePresenter : RowPresenter() {
     override fun isUsingDefaultSelectEffect() = false
 }
 
-/**
- * The rows of a page under its title. The title is a part of the page, so it moves and scales with it, but it is not a row:
- * it does not scroll away with the rows and stands at the same place with the menu open and closed, like on the catalogue pages.
- */
 class TitledRowsFragment : RowsSupportFragment() {
-    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: android.os.Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val rows = super.onCreateView(inflater, container, savedInstanceState) ?: return null
         val scale = resources.displayMetrics.widthPixels / 1280f
-        // measured on the emulator: with these numbers the title and the first tiles of the settings sit where the title and cards of "Фильмы" do
         val compact = requireArguments().getBoolean("compact")
         val title = TextView(requireContext()).apply {
             text = requireArguments().getString("title")
@@ -965,19 +999,22 @@ class TitledRowsFragment : RowsSupportFragment() {
             setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (6 * scale).toInt(), 0, 0)
             visibility = View.GONE
         }
+        (rows as? ViewGroup)?.clipChildren = false
+        (rows as? ViewGroup)?.clipToPadding = false
         return FrameLayout(requireContext()).apply {
+            clipChildren = false
+            clipToPadding = false
             addView(rows, FrameLayout.LayoutParams(-1, -1).apply { topMargin = ((if (compact) 39 else 72) * scale).toInt() })
-            addView(android.widget.LinearLayout(requireContext()).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                addView(title, android.widget.LinearLayout.LayoutParams(-1, -2))
-                addView(note, android.widget.LinearLayout.LayoutParams(-1, -2))
+            addView(LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(title, LinearLayout.LayoutParams(-1, -2))
+                addView(note, LinearLayout.LayoutParams(-1, -2))
             }, FrameLayout.LayoutParams(-1, -2))
         }
     }
 
     private lateinit var note: TextView
 
-    /** The text of the note row, when the page has one, stands under the title. */
     private val noteWatcher = object : androidx.leanback.widget.ObjectAdapter.DataObserver() {
         override fun onChanged() = showNote()
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = showNote()
@@ -991,14 +1028,14 @@ class TitledRowsFragment : RowsSupportFragment() {
         note.visibility = if (text == null) View.GONE else View.VISIBLE
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         adapter?.registerObserver(noteWatcher)
         showNote()
         verticalGridView?.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
                 val ctx = context ?: return
-                val glide = com.bumptech.glide.Glide.with(ctx)
+                val glide = Glide.with(ctx)
                 if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
                     glide.pauseRequests()
                 } else {
