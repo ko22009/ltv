@@ -13,7 +13,6 @@ $env:JAVA_HOME='<JDK 17>'
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Эмулятор: `adb -s emulator-5554`, приставка: `<приставка>:5555`.
 После установки приложение открывать сразу: `adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true`. Ключ `restore` возвращает на экран, который был открыт до обновления. Android сам после обновления приложение не запускает.
-Всё вместе (сборка, установка, открытие на прежнем экране) делает `tools\install.ps1`.
 
 ## Коммиты
 
