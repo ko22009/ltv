@@ -77,7 +77,7 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
 fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinishing && !isDestroyed) block() }
 
 private val failedPosters = java.util.concurrent.ConcurrentHashMap<String, Long>()
-private const val FAILED_POSTER_TTL_MS = 2 * 60 * 1000L
+private const val FAILED_POSTER_TTL_MS = 8 * 1000L
 
 fun clearFailedPosters() = failedPosters.clear()
 

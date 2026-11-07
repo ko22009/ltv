@@ -399,6 +399,22 @@ class MainFragment : BrowseSupportFragment() {
             super.onBindRowViewHolder(holder, item)
             showCaption(holder)
             pendingLoads.remove(item)?.invoke()
+            val grid = (holder as? ListRowPresenter.ViewHolder)?.gridView ?: return
+            if (grid.tag != "glide_scroll") {
+                grid.tag = "glide_scroll"
+                grid.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
+                        val ctx = recyclerView.context ?: return
+                        val glide = com.bumptech.glide.Glide.with(ctx)
+                        if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
+                            glide.pauseRequests()
+                        } else {
+                            glide.resumeRequests()
+                            clearFailedPosters()
+                        }
+                    }
+                })
+            }
         }
 
         override fun onRowViewSelected(holder: RowPresenter.ViewHolder, selected: Boolean) {
@@ -650,6 +666,7 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         val card = holder.view as TitleCard
         card.runtimeTask?.cancel(false)
         card.runtimeTask = null
+        card.cancelPoster()
         com.bumptech.glide.Glide.with(card.context).clear(card.poster)
         card.poster.setImageDrawable(null)
     }
@@ -979,6 +996,18 @@ class TitledRowsFragment : RowsSupportFragment() {
         super.onViewCreated(view, savedInstanceState)
         adapter?.registerObserver(noteWatcher)
         showNote()
+        verticalGridView?.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
+                val ctx = context ?: return
+                val glide = com.bumptech.glide.Glide.with(ctx)
+                if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
+                    glide.pauseRequests()
+                } else {
+                    glide.resumeRequests()
+                    clearFailedPosters()
+                }
+            }
+        })
     }
 
     override fun onDestroyView() {

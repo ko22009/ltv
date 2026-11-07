@@ -90,9 +90,38 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private val posterSpinner = Spinner(context, px(40f)).apply { visibility = View.GONE }
+    private var posterTask: Runnable? = null
 
-    /** Shows the poster with a spinner until it is loaded; no poster or a failed load ends with the stub. */
-    fun showPoster(path: String?) = poster.showPoster(path, posterSpinner)
+    /** Cancels pending debounced poster load if the card is recycled or unbounds before delay expires. */
+    fun cancelPoster() {
+        posterTask?.let { removeCallbacks(it) }
+        posterTask = null
+    }
+
+    /** Shows the poster with a spinner until it is loaded; debounced so fast scrolling skips requests. */
+    fun showPoster(path: String?, debounceMs: Long = 80L) {
+        cancelPoster()
+        posterSpinner.visibility = View.GONE
+        if (path.isNullOrEmpty()) {
+            poster.showPoster(null, posterSpinner)
+            return
+        }
+        if (debounceMs <= 0L) {
+            poster.showPoster(path, posterSpinner)
+        } else {
+            val task = Runnable {
+                posterTask = null
+                poster.showPoster(path, posterSpinner)
+            }
+            posterTask = task
+            postDelayed(task, debounceMs)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        cancelPoster()
+    }
 
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
     private val badge = ImageView(context).apply {
@@ -371,6 +400,17 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
         clipToPadding = false
         setItemSpacing((6 * scale).toInt())
         adapter = bridge
+        addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
+                val glide = com.bumptech.glide.Glide.with(context)
+                if (newState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
+                    glide.pauseRequests()
+                } else {
+                    glide.resumeRequests()
+                    clearFailedPosters()
+                }
+            }
+        })
     }
 }
 
