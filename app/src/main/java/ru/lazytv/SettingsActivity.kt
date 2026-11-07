@@ -104,7 +104,6 @@ class SettingsActivity : FragmentActivity() {
                 setPadding(px(22), px(14), px(22), px(14))
                 background = focusShape(scale, 0x33000000, radius = 6f)
                 isFocusable = true
-                isClickable = true
                 addView(TextView(this@SettingsActivity).apply {
                     text = topicTitle
                     setTextColor(Color.WHITE)
@@ -118,13 +117,6 @@ class SettingsActivity : FragmentActivity() {
                     setLineSpacing(0f, 1.2f)
                     setPadding(0, px(6), 0, 0)
                 })
-                setOnClickListener {
-                    android.app.AlertDialog.Builder(this@SettingsActivity, android.R.style.Theme_Material_Dialog_Alert)
-                        .setTitle(topicTitle)
-                        .setMessage(body)
-                        .setPositiveButton("Закрыть", null)
-                        .show()
-                }
                 setOnKeyListener { _, code, event ->
                     if (event.action != KeyEvent.ACTION_DOWN) false
                     else when (code) {

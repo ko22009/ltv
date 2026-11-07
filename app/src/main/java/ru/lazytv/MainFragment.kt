@@ -443,10 +443,6 @@ class MainFragment : BrowseSupportFragment() {
                 favoritesSignature = favoritesState(ctx)
                 fillFavorites(rows, ctx)
             }
-            SETTINGS -> SETTINGS_SECTIONS.chunked(3).forEachIndexed { index, chunk ->
-                val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, chunk) }
-                rows.add(ListRow(tiles))
-            }
             else -> Unit
         }
         rows
@@ -514,6 +510,7 @@ class MainFragment : BrowseSupportFragment() {
             // the page is remembered for the install script: after an update the menu opens on it (docs/workflow.md)
             if (pageToRestore.isEmpty()) LastScreen.rememberPage(requireContext(), name)
             if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
+            if (name == SETTINGS) return SettingsPageFragment()
             // films and series are one long grid with lazy loading, not rows of collections with a "Результаты" tile
             val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
             if (category != null) return CatalogPageFragment().apply {
@@ -675,6 +672,113 @@ class PlainTextPresenter : Presenter() {
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
+}
+
+/**
+ * Settings page as one three-column grid instead of separate horizontal rows, so Up/Down stays in the same column
+ * and Right at the end of a row continues onto the first tile of the next row.
+ */
+class SettingsPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
+    private val pageAdapter = object : BrowseSupportFragment.MainFragmentAdapter<SettingsPageFragment>(this) {
+        override fun onTransitionStart() {
+            super.onTransitionStart()
+            view?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        }
+
+        override fun onTransitionEnd() {
+            super.onTransitionEnd()
+            view?.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
+
+        override fun setExpand(expand: Boolean) {
+            super.setExpand(expand)
+            view?.animate()?.alpha(if (expand) 1f else 0.55f)?.setDuration(200)?.start()
+        }
+    }
+
+    override fun getMainFragmentAdapter() = pageAdapter.also { it.isScalingEnabled = true }
+
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: ViewGroup?, savedInstanceState: android.os.Bundle?): View {
+        val scale = resources.displayMetrics.widthPixels / 1280f
+        fun px(v: Int) = (v * scale).toInt()
+        val page = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(92), px(21), px(48), px(16))
+            clipChildren = false
+            clipToPadding = false
+            layoutParams = FrameLayout.LayoutParams(resources.displayMetrics.widthPixels, ViewGroup.LayoutParams.MATCH_PARENT)
+        }
+        page.addView(TextView(requireContext()).apply {
+            text = "Настройки"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
+        })
+        val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, SETTINGS_SECTIONS) }
+        val bridge = androidx.leanback.widget.ItemBridgeAdapter(tiles)
+        bridge.setAdapterListener(object : androidx.leanback.widget.ItemBridgeAdapter.AdapterListener() {
+            override fun onCreate(viewHolder: androidx.leanback.widget.ItemBridgeAdapter.ViewHolder) {
+                viewHolder.itemView.setOnClickListener {
+                    (viewHolder.item as? SettingsSection)?.let { section ->
+                        startActivity(Intent(requireContext(), SettingsActivity::class.java).putExtra("section", section.title))
+                    }
+                }
+            }
+        })
+        val gap = px(12)
+        val side = px(20)
+        val grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS).apply {
+            setItemSpacing(gap)
+        }
+        fun moveTo(target: Int) {
+            grid.selectedPosition = target
+            grid.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus()
+        }
+        grid.setOnKeyInterceptListener { event ->
+            if (event.action != android.view.KeyEvent.ACTION_DOWN) return@setOnKeyInterceptListener false
+            val pos = grid.selectedPosition
+            val count = SETTINGS_SECTIONS.size
+            if (pos !in 0 until count) return@setOnKeyInterceptListener false
+            when (event.keyCode) {
+                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (pos + 1 < count) moveTo(pos + 1)
+                    true
+                }
+                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    // on the first column Left passes through so BrowseSupportFragment opens the side menu
+                    if (pos % COLUMNS == 0) false
+                    else {
+                        moveTo(pos - 1)
+                        true
+                    }
+                }
+                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    val nextRowStart = (pos / COLUMNS + 1) * COLUMNS
+                    if (nextRowStart < count) moveTo(minOf(pos + COLUMNS, count - 1))
+                    true
+                }
+                android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (pos >= COLUMNS) moveTo(pos - COLUMNS)
+                    true
+                }
+                else -> false
+            }
+        }
+        val gridWidth = COLUMNS * px(290) + (COLUMNS - 1) * gap + 2 * side
+        page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
+            setMargins(-side, px(14), 0, 0)
+        })
+        return page
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: android.os.Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        pageAdapter.fragmentHost?.notifyViewCreated(pageAdapter)
+        pageAdapter.fragmentHost?.notifyDataReady(pageAdapter)
+    }
+
+    private companion object {
+        const val COLUMNS = 3
+    }
 }
 
 /** One settings section as a compact card with a caption and a short explanation. */
