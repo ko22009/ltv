@@ -195,6 +195,9 @@ class DetailsActivity : Activity() {
                     val next = barButtons.getOrNull(index + step)
                     if (next != null) next.requestFocus()
                     next != null || step > 0
+                } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+                    val target = firstDirectorLink ?: firstCastCard
+                    target?.requestFocus() ?: false
                 } else false
             }
         }
@@ -282,10 +285,16 @@ class DetailsActivity : Activity() {
                         "Жанр" to d.genres.joinToString(", "),
                         "Страна" to d.countries.joinToString(", "),
                         "Режиссёр" to d.director,
-                    ))
+                    ), d.directors, scroll)
                     val info = table.parent as? LinearLayout
-                    if (info != null && d.castPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
-                        val row = castRow(d.castPeople, scroll)
+                    val linkedDirectors = d.directors.filter { it.id > 0L }
+                    val castMap = d.castPeople.associateBy { it.id }
+                    val mergedPeople = linkedDirectors.map { dir ->
+                        val acted = castMap[dir.id]
+                        if (acted != null && acted.role.isNotEmpty()) dir.copy(role = "${dir.role} • ${acted.role}") else dir
+                    } + d.castPeople.filter { c -> linkedDirectors.none { it.id == c.id } }
+                    if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
+                        val row = castRow(mergedPeople, linkedDirectors.isNotEmpty(), scroll)
                         row.tag = "cast"
                         info.addView(row)
                     }
@@ -296,15 +305,75 @@ class DetailsActivity : Activity() {
         }.start()
     }
 
-    /** Facts as a table: the caption on the left, the value on the right, a thin line between rows. Empty values are skipped. */
-    private fun fillTable(table: LinearLayout, rows: List<Pair<String, String>>) {
+    /** Facts as a table: the caption on the left, the value on the right, a thin line between rows; directors link to PersonActivity. */
+    private fun fillTable(
+        table: LinearLayout, rows: List<Pair<String, String>>,
+        directors: List<Tmdb.Person> = emptyList(), pageScroll: ScrollView? = null,
+    ) {
         table.removeAllViews()
+        firstDirectorLink = null
+        val linkedDirectors = directors.filter { it.id > 0L }
         rows.filter { it.second.isNotBlank() }.forEachIndexed { i, (caption, value) ->
             if (i > 0) table.addView(View(this).apply { setBackgroundColor(0x22FFFFFF) }, LinearLayout.LayoutParams(-1, 1))
             val row = LinearLayout(this)
+            row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
             row.addView(text(caption, 15f, 0xFF8FB39D.toInt()), LinearLayout.LayoutParams(dp(150), -2))
-            row.addView(text(value, 16f, 0xFFDCE8E0.toInt()), LinearLayout.LayoutParams(0, -2, 1f))
+            if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
+                val linksRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                val linkViews = mutableListOf<View>()
+                linkedDirectors.forEachIndexed { idx, dir ->
+                    val link = TextView(this).apply {
+                        text = dir.name
+                        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+                        setTextColor(android.content.res.ColorStateList(
+                            arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+                            intArrayOf(Color.WHITE, 0xFFB9F6CA.toInt()),
+                        ))
+                        setPadding(dp(10), dp(3), dp(10), dp(3))
+                        background = focusShape(scale, 0x26FFFFFF, radius = 4f)
+                        isFocusable = true
+                        isClickable = true
+                        setOnClickListener {
+                            startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
+                                .putExtra("id", dir.id).putExtra("name", dir.name))
+                        }
+                        setOnKeyListener { _, code, event ->
+                            if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                            else when (code) {
+                                android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                                    linkViews.getOrNull(idx + step)?.requestFocus()
+                                    true
+                                }
+                                android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                    pageScroll?.smoothScrollTo(0, 0)
+                                    watchButton.requestFocus()
+                                    true
+                                }
+                                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    firstCastCard?.requestFocus() ?: false
+                                }
+                                else -> false
+                            }
+                        }
+                    }
+                    if (firstDirectorLink == null) firstDirectorLink = link
+                    linkViews.add(link)
+                    linksRow.addView(link, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(8) })
+                }
+                val linksScroll = android.widget.HorizontalScrollView(this).apply {
+                    isHorizontalScrollBarEnabled = false
+                    isFocusable = false
+                    addView(linksRow)
+                }
+                row.addView(linksScroll, LinearLayout.LayoutParams(0, -2, 1f))
+            } else {
+                row.addView(text(value, 16f, 0xFFDCE8E0.toInt()), LinearLayout.LayoutParams(0, -2, 1f))
+            }
             table.addView(row)
         }
     }
@@ -319,15 +388,18 @@ class DetailsActivity : Activity() {
     private lateinit var posterSpinner: Spinner
     private lateinit var backdrop: ImageView
     private lateinit var bannerSpinner: Spinner
+    private var firstDirectorLink: View? = null
+    private var firstCastCard: View? = null
 
-    /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
-    private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
+    /** Cast and directors of the film: a caption and a carousel of round photos with the name and role; OK opens PersonActivity. */
+    private fun castRow(people: List<Tmdb.Person>, hasDirectors: Boolean, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
-        block.addView(text("В РОЛЯХ", 18f).apply { setPadding(0, dp(14), 0, dp(8)) })
+        block.addView(text(if (hasDirectors) "РЕЖИССЁР И В РОЛЯХ" else "В РОЛЯХ", 18f).apply { setPadding(0, dp(14), 0, dp(8)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(92)
+        firstCastCard = null
         people.forEachIndexed { index, person ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -358,13 +430,14 @@ class DetailsActivity : Activity() {
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
                             // ScrollView does not scroll back when focus leaves it upwards, so bring the facts back into view
                             pageScroll.smoothScrollTo(0, 0)
-                            watchButton.requestFocus()
+                            (firstDirectorLink ?: watchButton).requestFocus()
                             true
                         }
                         else -> false
                     }
                 }
             }
+            if (firstCastCard == null) firstCastCard = card
             // initials on a calm green circle sit under the photo: they show while it loads and for an actor who has none
             val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
             val photo = FrameLayout(this).apply {

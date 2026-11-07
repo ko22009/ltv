@@ -164,6 +164,8 @@ object Tmdb {
         val castPeople: List<Person> = emptyList(),
         /** Poster path from TMDB; used when the list did not pass a poster to the card. */
         val poster: String = "",
+        /** Directors (or series creators) with TMDB person ids, so the card can link to their pages too. */
+        val directors: List<Person> = emptyList(),
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -227,14 +229,29 @@ object Tmdb {
         } ?: emptyList()
         val cast = castPeople.map { it.name }
         val crew = credits?.optJSONArray("crew")
-        var director = ""
+        val directorPeople = mutableListOf<Person>()
         if (crew != null) {
             for (i in 0 until crew.length()) {
                 val member = crew.getJSONObject(i)
-                if (member.str("job") == "Director") { director = member.str("name"); break }
+                val name = member.str("name")
+                if (member.str("job") == "Director" && name.isNotEmpty()) {
+                    directorPeople.add(Person(member.optLong("id"), name, member.str("profile_path"), "Режиссёр"))
+                }
             }
         }
-        if (director.isEmpty()) director = names("created_by").joinToString(", ")
+        if (directorPeople.isEmpty()) {
+            o.optJSONArray("created_by")?.let { creators ->
+                for (i in 0 until creators.length()) {
+                    val c = creators.getJSONObject(i)
+                    val name = c.str("name")
+                    if (name.isNotEmpty()) {
+                        directorPeople.add(Person(c.optLong("id"), name, c.str("profile_path"), "Создатель"))
+                    }
+                }
+            }
+        }
+        val uniqueDirectors = directorPeople.distinctBy { if (it.id > 0L) it.id else it.name }
+        val director = uniqueDirectors.joinToString(", ") { it.name }
         var age = ""
         if (tv) {
             val a = o.optJSONObject("content_ratings")?.optJSONArray("results")
@@ -277,39 +294,70 @@ object Tmdb {
             names("genres"), countries, runtime, age,
             o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
             o.optInt("number_of_seasons"), o.str("backdrop_path"), nextEpisode, castPeople,
-            o.str("poster_path"),
+            o.str("poster_path"), uniqueDirectors,
         )
     }
 
-    /** One acting credit of a person: a catalog title and the role. */
+    /** One acting or directing credit of a person: a catalog title and the role. */
     class Credit(val title: Title, val role: String)
 
-    /** The actor page: photo, facts, biography and the best-known films and series. */
+    /** The person page (actor or director): photo, facts, biography and the best-known films and series. */
     class PersonPage(
         val name: String, val biography: String, val birthday: String, val place: String,
-        val photo: String?, val credits: List<Credit>,
+        val photo: String?, val credits: List<Credit>, val role: String = "",
     )
 
     fun person(context: Context, id: Long): PersonPage {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
         val o = JSONObject(download(context, "$BASE/person/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=combined_credits"))
-        val cast = o.optJSONObject("combined_credits")?.optJSONArray("cast")
-        val credits = if (cast == null) emptyList() else (0 until cast.length()).mapNotNull { i ->
-            val c = cast.getJSONObject(i)
+        val department = o.str("known_for_department")
+        val roleName = when (department) {
+            "Directing" -> "Режиссёр"
+            "Acting" -> "Актёр"
+            "Writing" -> "Сценарист"
+            "Production" -> "Продюсер"
+            "Creator" -> "Создатель"
+            else -> ""
+        }
+        fun parseCredit(c: JSONObject, role: String, weightBoost: Double = 1.0): Pair<Credit, Double>? {
             val tv = c.str("media_type") == "tv"
             val name = c.str("title").ifEmpty { c.str("name") }
-            if (name.isEmpty()) return@mapNotNull null
+            if (name.isEmpty()) return null
             val date = c.str("release_date").ifEmpty { c.str("first_air_date") }
             val title = Title(
                 c.optLong("id"), name, c.str("overview"), c.str("poster_path").takeIf { it.isNotEmpty() }, tv,
                 date.take(4), String.format(java.util.Locale.US, "%.1f", c.optDouble("vote_average", 0.0)),
                 genreText(c.optJSONArray("genre_ids")),
             )
-            Credit(title, c.str("character")) to c.optDouble("popularity", 0.0)
-        }.sortedByDescending { it.second }.distinctBy { it.first.title.tv to it.first.title.id }.take(40).map { it.first }
+            return Credit(title, role) to (c.optDouble("popularity", 0.0) * weightBoost)
+        }
+        val combined = o.optJSONObject("combined_credits")
+        val crewArray = combined?.optJSONArray("crew")
+        val directJobs = setOf("Director", "Series Director", "Co-Director", "Creator")
+        val crewCredits = if (crewArray == null) emptyList() else (0 until crewArray.length()).mapNotNull { i ->
+            val c = crewArray.getJSONObject(i)
+            val job = c.str("job")
+            if (job in directJobs || c.str("department") == "Directing") {
+                // boost directing works so a director's own films stand ahead of minor cameo appearances
+                parseCredit(c, if (job == "Creator") "Создатель" else "Режиссёр", if (department == "Directing") 100.0 else 2.0)
+            } else null
+        }
+        val castArray = combined?.optJSONArray("cast")
+        val selfRoles = setOf("self", "himself", "herself", "играет самого себя", "играет саму себя")
+        val castCredits = if (castArray == null) emptyList() else (0 until castArray.length()).mapNotNull { i ->
+            val c = castArray.getJSONObject(i)
+            val character = c.str("character").trim()
+            if (crewCredits.isNotEmpty() && character.lowercase() in selfRoles) return@mapNotNull null
+            parseCredit(c, character)
+        }
+        val credits = (crewCredits + castCredits)
+            .sortedByDescending { it.second }
+            .distinctBy { it.first.title.tv to it.first.title.id }
+            .take(40)
+            .map { it.first }
         return PersonPage(
             o.str("name"), o.str("biography"), o.str("birthday"), o.str("place_of_birth"),
-            o.str("profile_path").takeIf { it.isNotEmpty() }, credits,
+            o.str("profile_path").takeIf { it.isNotEmpty() }, credits, roleName,
         )
     }
 

@@ -57,7 +57,7 @@ class PersonActivity : Activity() {
         header.addView(title)
         page.addView(header)
 
-        val loading = LoadingView(this, scale, "Загружаем страницу актёра…")
+        val loading = LoadingView(this, scale, "Загружаем страницу…")
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         root.addView(loading, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
@@ -144,7 +144,7 @@ class PersonActivity : Activity() {
         band.addView(photo, LinearLayout.LayoutParams(px(110), px(150)).apply { rightMargin = px(24) })
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
-        val facts = listOf(person.birthday, person.place).filter { it.isNotEmpty() }.joinToString(" • ")
+        val facts = listOf(person.role, person.birthday, person.place).filter { it.isNotEmpty() }.joinToString(" • ")
         // no font padding: the first line starts at the top edge of the photo, and both texts share the left edge
         if (facts.isNotEmpty()) texts.addView(label(facts, 16f, 0xFF8FB39D.toInt()).apply { includeFontPadding = false })
         if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, 0xFFDCE8E0.toInt()).apply {
