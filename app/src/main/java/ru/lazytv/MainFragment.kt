@@ -761,7 +761,8 @@ class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
         card.runtimeTask?.cancel(false)
         card.runtimeTask = runtimePool.submit {
             if (card.shownId != title.id) return@submit
-            val details = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv) }.getOrNull()
+            // the short answer (runtime, genres) for every card of a row; the full details only for the focused one below
+            val details = runCatching { Tmdb.rowInfo(appContext, title.id, title.tv) }.getOrNull()
             if (card.shownId != title.id) return@submit
             val minutes = details?.runtime ?: 0
             if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }

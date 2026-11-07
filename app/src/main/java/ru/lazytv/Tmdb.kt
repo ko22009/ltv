@@ -244,6 +244,34 @@ object Tmdb {
         }
     }
 
+    /** What a card in a row shows besides the list data: the runtime and the genres. */
+    class RowInfo(val runtime: Int, val genres: List<String>)
+
+    private val rowInfoCache = java.util.concurrent.ConcurrentHashMap<String, RowInfo>()
+
+    /**
+     * Runtime and genres for a card in a row. The list answer has no runtime, and the full details (cast, ratings, images)
+     * are far heavier than one number, so a row asks for the short answer; the full details are loaded when a card is opened
+     * or focused. Details already in memory are used as they are. The number of requests is the same, only each answer is smaller.
+     */
+    fun rowInfo(context: Context, id: Long, tv: Boolean): RowInfo {
+        peekDetails(context, id, tv)?.let { return RowInfo(it.runtime, it.genres) }
+        val key = detailKey(context, id, tv)
+        rowInfoCache[key]?.let { return it }
+        val kind = if (tv) "tv" else "movie"
+        val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
+        val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language"))
+        val genres = o.optJSONArray("genres")?.let { a ->
+            (0 until a.length()).map { a.getJSONObject(it).str("name") }.filter { it.isNotEmpty() }
+        } ?: emptyList()
+        val runtime = if (tv) o.optJSONArray("episode_run_time")?.optInt(0) ?: 0 else o.optInt("runtime")
+        val info = RowInfo(runtime, genres)
+        // small entries, but still never unbounded
+        if (rowInfoCache.size > 400) rowInfoCache.clear()
+        rowInfoCache[key] = info
+        return info
+    }
+
     /** Full card data: original title, genres, countries, runtime, age rating, director and cast. */
     fun details(context: Context, id: Long, tv: Boolean): Details {
         val kind = if (tv) "tv" else "movie"
