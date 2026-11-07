@@ -180,25 +180,36 @@ class MainFragment : Fragment() {
         }
         rootLayout.addView(contentContainer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
+        val railPanel = FrameLayout(ctx).apply {
+            setBackgroundColor(0xFF161920.toInt())
+        }
+
         val railScroll = object : ScrollView(ctx) {
             init {
                 isVerticalScrollBarEnabled = false
                 clipChildren = false
                 clipToPadding = false
             }
-        }.apply {
-            setBackgroundColor(0xFF1B2E23.toInt())
         }
 
         railContainer = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
             clipToPadding = false
-            setPadding(sidePadding, topPadding, sidePadding, bottomPadding)
+            setPadding(sidePadding, topPadding, sidePadding, bottomPadding + (48 * scale).toInt())
         }
         railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
+        railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        rootLayout.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START or Gravity.TOP))
+        val railLogo = Logo.create(ctx, textSizeSp = 14f).apply {
+            isFocusable = false
+            isClickable = false
+        }
+        railPanel.addView(railLogo, FrameLayout.LayoutParams(railWidth, (36 * scale).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+            bottomMargin = (14 * scale).toInt()
+        })
+
+        rootLayout.addView(railPanel, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START or Gravity.TOP))
 
         return rootLayout
     }
@@ -430,13 +441,13 @@ class MainFragment : Fragment() {
             val isCur = (name == currentPage)
             val focused = isFocused
             val bg = when {
-                focused -> 0xFF2F7D57.toInt()
-                isCur -> 0xFF2A5540.toInt()
+                focused -> 0xFF6366F1.toInt()
+                isCur -> 0xFF3730A3.toInt()
                 else -> Color.TRANSPARENT
             }
             val iconColor = when {
                 focused || isCur -> Color.WHITE
-                else -> 0xFF94AFA1.toInt()
+                else -> 0xFF94A3B8.toInt()
             }
             background = if (bg == Color.TRANSPARENT) null else plate(bg, cell)
             iconView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
@@ -824,7 +835,7 @@ class PlainTextPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f
         val view = TextView(parent.context).apply {
-            setTextColor(0xFFDCE8E0.toInt())
+            setTextColor(0xFFCBD5E1.toInt())
             textSize = 18f
             gravity = Gravity.START
             setPadding(0, (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
@@ -933,7 +944,7 @@ class SettingsSectionPresenter : Presenter() {
             setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD; maxLines = 2
         }
         val description = TextView(parent.context).apply {
-            setTextColor(0xFFAFC4B6.toInt()); textSize = 13f; maxLines = 3; setPadding(0, dp(8), 0, 0)
+            setTextColor(0xFF94A3B8.toInt()); textSize = 13f; maxLines = 3; setPadding(0, dp(8), 0, 0)
         }
         texts.addView(title)
         texts.addView(description)
@@ -945,8 +956,8 @@ class SettingsSectionPresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val section = item as SettingsSection
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF2F7D57.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF2F7D57.toInt() else 0x33000000) }
+        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val texts = tile.tag as Pair<TextView, TextView>
         texts.first.text = section.title
@@ -971,7 +982,7 @@ class FavoriteEpisodePresenter : Presenter() {
             setTextColor(Color.WHITE); textSize = 16f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD
         }
         val episode = TextView(parent.context).apply {
-            setTextColor(0xFFDCE8E0.toInt()); textSize = 13f; maxLines = 2; setPadding(0, dp(8), 0, 0)
+            setTextColor(0xFFCBD5E1.toInt()); textSize = 13f; maxLines = 2; setPadding(0, dp(8), 0, 0)
         }
         val mark = TextView(parent.context).apply { setTextColor(0xFFE0B94F.toInt()); textSize = 13f }
         texts.addView(series)
@@ -985,8 +996,8 @@ class FavoriteEpisodePresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val favorite = item as FavoriteEpisode
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF2F7D57.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF2F7D57.toInt() else 0x33000000) }
+        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val texts = tile.tag as Triple<TextView, TextView, TextView>
         texts.first.text = favorite.seriesTitle
@@ -1009,7 +1020,7 @@ class TorrentCardPresenter : Presenter() {
         texts.orientation = LinearLayout.VERTICAL
         texts.setPadding(dp(14), dp(14), dp(14), dp(14))
         val title = TextView(parent.context).apply { setTextColor(Color.WHITE); textSize = 15f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD }
-        val info = TextView(parent.context).apply { setTextColor(0xFF8FB39D.toInt()); textSize = 12f; setPadding(0, dp(8), 0, 0) }
+        val info = TextView(parent.context).apply { setTextColor(0xFF94A3B8.toInt()); textSize = 12f; setPadding(0, dp(8), 0, 0) }
         texts.addView(title)
         texts.addView(info)
         tile.addView(texts, FrameLayout.LayoutParams(-1, -1))
@@ -1020,8 +1031,8 @@ class TorrentCardPresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val torrent = item as Torrent
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF2F7D57.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF2F7D57.toInt() else 0x33000000) }
+        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val pair = tile.tag as Pair<TextView, TextView>
         pair.first.text = torrent.title
@@ -1061,7 +1072,7 @@ class TitledRowsFragment : RowsSupportFragment() {
             setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
         }
         note = TextView(requireContext()).apply {
-            setTextColor(0xFF8FA597.toInt())
+            setTextColor(0xFF94A3B8.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
             setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (6 * scale).toInt(), 0, 0)
             visibility = View.GONE

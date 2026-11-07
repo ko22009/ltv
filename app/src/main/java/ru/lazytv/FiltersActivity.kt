@@ -51,7 +51,7 @@ class FiltersActivity : Activity() {
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(36), px(64), px(24))
         page.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xFF101A14.toInt())
+            setColor(0xFF101216.toInt())
             cornerRadius = px(12).toFloat()
         }
         root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { setMargins(px(40), px(40), px(40), px(40)) })
@@ -118,7 +118,7 @@ class FiltersActivity : Activity() {
         line.isFocusable = true
         line.isClickable = true
         line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
-        val shown = text(value, 17f, 0xFFCFE3D6.toInt()).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+        val shown = text(value, 17f, 0xFFCBD5E1.toInt()).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
         line.addView(shown, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(24) })
         line.setOnClickListener { onClick(shown) }
         if (onKey != null) line.setOnKeyListener { _, code, event -> event.action == KeyEvent.ACTION_DOWN && onKey(code, shown) }
@@ -263,7 +263,7 @@ class FiltersActivity : Activity() {
     private fun GridLayout.addCaption(caption: String) {
         val colSpec = GridLayout.spec(0, columnCount, GridLayout.FILL, 1f)
         val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
-        addView(text(caption, 16f, 0xFF8FD4AE.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
+        addView(text(caption, 16f, 0xFFA5B4FC.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
             GridLayout.LayoutParams(rowSpec, colSpec).apply {
                 width = 0
                 height = FrameLayout.LayoutParams.WRAP_CONTENT
@@ -322,7 +322,7 @@ class FiltersActivity : Activity() {
             } else {
                 val matches = allCountries.filter { it.second.lowercase().contains(q) || it.first.lowercase().contains(q) }
                 if (matches.isEmpty()) {
-                    val emptyText = text("Ничего не найдено", 18f, 0xFF8FA597.toInt()).apply {
+                    val emptyText = text("Ничего не найдено", 18f, 0xFF94A3B8.toInt()).apply {
                         setPadding(px(14), px(24), px(14), px(24))
                     }
                     val colSpec = GridLayout.spec(0, 1, GridLayout.FILL, 1f)

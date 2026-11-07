@@ -112,7 +112,7 @@ class SettingsActivity : FragmentActivity() {
                 })
                 addView(TextView(this@SettingsActivity).apply {
                     text = body
-                    setTextColor(0xFFDCE8E0.toInt())
+                    setTextColor(0xFFCBD5E1.toInt())
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
                     setLineSpacing(0f, 1.2f)
                     setPadding(0, px(6), 0, 0)

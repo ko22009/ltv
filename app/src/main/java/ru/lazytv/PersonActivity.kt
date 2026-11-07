@@ -112,7 +112,7 @@ class PersonActivity : Activity() {
                         grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
                     }
                 }.onFailure { err ->
-                    page.addView(label(Errors.explain(err), 16f, 0xFFAFC4B6.toInt()).apply {
+                    page.addView(label(Errors.explain(err), 16f, 0xFFCBD5E1.toInt()).apply {
                         setPadding(0, px(12), 0, 0)
                     })
                     val action = Errors.actionOf(err)
@@ -142,11 +142,11 @@ class PersonActivity : Activity() {
         val band = LinearLayout(this)
         band.orientation = LinearLayout.HORIZONTAL
         band.setPadding(0, px(14), 0, 0)
-        // initials on a calm green plate sit under the photo: they show while it loads and for a person who has none
+        // initials on a calm indigo plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF2F5A44.toInt(), 0xFF1B3327.toInt()))
-            addView(label(initials, 40f, 0xFFB9F6CA.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF3730A3.toInt(), 0xFF1E222A.toInt()))
+            addView(label(initials, 40f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
             if (!person.photo.isNullOrEmpty()) {
@@ -171,8 +171,8 @@ class PersonActivity : Activity() {
         texts.orientation = LinearLayout.VERTICAL
         val facts = listOf(person.role, person.birthday, person.place).filter { it.isNotEmpty() }.joinToString(" • ")
         // no font padding: the first line starts at the top edge of the photo, and both texts share the left edge
-        if (facts.isNotEmpty()) texts.addView(label(facts, 16f, 0xFF8FB39D.toInt()).apply { includeFontPadding = false })
-        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, 0xFFDCE8E0.toInt()).apply {
+        if (facts.isNotEmpty()) texts.addView(label(facts, 16f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false })
+        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, 0xFFCBD5E1.toInt()).apply {
             includeFontPadding = false
             setLineSpacing(0f, 1.2f)
             setPadding(0, px(if (facts.isEmpty()) 0 else 10), 0, 0)

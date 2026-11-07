@@ -1,11 +1,11 @@
 <resources>
     <style name="Theme.LazyTV" parent="@style/Theme.Leanback">
-        <item name="android:windowBackground">#0C140F</item>
+        <item name="android:windowBackground">#101216</item>
         <!-- the pages start near the top edge: Leanback leaves 167dp there for its title bar, which is not used -->
         <item name="browseRowsMarginTop">28dp</item>
     </style>
     <style name="Theme.LazyTV.Guided" parent="@style/Theme.Leanback.GuidedStep">
-        <item name="android:windowBackground">#101A14</item>
+        <item name="android:windowBackground">#101216</item>
     </style>
     <!-- the filters lie over the list as a panel: the window is transparent, the catalogue stays behind it, dimmed -->
     <style name="Theme.LazyTV.Filters" parent="@style/Theme.LazyTV">

@@ -58,7 +58,7 @@ class TitlesGridActivity : Activity() {
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
         header.addView(label(more.title, 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
         page.addView(header)
-        message = label("", 16f, 0xFFAFC4B6.toInt()).apply {
+        message = label("", 16f, 0xFFCBD5E1.toInt()).apply {
             visibility = View.GONE
             setPadding(0, px(12), 0, 0)
         }

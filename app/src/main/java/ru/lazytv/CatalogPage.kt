@@ -119,7 +119,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         header.addView(buttons, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = barCut })
         // what is chosen now, one line under the buttons
         filtersText = TextView(requireContext()).apply {
-            setTextColor(0xFF9FB3A9.toInt())
+            setTextColor(0xFF94A3B8.toInt())
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 15f * scale)
             setPadding(0, px(6), 0, 0)
             visibility = View.GONE
@@ -127,7 +127,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         page.addView(filtersText)
 
         message = TextView(requireContext()).apply {
-            setTextColor(0xFFAFC4B6.toInt())
+            setTextColor(0xFFCBD5E1.toInt())
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setPadding(0, px(10), 0, 0)
             visibility = View.GONE

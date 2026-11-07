@@ -65,7 +65,7 @@ class EpisodesActivity : Activity() {
             })
             // the original name is its own line, not glued to the description
             if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
-                addView(label(variant.alt, 21f, 0xFFAFC4B6.toInt()).apply {
+                addView(label(variant.alt, 21f, 0xFF94A3B8.toInt()).apply {
                     setPadding(0, px(2), 0, 0)
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
@@ -78,10 +78,10 @@ class EpisodesActivity : Activity() {
             addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         }
         page.addView(header)
-        page.addView(label("Удерживайте OK, чтобы выбрать качество", 14f, 0xFF8FB39D.toInt()).apply {
+        page.addView(label("Удерживайте OK, чтобы выбрать качество", 14f, 0xFF94A3B8.toInt()).apply {
             setPadding(0, px(12), 0, px(12))
         })
-        val status = label("", 15f, 0xFFDCE8E0.toInt())
+        val status = label("", 15f, 0xFFCBD5E1.toInt())
         status.visibility = View.GONE
         page.addView(status)
         val errorRow = LinearLayout(this).apply {
@@ -218,19 +218,19 @@ class EpisodesActivity : Activity() {
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(14), px(20), px(14))
         card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF2F7D57.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply {
                 // a watched episode is visibly dimmer than an unseen one
                 setColor(if (watched) 0x16000000 else 0x33000000)
                 cornerRadius = px(3).toFloat()
             })
         }
-        card.addView(label(episode.title, 19f, if (watched) 0xFF6F8478.toInt() else Color.WHITE, true),
+        card.addView(label(episode.title, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
             LinearLayout.LayoutParams(0, -2, 1f))
         if (favorite) card.addView(label("★", 20f, 0xFFE0B94F.toInt()).apply { setPadding(px(8), 0, px(4), 0) })
-        if (watched) card.addView(label("✓", 20f, 0xFF6FA487.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
+        if (watched) card.addView(label("✓", 20f, 0xFFA5B4FC.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
         card.addView(label(episode.streams.joinToString("  ") { it.first }, 14f,
-            if (watched) 0xFF5E7066.toInt() else 0xFFAFC4B6.toInt()).apply {
+            if (watched) 0xFF475569.toInt() else 0xFF94A3B8.toInt()).apply {
             setPadding(px(8), 0, px(12), 0)
         })
         val holder = object : FrameLayout(this) {

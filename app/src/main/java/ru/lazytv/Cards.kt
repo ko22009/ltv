@@ -45,12 +45,12 @@ class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = TIT
             bottomMargin = (12 * scale).toInt()
         }
         background = GradientDrawable().apply {
-            setColor(0xFF1A2A22.toInt())
+            setColor(0xFF161920.toInt())
             cornerRadius = 4 * scale
         }
         // the same heights as the poster and the text plate of a real card
         addView(View(context), LayoutParams(-1, (posterHeight * scale).toInt()))
-        addView(View(context).apply { setBackgroundColor(0xFF24352C.toInt()) }, LayoutParams(-1, (infoHeight * scale).toInt()))
+        addView(View(context).apply { setBackgroundColor(0xFF1E222A.toInt()) }, LayoutParams(-1, (infoHeight * scale).toInt()))
         // the band must not stick out of the rounded corners
         clipToOutline = true
     }
@@ -86,8 +86,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     val poster = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        // a title without a poster shows the brand green, not a hole that looks like a failed load
-        setBackgroundColor(0xFF1B2E23.toInt())
+        // a title without a poster shows the dark surface, not a hole that looks like a failed load
+        setBackgroundColor(0xFF161920.toInt())
     }
 
     /** Cancels pending poster load if the card is recycled or unbound. */
@@ -112,24 +112,24 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
     private val badge = ImageView(context).apply {
         setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
-            setColorFilter(0xFFB9F6CA.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
         })
         setPadding(px(4f), px(4f), px(4f), px(4f))
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(0xE60C140F.toInt())
+            setColor(0xE6101216.toInt())
         }
         visibility = View.GONE
     }
 
-    /** The mark of a card chosen for deletion (edit mode of the history): a green veil and a big tick. */
+    /** The mark of a card chosen for deletion (edit mode of the history): an indigo veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
-        setBackgroundColor(0x992F7D57.toInt())
+        setBackgroundColor(0x994F46E5.toInt())
         visibility = View.GONE
         // a square of its own: the icon is drawn by width, a stretched view would cut it
         addView(ImageView(context).apply {
             setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
-                setColorFilter(0xFFB9F6CA.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
             })
         }, android.widget.FrameLayout.LayoutParams(px(72f), px(72f), Gravity.CENTER))
     }
@@ -182,7 +182,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     private val info = LinearLayout(context).apply {
         orientation = VERTICAL
         // the same quiet plate the rows use, so the title and the year read on any poster
-        setBackgroundColor(0xFF39423D.toInt())
+        setBackgroundColor(0xFF1E222A.toInt())
         setPadding(px(12f), px(7f), px(12f), px(7f))
         addView(name, LayoutParams(-1, -2))
         addView(genre, LayoutParams(-1, -2).apply { topMargin = px(3f) })
@@ -216,7 +216,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
-            setColor(0xFF1B2E23.toInt())
+            setColor(0xFF161920.toInt())
             cornerRadius = px(4f).toFloat()
         }
         clipToOutline = true

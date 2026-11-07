@@ -76,13 +76,13 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
         }
         // the tile keeps its plate colour on focus: the focus is shown by the zoom, as on the cards
         tile.background = GradientDrawable().apply {
-            setColor(0xFF39423D.toInt())
+            setColor(0xFF1E222A.toInt())
             cornerRadius = px(4f).toFloat()
         }
         tile.elevation = 0f
         tile.addView(ImageView(context).apply {
             setImageDrawable(PathDrawable(MenuIcons.LINK).apply {
-                setColorFilter(0xFFB9F6CA.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
             })
         }, LinearLayout.LayoutParams(px(64f), px(64f)))
         // only the name of the row, as written over it

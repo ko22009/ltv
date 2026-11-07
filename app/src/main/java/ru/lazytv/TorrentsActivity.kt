@@ -111,7 +111,7 @@ class TorrentsActivity : Activity() {
         page.addView(header, LinearLayout.LayoutParams(-1, px(56)))
 
         // the line under the query bar only carries messages (nothing found, errors) and hides when empty
-        status = label("", 15f, 0xFFAFC4B6.toInt())
+        status = label("", 15f, 0xFFCBD5E1.toInt())
         status.visibility = View.GONE
         status.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) { status.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE }
@@ -162,7 +162,7 @@ class TorrentsActivity : Activity() {
         else {
             val image = ImageView(this)
             image.scaleType = ImageView.ScaleType.CENTER_CROP
-            image.setBackgroundColor(0xFF12201A.toInt())
+            image.setBackgroundColor(0xFF161920.toInt())
             val posterSpinner = Spinner(this, px(40))
             image.showPoster(poster, posterSpinner, "w342")
             val posterSlot = FrameLayout(this).apply {
@@ -327,9 +327,9 @@ class TorrentsActivity : Activity() {
         view.isFocusable = true
         view.isClickable = true
         view.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF2F7D57.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply {
-                setColor(if (active) 0xFF2F7D57.toInt() else 0x66000000); cornerRadius = px(3).toFloat()
+                setColor(if (active) 0xFF3730A3.toInt() else 0x66000000); cornerRadius = px(3).toFloat()
             })
         }
         view.setOnClickListener { action() }
@@ -376,21 +376,21 @@ class TorrentsActivity : Activity() {
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(10), px(20), px(10))
         card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF2F7D57.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x33000000); cornerRadius = px(3).toFloat() })
         }
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
         texts.addView(label(main, 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
-        texts.addView(label(rest, 14f, 0xFFDCE8E0.toInt()).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
-        texts.addView(label(torrent.source, 13f, 0xFF8FB39D.toInt()))
+        texts.addView(label(rest, 14f, 0xFFCBD5E1.toInt()).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
+        texts.addView(label(torrent.source, 13f, 0xFF94A3B8.toInt()))
         card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
 
         val numbers = LinearLayout(this)
         numbers.orientation = LinearLayout.VERTICAL
         numbers.gravity = Gravity.END
         numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
-        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFAFC4B6.toInt()))
+        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFA5B4FC.toInt()))
         numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFEF9A9A.toInt()))
         card.addView(numbers, LinearLayout.LayoutParams(px(110), -2))
 
@@ -518,7 +518,7 @@ class TorrentsActivity : Activity() {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(8), px(24), 0)
-            addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, 0xFF8FB39D.toInt()))
+            addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, 0xFF94A3B8.toInt()))
             addView(input, LinearLayout.LayoutParams(-1, px(52)).apply { topMargin = px(8) })
         }
         AlertDialog.Builder(this)
@@ -588,16 +588,16 @@ class TorrentsActivity : Activity() {
     private inner class PreloadView {
         val title = label("", 18f, Color.WHITE, true)
         val file = label("", 15f, Color.WHITE)
-        val info = label("", 14f, 0xFFDCE8E0.toInt())
-        val buffer = label("", 14f, 0xFFDCE8E0.toInt())
+        val info = label("", 14f, 0xFFCBD5E1.toInt())
+        val buffer = label("", 14f, 0xFFCBD5E1.toInt())
         val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply { max = 1000 }
         val root = LinearLayout(this@TorrentsActivity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(18), px(24), px(18))
-            background = GradientDrawable().apply { setColor(0xFF1B2E23.toInt()); cornerRadius = px(4).toFloat() }
+            background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = px(4).toFloat() }
             minimumWidth = px(620)
             addView(title)
-            addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFF8FB39D.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
+            addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFFA5B4FC.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
             addView(file)
             addView(info.apply { setPadding(0, px(6), 0, 0) })
             addView(buffer)

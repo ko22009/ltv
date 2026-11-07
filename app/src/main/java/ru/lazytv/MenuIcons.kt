@@ -194,8 +194,8 @@ class IconHeaderPresenter : RowHeaderPresenter() {
 
         /** A bright plate under the focus and a calmer one under the selected page; nothing otherwise. */
         private fun plate() = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), shape(0xFF2F7D57.toInt()))
-            addState(intArrayOf(android.R.attr.state_selected), shape(0xFF2A5540.toInt()))
+            addState(intArrayOf(android.R.attr.state_focused), shape(0xFF6366F1.toInt()))
+            addState(intArrayOf(android.R.attr.state_selected), shape(0xFF3730A3.toInt()))
             addState(intArrayOf(), shape(Color.TRANSPARENT))
         }
 
@@ -254,7 +254,7 @@ class IconHeaderPresenter : RowHeaderPresenter() {
 
         fun restyle() {
             val active = isSelected || isFocused || hasFocus()
-            title?.setTextColor(if (active) Color.WHITE else 0xFF94AFA1.toInt())
+            title?.setTextColor(if (active) Color.WHITE else 0xFF94A3B8.toInt())
             title?.alpha = 1f
             // the leanback header dims its own title view; the plate already tells the state
             getChildAt(1)?.alpha = 1f

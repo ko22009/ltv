@@ -13,8 +13,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
-/** Rotating light-green arc: the preloader of lists, the card and the torrent screens. */
-class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFF8FB39D.toInt()) : View(context) {
+/** Rotating arc: the preloader of lists, the card and the torrent screens. */
+class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFFA5B4FC.toInt()) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -62,7 +62,7 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
         addView(Spinner(context, (72 * scale).toInt()))
         label.text = caption
         label.gravity = Gravity.CENTER
-        label.setTextColor(0xFFAFC4B6.toInt())
+        label.setTextColor(0xFFCBD5E1.toInt())
         label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         label.setPadding(0, (16 * scale).toInt(), 0, 0)
         addView(label)

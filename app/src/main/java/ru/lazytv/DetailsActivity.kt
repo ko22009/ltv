@@ -61,7 +61,7 @@ class DetailsActivity : Activity() {
         isClickable = true
         background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(0xFF2A4A39.toInt())
+                setColor(0xFF6366F1.toInt())
                 cornerRadius = dp(2).toFloat()
             })
         }
@@ -90,11 +90,11 @@ class DetailsActivity : Activity() {
         )
 
         val root = FrameLayout(this)
-        root.setBackgroundColor(0xFF101A14.toInt())
+        root.setBackgroundColor(0xFF101216.toInt())
 
         // a calm dark band; the frame of the film (TMDB backdrop) fades in under a dark veil once it is known
         val banner = FrameLayout(this)
-        banner.setBackgroundColor(0xFF15251B.toInt())
+        banner.setBackgroundColor(0xFF161920.toInt())
         // the stub stands under the frame from the start: the spinner turns on it, and the frame fades in over it
         banner.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageResource(R.drawable.no_backdrop) },
             FrameLayout.LayoutParams(-1, -1))
@@ -111,15 +111,6 @@ class DetailsActivity : Activity() {
             loadBackdrop(passedBackdrop)
         }
 
-        val appName = ImageView(this).apply {
-            setImageResource(R.drawable.logo)
-            scaleType = ImageView.ScaleType.FIT_END
-            contentDescription = "Lazy TV"
-        }
-        root.addView(appName, FrameLayout.LayoutParams(dp(250), dp(86), Gravity.END or Gravity.TOP).apply {
-            topMargin = dp(24); rightMargin = dp(64)
-        })
-
         // the back stands on the frame: a crisp translucent dark circle keeps the arrow readable on any still
         fun softDisc(fill: Int) = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
@@ -130,7 +121,7 @@ class DetailsActivity : Activity() {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF2F7D57.toInt()))
+                addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF6366F1.toInt()))
                 addState(intArrayOf(), softDisc(0x99000000.toInt()))
             }
             isFocusable = true
@@ -144,7 +135,7 @@ class DetailsActivity : Activity() {
         })
 
         val bar = LinearLayout(this)
-        bar.setBackgroundColor(0xFF1B2E23.toInt())
+        bar.setBackgroundColor(0xFF161920.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(389), 0, dp(24), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
@@ -159,7 +150,16 @@ class DetailsActivity : Activity() {
             }
         }
         back.nextFocusDownId = watchButton.id
+        back.setOnKeyListener { _, code, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN || code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    watchButton.requestFocus()
+                    true
+                } else false
+            } else false
+        }
         watchButton.nextFocusUpId = back.id
+        watchButton.nextFocusLeftId = back.id
         watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
             visibility = View.GONE
             isFocusable = false
@@ -217,8 +217,13 @@ class DetailsActivity : Activity() {
                 else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                     val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
                     val next = barButtons.getOrNull(index + step)
-                    if (next != null) next.requestFocus()
-                    next != null || step > 0
+                    if (next != null) {
+                        next.requestFocus()
+                        true
+                    } else if (step < 0) {
+                        back.requestFocus()
+                        true
+                    } else true
                 } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
                     val target = firstDirectorLink ?: (if (overviewView.text.isNotEmpty()) overviewView else firstCastCard)
                     target?.requestFocus() ?: false
@@ -232,9 +237,14 @@ class DetailsActivity : Activity() {
         }
         root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
 
+        val ltvLogo = Logo.create(this, textSizeSp = 22f)
+        root.addView(ltvLogo, FrameLayout.LayoutParams(dp(80), dp(72), Gravity.START or Gravity.TOP).apply {
+            leftMargin = dp(64); topMargin = dp(360)
+        })
+
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
-        posterView.setBackgroundColor(0xFF1B2E23.toInt())
+        posterView.setBackgroundColor(0xFF161920.toInt())
         posterSpinner = Spinner(this, dp(40))
         posterView.showPoster(posterPath, posterSpinner)
         root.addView(FrameLayout(this).apply {
@@ -252,7 +262,7 @@ class DetailsActivity : Activity() {
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
         info.addView(text(name, 34f))
-        val original = text("", 16f, 0xFFAFC4B6.toInt())
+        val original = text("", 16f, 0xFF94A3B8.toInt())
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
@@ -261,7 +271,7 @@ class DetailsActivity : Activity() {
         info.addView(table)
 
         val rawOverview = intent.getStringExtra("overview").orEmpty()
-        overviewView = text(rawOverview, 18f, 0xFFE6ECEA.toInt()).apply {
+        overviewView = text(rawOverview, 18f, 0xFFE2E8F0.toInt()).apply {
             setLineSpacing(0f, 1.25f)
             setPadding(dp(12), dp(8), dp(12), dp(8))
             isFocusable = true
@@ -270,7 +280,7 @@ class DetailsActivity : Activity() {
                 val focused = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
                     cornerRadius = dp(6).toFloat()
-                    setStroke(dp(2), 0xFFB9F6CA.toInt())
+                    setStroke(dp(2), 0xFFA5B4FC.toInt())
                 }
                 val normal = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
@@ -437,7 +447,7 @@ class DetailsActivity : Activity() {
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
-            row.addView(text(caption, 17f, 0xFFBDD4C7.toInt()), LinearLayout.LayoutParams(dp(160), -2))
+            row.addView(text(caption, 17f, 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(160), -2))
             if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
                 val linksRow = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -450,7 +460,7 @@ class DetailsActivity : Activity() {
                         setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                         setTextColor(android.content.res.ColorStateList(
                             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                            intArrayOf(Color.WHITE, 0xFFB9F6CA.toInt()),
+                            intArrayOf(Color.WHITE, 0xFFA5B4FC.toInt()),
                         ))
                         setPadding(dp(10), dp(3), dp(10), dp(3))
                         background = focusShape(scale, 0x26FFFFFF, radius = 4f)
@@ -621,7 +631,7 @@ class DetailsActivity : Activity() {
                 isClickable = true
                 background = StateListDrawable().apply {
                     addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(0xFF2F7D57.toInt()); cornerRadius = dp(6).toFloat()
+                        setColor(0xFF6366F1.toInt()); cornerRadius = dp(6).toFloat()
                     })
                     addState(intArrayOf(), GradientDrawable().apply {
                         setColor(0x33000000); cornerRadius = dp(6).toFloat()
@@ -650,25 +660,25 @@ class DetailsActivity : Activity() {
                 }
             }
             if (firstCastCard == null) firstCastCard = card
-            // initials on a calm green circle sit under the photo: they show while it loads and for an actor who has none
+            // initials on a calm indigo circle sit under the photo: they show while it loads and for an actor who has none
             val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
             val photo = FrameLayout(this).apply {
-                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF2F5A44.toInt(), 0xFF1B3327.toInt()))
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
                     .apply { shape = GradientDrawable.OVAL }
                 // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
-                addView(text(initials, 30f, 0xFFB9F6CA.toInt()).apply { gravity = Gravity.CENTER },
+                addView(text(initials, 30f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER },
                     FrameLayout.LayoutParams(-1, -1))
                 val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 addView(image, FrameLayout.LayoutParams(-1, -1))
-                if (person.photo.isNotEmpty()) Glide.with(this@DetailsActivity).load("https://image.tmdb.org/t/p/w185${person.photo}")
+                if (person.photo.isNotEmpty()) Glide.with(image).load("https://image.tmdb.org/t/p/w185${person.photo}")
                     .transition(DrawableTransitionOptions.withCrossFade()).into(image)
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             card.addView(text(person.name, 14f).apply {
                 gravity = Gravity.CENTER; maxLines = 2; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(6), 0, 0)
             }, LinearLayout.LayoutParams(dp(112), -2))
-            if (person.role.isNotEmpty()) card.addView(text(person.role, 12f, 0xFF8FB39D.toInt()).apply {
+            if (person.role.isNotEmpty()) card.addView(text(person.role, 12f, 0xFF94A3B8.toInt()).apply {
                 gravity = Gravity.CENTER; maxLines = 2
             }, LinearLayout.LayoutParams(dp(112), -2))
             row.addView(card, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })

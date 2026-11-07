@@ -328,7 +328,7 @@ class PlayerActivity : Activity() {
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF2F7D57.toInt()); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); shape = GradientDrawable.OVAL })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x55000000); shape = GradientDrawable.OVAL })
         }
         setOnClickListener { resetHideTimer(); action() }
@@ -343,7 +343,7 @@ class PlayerActivity : Activity() {
         top.setPadding(dp(48), dp(28), dp(48), dp(60))
         titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 24f, Color.WHITE, true)
         baseMeta = queue.getOrNull(queueIndex)?.meta ?: meta
-        metaView = label(baseMeta, 15f, 0xFFAFC4B6.toInt()).apply {
+        metaView = label(baseMeta, 15f, 0xFFCBD5E1.toInt()).apply {
             setPadding(0, dp(6), 0, 0)
             visibility = if (baseMeta.isEmpty()) View.GONE else View.VISIBLE
         }
@@ -359,15 +359,15 @@ class PlayerActivity : Activity() {
 
         val seekRow = LinearLayout(this)
         seekRow.gravity = Gravity.CENTER_VERTICAL
-        position = label("0:00", 14f, 0xFFDCE8E0.toInt())
-        duration = label("0:00", 14f, 0xFFDCE8E0.toInt())
+        position = label("0:00", 14f, 0xFFCBD5E1.toInt())
+        duration = label("0:00", 14f, 0xFFCBD5E1.toInt())
         seek = SeekBar(this)
         seek.isFocusable = true
-        seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF2F7D57.toInt())
-        seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFF6FA487.toInt())
+        seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF6366F1.toInt())
+        seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFFA5B4FC.toInt())
         seek.setOnFocusChangeListener { _, hasFocus ->
-            seek.progressTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) 0xFF4CAF50.toInt() else 0xFF2F7D57.toInt())
-            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) Color.WHITE else 0xFF6FA487.toInt())
+            seek.progressTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) 0xFF818CF8.toInt() else 0xFF6366F1.toInt())
+            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) Color.WHITE else 0xFFA5B4FC.toInt())
         }
         seek.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
@@ -438,7 +438,7 @@ class PlayerActivity : Activity() {
             episodeButtons.orientation = LinearLayout.HORIZONTAL
             queue.forEachIndexed { index, item ->
                 val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
-                val button = label(caption, 15f, 0xFFDCE8E0.toInt()).apply {
+                val button = label(caption, 15f, 0xFFCBD5E1.toInt()).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(18), 0, dp(18), 0)
                     isFocusable = true
@@ -597,14 +597,14 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
-    /** Repaints the episode strip: red for the current episode, green while focused. */
+    /** Repaints the episode strip: red for the current episode, indigo while focused. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
             val active = index == queueIndex
-            view.setTextColor(if (active) Color.WHITE else 0xFFDCE8E0.toInt())
+            view.setTextColor(if (active) Color.WHITE else 0xFFCBD5E1.toInt())
             view.background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(0xFF2F7D57.toInt()); cornerRadius = dp(3).toFloat()
+                    setColor(0xFF6366F1.toInt()); cornerRadius = dp(3).toFloat()
                 })
                 addState(intArrayOf(), GradientDrawable().apply {
                     setColor(if (active) 0xFFE57373.toInt() else 0x55000000)

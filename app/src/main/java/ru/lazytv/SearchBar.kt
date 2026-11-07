@@ -27,8 +27,8 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
-/** Flat or round background that turns bright green while the view has focus. */
-fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = 0xFF2F7D57.toInt()) = StateListDrawable().apply {
+/** Flat or round background that turns indigo while the view has focus. */
+fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = 0xFF6366F1.toInt()) = StateListDrawable().apply {
     fun shape(color: Int) = GradientDrawable().apply {
         setColor(color)
         if (circle) this.shape = GradientDrawable.OVAL else cornerRadius = radius * scale
@@ -45,7 +45,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     val mic = LinearLayout(activity)
     val input = EditText(activity)
     private val micIcon = ImageView(activity)
-    private val spinner = Spinner(activity, (24 * scale).toInt(), 0xFFDCE8E0.toInt()).apply {
+    private val spinner = Spinner(activity, (24 * scale).toInt(), 0xFFCBD5E1.toInt()).apply {
         visibility = View.GONE
         isFocusable = false
         isClickable = false
@@ -73,8 +73,8 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.gravity = Gravity.CENTER
         mic.isFocusable = true
         mic.isClickable = true
-        mic.background = focusShape(scale, 0xFF22382B.toInt(), circle = true)
-        micIcon.setImageDrawable(PathDrawable(MenuIcons.MIC).apply { colorFilter = PorterDuffColorFilter(0xFFDCE8E0.toInt(), PorterDuff.Mode.SRC_IN) })
+        mic.background = focusShape(scale, 0xFF1C2029.toInt(), circle = true)
+        micIcon.setImageDrawable(PathDrawable(MenuIcons.MIC).apply { colorFilter = PorterDuffColorFilter(0xFFCBD5E1.toInt(), PorterDuff.Mode.SRC_IN) })
         mic.addView(micIcon, LayoutParams(px(30), px(30)))
         mic.setOnClickListener {
             if (listening) cancelListening() else listen()
@@ -86,14 +86,14 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
 
         input.setSingleLine()
         input.hint = "Поиск"
-        input.setHintTextColor(0xFF8FA597.toInt())
-        input.setTextColor(0xFFE6EDE8.toInt())
+        input.setHintTextColor(0xFF64748B.toInt())
+        input.setTextColor(0xFFF1F5F9.toInt())
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
         input.setPadding(px(18), 0, px(18), 0)
         // the field lights up when the remote reaches it and the keyboard comes up at once: the field is active, as when it is clicked;
         // it also goes away when the remote leaves the field, so the phrases below are not covered by it
-        input.background = focusShape(scale, 0xFF1F3228.toInt())
+        input.background = focusShape(scale, 0xFF1C2029.toInt())
         input.setOnFocusChangeListener { view, hasFocus ->
             if (listening) cancelListening()
             val imm = activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
@@ -293,8 +293,8 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
             micIcon.scaleY = 1f
             mic.scaleX = 1f
             mic.scaleY = 1f
-            mic.background = focusShape(scale, 0xFF22382B.toInt(), circle = true)
-            micIcon.colorFilter = PorterDuffColorFilter(0xFFDCE8E0.toInt(), PorterDuff.Mode.SRC_IN)
+            mic.background = focusShape(scale, 0xFF1C2029.toInt(), circle = true)
+            micIcon.colorFilter = PorterDuffColorFilter(0xFFCBD5E1.toInt(), PorterDuff.Mode.SRC_IN)
         }
     }
 

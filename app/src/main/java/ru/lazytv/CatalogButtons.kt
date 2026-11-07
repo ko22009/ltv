@@ -45,7 +45,7 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         isFocusable = true
         isFocusableInTouchMode = true
         isClickable = true
-        background = focusShape(scale, 0xFF1F3228.toInt(), radius = 6f)
+        background = focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {
