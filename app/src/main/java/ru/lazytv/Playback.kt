@@ -42,8 +42,14 @@ private fun startPlayer(activity: Activity, variant: Variant, episodes: List<Epi
     val queue = org.json.JSONArray()
     episodes.forEach { episode ->
         val stream = streamFor(episode, wanted, exact)
-        queue.put(org.json.JSONObject().put("u", stream.second).put("t", "${variant.title} • ${episode.title}")
-            .put("m", "${variant.source} • ${stream.first}").put("e", shortEpisode(episode.title)))
+        val streamsJson = org.json.JSONArray()
+        episode.streams.forEach { (q, u) -> streamsJson.put(org.json.JSONObject().put("q", q).put("u", u)) }
+        queue.put(
+            org.json.JSONObject().put("u", stream.second).put("t", "${variant.title} • ${episode.title}")
+                .put("m", "${variant.source} • ${stream.first}").put("e", shortEpisode(episode.title))
+                .put("k", EpisodeState.key(variant.sourceId, variant.ref, episode.title))
+                .put("s", streamsJson)
+        )
     }
     val current = streamFor(episodes[index], wanted, exact)
     openPlayer(

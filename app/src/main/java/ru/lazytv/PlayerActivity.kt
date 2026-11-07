@@ -47,11 +47,18 @@ fun openPlayer(
     }
 }
 
-/** One item of the auto-next queue: the stream, its title, the source/quality line and a short episode caption. */
-data class PlayItem(val url: String, val title: String, val meta: String, val label: String = "")
+/** One item of the auto-next queue: the stream, its title, the source/quality line, episode caption, watch key and available streams. */
+data class PlayItem(
+    val url: String,
+    val title: String,
+    val meta: String,
+    val label: String = "",
+    val watchKey: String = "",
+    val streams: List<Pair<String, String>> = emptyList(),
+)
 
 /**
- * Built-in player with its own control row (title, audio/subtitle track pick, aspect ratio) instead of ExoPlayer's
+ * Built-in player with its own control row (title, audio/subtitle track pick, aspect ratio, quality/speed) instead of ExoPlayer's
  * bare default — the LazyMedia Deluxe screen it follows shows the same: title line, source/quality line, round
  * buttons. The position is remembered per address and restored when the setting is on.
  */
@@ -73,6 +80,7 @@ class PlayerActivity : Activity() {
     private var baseMeta = ""
     private var queue: List<PlayItem> = emptyList()
     private var queueIndex = 0
+    private var episodeScroll: android.widget.HorizontalScrollView? = null
     private lateinit var episodeButtons: LinearLayout
     private val episodeViews = mutableListOf<TextView>()
     private var resize = AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -80,6 +88,8 @@ class PlayerActivity : Activity() {
     /** True while the screen is closing: ExoPlayer's own "release timed out" is not a playback error then. */
     private var releasing = false
     private var errorDialog: android.app.AlertDialog? = null
+    private var lastBackAt = 0L
+    private var playbackSpeed = 1.0f
 
     private val saver = object : Runnable {
         override fun run() {
@@ -170,10 +180,14 @@ class PlayerActivity : Activity() {
 
         val exo = ExoPlayer.Builder(this).build()
         view.player = exo
+        applyVoicePreference(exo)
         exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
             val saved = getSharedPreferences("positions", 0).getLong(url, 0)
-            if (saved > 0) exo.seekTo(saved)
+            if (saved > 5_000L) {
+                exo.seekTo(saved)
+                Toast.makeText(this, "Продолжено с ${stamp(saved)}", Toast.LENGTH_SHORT).show()
+            }
         }
         exo.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
@@ -184,7 +198,14 @@ class PlayerActivity : Activity() {
 
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
-                if (state == Player.STATE_ENDED) advance()
+                if (state == Player.STATE_ENDED) {
+                    getSharedPreferences("positions", 0).edit().remove(url).apply()
+                    advance()
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (overlay.visibility == View.VISIBLE) resetHideTimer()
             }
         })
         exo.prepare()
@@ -195,6 +216,20 @@ class PlayerActivity : Activity() {
         showControls()
     }
 
+    /** Applies the default voice/subtitle preference from settings before the stream starts. */
+    private fun applyVoicePreference(exo: ExoPlayer) {
+        val voice = Settings.string(this, Settings.VOICE, "any")
+        val builder = exo.trackSelectionParameters.buildUpon()
+        when (voice) {
+            "ru" -> builder.setPreferredAudioLanguage("ru").setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            "original" -> builder
+                .setPreferredAudioLanguages("ja", "en", "ko", "zh", "fr", "de", "es", "it")
+                .setPreferredTextLanguage("ru")
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+        }
+        exo.trackSelectionParameters = builder.build()
+    }
+
     // --- the control row -------------------------------------------------------------------------
 
     private fun parseQueue(json: String): List<PlayItem> {
@@ -203,7 +238,16 @@ class PlayerActivity : Activity() {
             val array = org.json.JSONArray(json)
             (0 until array.length()).map { i ->
                 val o = array.getJSONObject(i)
-                PlayItem(o.getString("u"), o.optString("t"), o.optString("m"), o.optString("e"))
+                val streams = mutableListOf<Pair<String, String>>()
+                o.optJSONArray("s")?.let { sArr ->
+                    for (j in 0 until sArr.length()) {
+                        val so = sArr.getJSONObject(j)
+                        val q = so.optString("q")
+                        val u = so.optString("u")
+                        if (q.isNotEmpty() && u.isNotEmpty()) streams.add(q to u)
+                    }
+                }
+                PlayItem(o.getString("u"), o.optString("t"), o.optString("m"), o.optString("e"), o.optString("k"), streams)
             }
         }.getOrDefault(emptyList())
     }
@@ -223,6 +267,7 @@ class PlayerActivity : Activity() {
         save()
         queueIndex = index
         url = item.url
+        if (item.watchKey.isNotEmpty()) EpisodeState.setWatched(this, item.watchKey, true)
         titleView.text = item.title
         baseMeta = item.meta
         metaView.text = item.meta
@@ -231,11 +276,25 @@ class PlayerActivity : Activity() {
         position.text = "0:00"
         duration.text = "0:00"
         exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+        if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
+            val saved = getSharedPreferences("positions", 0).getLong(url, 0)
+            if (saved > 5_000L) exo.seekTo(saved)
+        }
         exo.prepare()
         exo.playWhenReady = true
         updateEpisodeButtons()
+        scrollToActiveEpisode()
         resetHideTimer()
         if (toast) Toast.makeText(this, "Далее: ${item.label.ifEmpty { item.title }}", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun scrollToActiveEpisode() {
+        val scroll = episodeScroll ?: return
+        val activeView = episodeViews.getOrNull(queueIndex) ?: return
+        scroll.post {
+            val targetX = (activeView.left - (scroll.width - activeView.width) / 2).coerceAtLeast(0)
+            scroll.smoothScrollTo(targetX, 0)
+        }
     }
 
     private fun label(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(this).apply {
@@ -285,9 +344,36 @@ class PlayerActivity : Activity() {
         position = label("0:00", 14f, 0xFFDCE8E0.toInt())
         duration = label("0:00", 14f, 0xFFDCE8E0.toInt())
         seek = SeekBar(this)
-        seek.isFocusable = false
+        seek.isFocusable = true
         seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF2F7D57.toInt())
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFF6FA487.toInt())
+        seek.setOnFocusChangeListener { _, hasFocus ->
+            seek.progressTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) 0xFF4CAF50.toInt() else 0xFF2F7D57.toInt())
+            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) Color.WHITE else 0xFF6FA487.toInt())
+        }
+        seek.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        val sign = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                        seekByStep(sign * seekStepMs(event.repeatCount))
+                        resetHideTimer()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        playPause.requestFocus()
+                        resetHideTimer()
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                        togglePlay()
+                        resetHideTimer()
+                        true
+                    }
+                    else -> false
+                }
+            } else false
+        }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, value: Int, byUser: Boolean) {}
             override fun onStartTrackingTouch(sb: SeekBar) { userSeeking = true }
@@ -301,16 +387,18 @@ class PlayerActivity : Activity() {
         val buttons = LinearLayout(this)
         buttons.gravity = Gravity.CENTER_VERTICAL
         buttons.setPadding(0, dp(14), 0, 0)
-        buttons.addView(round(MenuIcons.REPLAY10) { player?.let { it.seekTo((it.currentPosition - 10_000).coerceAtLeast(0)) } },
+        buttons.addView(round(MenuIcons.REPLAY10) { seekByStep(-10_000L) },
             LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(18) })
         playPause = round(MenuIcons.PAUSE, true) { togglePlay() }
         buttons.addView(playPause, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(18) })
-        buttons.addView(round(MenuIcons.FORWARD10) { player?.let { it.seekTo(it.currentPosition + 10_000) } },
+        buttons.addView(round(MenuIcons.FORWARD10) { seekByStep(10_000L) },
             LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(32) })
         buttons.addView(round(MenuIcons.ASPECT) { cycleAspect() }, LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
         buttons.addView(round(MenuIcons.AUDIO_TRACK) { trackDialog(C.TRACK_TYPE_AUDIO, "Звуковая дорожка") },
             LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
-        buttons.addView(round(MenuIcons.SUBTITLES) { trackDialog(C.TRACK_TYPE_TEXT, "Субтитры") }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        buttons.addView(round(MenuIcons.SUBTITLES) { trackDialog(C.TRACK_TYPE_TEXT, "Субтитры") },
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+        buttons.addView(round(MenuIcons.GEAR) { qualityAndSpeedDialog() }, LinearLayout.LayoutParams(dp(52), dp(52)))
         bottom.addView(buttons)
 
         // the episode strip of a series: the current episode is highlighted, the others switch the player
@@ -334,7 +422,9 @@ class PlayerActivity : Activity() {
             val scroll = android.widget.HorizontalScrollView(this)
             scroll.isHorizontalScrollBarEnabled = false
             scroll.addView(episodeButtons)
+            episodeScroll = scroll
             bottom.addView(scroll, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(8) })
+            scrollToActiveEpisode()
         }
 
         overlay.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
@@ -416,22 +506,136 @@ class PlayerActivity : Activity() {
         }
         val entries = mutableListOf<String>()
         val picks = mutableListOf<Pair<androidx.media3.common.TrackGroup, Int>?>()
-        if (type == C.TRACK_TYPE_TEXT) { entries.add("Выключить"); picks.add(null) }
+        var checkedIndex = -1
+        if (type == C.TRACK_TYPE_TEXT) {
+            entries.add("Выключить")
+            picks.add(null)
+            if (exo.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT) || groups.none { it.isSelected }) {
+                checkedIndex = 0
+            }
+        }
         var index = 0
         groups.forEach { group ->
             for (i in 0 until group.length) {
+                if (group.isTrackSelected(i) && checkedIndex == -1) checkedIndex = entries.size
                 entries.add(trackLabel(group.getTrackFormat(i), index, type))
                 picks.add(group.mediaTrackGroup to i)
                 index++
             }
         }
-        android.app.AlertDialog.Builder(this).setTitle(title).setItems(entries.toTypedArray()) { _, which ->
-            val pick = picks[which]
-            val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
-            if (pick != null) builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
-            else builder.setTrackTypeDisabled(type, true)
-            exo.trackSelectionParameters = builder.build()
-        }.show()
+        android.app.AlertDialog.Builder(this).setTitle(title)
+            .setSingleChoiceItems(entries.toTypedArray(), checkedIndex) { dialog, which ->
+                val pick = picks[which]
+                val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
+                if (pick != null) builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
+                else builder.setTrackTypeDisabled(type, true)
+                exo.trackSelectionParameters = builder.build()
+                dialog.dismiss()
+            }.show()
+    }
+
+    /** Quality and playback speed picker opened by the gear button in the player. */
+    private fun qualityAndSpeedDialog() {
+        val exo = player ?: return
+        val itemStreams = queue.getOrNull(queueIndex)?.streams.orEmpty()
+        val videoGroups = exo.currentTracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
+        val hasVideoTracks = videoGroups.sumOf { it.length } > 1
+        val speedLabel = "Скорость (${if (playbackSpeed == 1.0f) "1×" else "${playbackSpeed}×"})"
+        if (itemStreams.size <= 1 && !hasVideoTracks) {
+            speedDialog()
+            return
+        }
+        val currentQuality = baseMeta.substringAfterLast(" • ", "").takeIf { it.isNotEmpty() } ?: "Авто"
+        val options = arrayOf("Качество ($currentQuality)", speedLabel)
+        android.app.AlertDialog.Builder(this).setTitle("Параметры воспроизведения")
+            .setItems(options) { _, which ->
+                if (which == 0) qualityDialog(itemStreams, videoGroups) else speedDialog()
+            }.show()
+    }
+
+    private fun qualityDialog(
+        itemStreams: List<Pair<String, String>>,
+        videoGroups: List<androidx.media3.common.Tracks.Group>,
+    ) {
+        val exo = player ?: return
+        if (itemStreams.size > 1) {
+            val labels = itemStreams.map { it.first }.toTypedArray()
+            val checked = itemStreams.indexOfFirst { it.second == url }.coerceAtLeast(0)
+            android.app.AlertDialog.Builder(this).setTitle("Качество потока")
+                .setSingleChoiceItems(labels, checked) { dialog, which ->
+                    val (qName, qUrl) = itemStreams[which]
+                    if (qUrl != url) {
+                        val pos = exo.currentPosition
+                        val wasPlaying = exo.playWhenReady
+                        save()
+                        url = qUrl
+                        val sourcePrefix = baseMeta.substringBefore(" • ", baseMeta)
+                        baseMeta = if (sourcePrefix.isNotEmpty()) "$sourcePrefix • $qName" else qName
+                        updateStreamMeta(exo)
+                        exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+                        exo.seekTo(pos)
+                        exo.prepare()
+                        exo.playWhenReady = wasPlaying
+                        Toast.makeText(this, "Качество: $qName", Toast.LENGTH_SHORT).show()
+                    }
+                    dialog.dismiss()
+                }.show()
+            return
+        }
+        val entries = mutableListOf("Авто")
+        val picks = mutableListOf<Pair<androidx.media3.common.TrackGroup, Int>?>(null)
+        var checked = if (exo.trackSelectionParameters.overrides.none { it.key.type == C.TRACK_TYPE_VIDEO }) 0 else -1
+        videoGroups.forEach { group ->
+            for (i in 0 until group.length) {
+                val f = group.getTrackFormat(i)
+                val label = buildString {
+                    if (f.height > 0) append("${f.height}p") else append("Поток ${entries.size}")
+                    if (f.bitrate > 0) append(" · %.1f Мбит/с".format(f.bitrate / 1_000_000.0))
+                }
+                if (checked == -1 && group.isTrackSelected(i)) checked = entries.size
+                entries.add(label)
+                picks.add(group.mediaTrackGroup to i)
+            }
+        }
+        android.app.AlertDialog.Builder(this).setTitle("Качество видео")
+            .setSingleChoiceItems(entries.toTypedArray(), checked) { dialog, which ->
+                val pick = picks[which]
+                val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+                if (pick != null) builder.setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
+                exo.trackSelectionParameters = builder.build()
+                dialog.dismiss()
+            }.show()
+    }
+
+    private fun speedDialog() {
+        val exo = player ?: return
+        val speeds = floatArrayOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+        val labels = arrayOf("0.75×", "1.0× (обычная)", "1.25×", "1.5×", "2.0×")
+        val checked = speeds.indexOfFirst { it == playbackSpeed }.coerceAtLeast(1)
+        android.app.AlertDialog.Builder(this).setTitle("Скорость воспроизведения")
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                playbackSpeed = speeds[which]
+                exo.setPlaybackSpeed(playbackSpeed)
+                Toast.makeText(this, "Скорость: ${labels[which]}", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }.show()
+    }
+
+    private fun seekStepMs(repeatCount: Int): Long = when {
+        repeatCount > 15 -> 60_000L
+        repeatCount > 5 -> 30_000L
+        else -> 10_000L
+    }
+
+    private fun seekByStep(deltaMs: Long) {
+        val exo = player ?: return
+        val dur = exo.duration
+        val target = (exo.currentPosition + deltaMs).coerceAtLeast(0L).let {
+            if (dur > 0 && dur != C.TIME_UNSET) it.coerceAtMost(dur) else it
+        }
+        exo.seekTo(target)
+        position.text = stamp(target)
+        if (dur > 0 && dur != C.TIME_UNSET) seek.progress = (target / 1000).toInt()
     }
 
     // --- show/hide ---------------------------------------------------------------------------------
@@ -445,21 +649,74 @@ class PlayerActivity : Activity() {
 
     private fun resetHideTimer() {
         handler.removeCallbacks(hider)
-        handler.postDelayed(hider, 4000)
+        if (player?.isPlaying == true) {
+            handler.postDelayed(hider, 4000)
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
-            if (overlay.visibility != View.VISIBLE && event.keyCode != KeyEvent.KEYCODE_BACK) {
-                showControls()
-                return true
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> { togglePlay(); showControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_PLAY -> { player?.playWhenReady = true; showControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> { player?.playWhenReady = false; showControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekByStep(seekStepMs(event.repeatCount)); showControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_REWIND -> { seekByStep(-seekStepMs(event.repeatCount)); showControls(); return true }
+                KeyEvent.KEYCODE_MEDIA_NEXT -> {
+                    if (queueIndex + 1 < queue.size) switchTo(queueIndex + 1, toast = true)
+                    return true
+                }
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
+                    if (queueIndex > 0) switchTo(queueIndex - 1, toast = true)
+                    return true
+                }
             }
             if (overlay.visibility == View.VISIBLE) {
+                if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                    setControlsVisible(false)
+                    return true
+                }
                 resetHideTimer()
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && currentFocus is ImageView) {
+                    seek.requestFocus()
+                    return true
+                }
                 // down from the round buttons goes straight to the episode strip
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && currentFocus is ImageView && episodeViews.isNotEmpty()) {
                     (episodeViews.getOrNull(queueIndex) ?: episodeViews.first()).requestFocus()
                     return true
+                }
+            } else {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_BACK -> {
+                        val now = System.currentTimeMillis()
+                        if (now - lastBackAt < 2500L) {
+                            finish()
+                        } else {
+                            lastBackAt = now
+                            Toast.makeText(this, "Если хотите выйти, нажмите ещё раз кнопку «Назад»", Toast.LENGTH_SHORT).show()
+                        }
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        seekByStep(-seekStepMs(event.repeatCount))
+                        showControls()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        seekByStep(seekStepMs(event.repeatCount))
+                        showControls()
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_SPACE -> {
+                        togglePlay()
+                        showControls()
+                        return true
+                    }
+                    else -> {
+                        showControls()
+                        return true
+                    }
                 }
             }
         }
@@ -469,7 +726,14 @@ class PlayerActivity : Activity() {
     private fun save() {
         val exo = player ?: return
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
-            getSharedPreferences("positions", 0).edit().putLong(url, exo.currentPosition).apply()
+            val pos = exo.currentPosition
+            val dur = exo.duration
+            val prefs = getSharedPreferences("positions", 0).edit()
+            if (dur > 0 && dur != C.TIME_UNSET && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
+                prefs.remove(url).apply()
+            } else if (pos >= 5_000L) {
+                prefs.putLong(url, pos).apply()
+            }
         }
     }
 
