@@ -118,7 +118,7 @@ object Tmdb {
         else Title(
             item.getLong("id"), name, item.str("overview"),
             item.str("poster_path").ifEmpty { null }, tv,
-            date.take(4), "%.1f".format(item.optDouble("vote_average", 0.0)),
+            date.take(4), String.format(java.util.Locale.US, "%.1f", item.optDouble("vote_average", 0.0)),
             genreText(item.optJSONArray("genre_ids")),
         )
     }
@@ -173,16 +173,19 @@ object Tmdb {
     private val detailPending = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.FutureTask<Details>>()
     private const val DETAIL_TTL_MS = 15 * 60 * 1000L
 
+    private fun detailKey(context: Context, id: Long, tv: Boolean) =
+        "$tv:$id:${Settings.string(context, Settings.LANGUAGE, "ru-RU")}"
+
     /** True when the details are already in the memory cache: the card opens without waiting for the network. */
-    fun isCached(id: Long, tv: Boolean): Boolean =
-        detailCache["$tv:$id"]?.let { System.currentTimeMillis() - it.first < DETAIL_TTL_MS } ?: false
+    fun isCached(context: Context, id: Long, tv: Boolean): Boolean =
+        detailCache[detailKey(context, id, tv)]?.let { System.currentTimeMillis() - it.first < DETAIL_TTL_MS } ?: false
 
     /**
      * Card details with a short memory cache: when the user only moves through the lists, the card is prefetched
      * on focus, so opening it does not wait for the network a second time.
      */
     fun detailsCached(context: Context, id: Long, tv: Boolean): Details {
-        val key = "$tv:$id"
+        val key = detailKey(context, id, tv)
         detailCache[key]?.let { (time, details) ->
             if (System.currentTimeMillis() - time < DETAIL_TTL_MS) return details
         }
@@ -299,10 +302,11 @@ object Tmdb {
             val date = c.str("release_date").ifEmpty { c.str("first_air_date") }
             val title = Title(
                 c.optLong("id"), name, c.str("overview"), c.str("poster_path").takeIf { it.isNotEmpty() }, tv,
-                date.take(4), "%.1f".format(c.optDouble("vote_average", 0.0)),
+                date.take(4), String.format(java.util.Locale.US, "%.1f", c.optDouble("vote_average", 0.0)),
+                genreText(c.optJSONArray("genre_ids")),
             )
             Credit(title, c.str("character")) to c.optDouble("popularity", 0.0)
-        }.sortedByDescending { it.second }.take(40).map { it.first }
+        }.sortedByDescending { it.second }.distinctBy { it.first.title.tv to it.first.title.id }.take(40).map { it.first }
         return PersonPage(
             o.str("name"), o.str("biography"), o.str("birthday"), o.str("place_of_birth"),
             o.str("profile_path").takeIf { it.isNotEmpty() }, credits,

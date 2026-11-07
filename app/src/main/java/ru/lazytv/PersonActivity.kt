@@ -90,12 +90,16 @@ class PersonActivity : Activity() {
                     page.addView(info(person))
                     // from the cards the focus search skips a button that sits off their column: Up goes to it by hand
                     val reach: View = readMore ?: back
-                    back.nextFocusDownId = reach.id
-                    if (person.credits.isEmpty()) return@onSuccess
+                    if (person.credits.isEmpty()) {
+                        readMore?.let { back.nextFocusDownId = it.id; it.nextFocusUpId = back.id }
+                        reach.requestFocus()
+                        return@onSuccess
+                    }
                     page.addView(label("ФИЛЬМОГРАФИЯ", 18f).apply { setPadding(0, px(14), 0, 0) })
                     val grid = titleCardGrid(this, scale, bridge, COLUMNS)
                     page.addView(grid, titleGridParams(scale))
                     cards.addAll(0, person.credits.map { it.title })
+                    back.nextFocusDownId = (readMore ?: grid).id
                     grid.setOnKeyInterceptListener { e ->
                         val up = e.action == android.view.KeyEvent.ACTION_DOWN && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                         // only from the first row of the grid: the upper rows are reached by the grid itself
@@ -110,7 +114,8 @@ class PersonActivity : Activity() {
                     page.addView(label(Errors.explain(err), 16f, 0xFFAFC4B6.toInt()).apply {
                         setPadding(0, px(12), 0, 0)
                     })
-                    Errors.actionOf(err)?.let { action ->
+                    val action = Errors.actionOf(err)
+                    if (action != null) {
                         val fix = chipButton(this, scale, action.caption).apply {
                             this.id = View.generateViewId()
                             nextFocusUpId = back.id
@@ -119,7 +124,7 @@ class PersonActivity : Activity() {
                         back.nextFocusDownId = fix.id
                         page.addView(fix, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { topMargin = px(12) })
                         fix.requestFocus()
-                    }
+                    } else back.requestFocus()
                 }
             }
         }.start()

@@ -72,13 +72,16 @@ class DetailsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val name = intent.getStringExtra("name").orEmpty()
+        val title = titleFrom(intent.extras ?: Bundle())
         posterPath = intent.getStringExtra("poster")
         // "recently opened": the card is put into the list when it is opened, not only when watching starts
-        if (savedInstanceState == null) History.add(this, historyTitle())
+        if (savedInstanceState == null && (title.id > 0L || name.isNotEmpty())) History.add(this, historyTitle())
+        val rawRating = intent.getStringExtra("rating").orEmpty().replace(',', '.')
+        val shownRating = if ((rawRating.toDoubleOrNull() ?: 0.0) > 0.0) rawRating else ""
         val baseRows = listOf(
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
             "Год" to intent.getStringExtra("year").orEmpty(),
-            "Рейтинг" to intent.getStringExtra("rating").orEmpty(),
+            "Рейтинг" to shownRating,
         )
 
         val root = FrameLayout(this)
@@ -96,7 +99,7 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44))
         // the details are already known (prefetched in the list): the frame comes from the cache, no spinner needed
-        if (titleFrom(intent.extras!!).let { Tmdb.isCached(it.id, it.tv) }) bannerSpinner.visibility = View.GONE
+        if (Tmdb.isCached(this, title.id, title.tv)) bannerSpinner.visibility = View.GONE
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
@@ -124,6 +127,7 @@ class DetailsActivity : Activity() {
             }
             isFocusable = true
             isClickable = true
+            id = View.generateViewId()
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
@@ -136,9 +140,9 @@ class DetailsActivity : Activity() {
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(389), 0, 0, 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
-        watchButton = button(MenuIcons.PLAY, "Смотреть") { variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name) }
+        watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply { id = View.generateViewId() }
+        back.nextFocusDownId = watchButton.id
         bar.addView(watchButton)
-        val title = titleFrom(intent.extras!!)
         lateinit var favorite: TextView
         // filled bookmark: the title is saved in a folder; outline: it is not
         fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
@@ -203,11 +207,11 @@ class DetailsActivity : Activity() {
         info.addView(text(intent.getStringExtra("overview").orEmpty(), 16f, 0xFFDCE8E0.toInt()).apply {
             setLineSpacing(0f, 1.2f)
         })
-        loadDetails(title, name, baseRows, original, table)
         val scroll = ScrollView(this)
         scroll.isFocusable = false
         scroll.isVerticalScrollBarEnabled = false
         scroll.addView(info)
+        loadDetails(title, name, baseRows, original, table, scroll)
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
             topMargin = dp(444); leftMargin = dp(389); rightMargin = dp(64)
         })
@@ -218,54 +222,58 @@ class DetailsActivity : Activity() {
 
     /** Fills in what the list does not carry: original title, runtime, age, genres, countries, director, cast. */
     private fun loadDetails(
-        title: Title, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout,
+        title: Title, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
     ) {
         Thread {
-            val d = runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
-            originalTitle = d?.originalTitle.orEmpty()
-            // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
-            variants = Sources.searchCached(applicationContext, name, originalTitle, title.year)
-            if (d == null) {
-                onUi { bannerSpinner.visibility = View.GONE }
-                return@Thread
-            }
-            onUi {
-                if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
-                    posterPath = d.poster
-                    posterView.showPoster(d.poster, posterSpinner)
+            try {
+                val d = runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
+                originalTitle = d?.originalTitle.orEmpty()
+                // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
+                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
+                if (d == null) {
+                    onUi { bannerSpinner.visibility = View.GONE }
+                    return@Thread
                 }
-                if (d.backdrop.isNotEmpty()) {
-                    // the spinner is already turning: it stays until the frame is there, and goes away when there is none
-                    Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
-                        .listener(object : RequestListener<Drawable> {
-                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                                bannerSpinner.visibility = View.GONE
-                                return false
-                            }
+                onUi {
+                    if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
+                        posterPath = d.poster
+                        posterView.showPoster(d.poster, posterSpinner)
+                    }
+                    if (d.backdrop.isNotEmpty()) {
+                        // the spinner is already turning: it stays until the frame is there, and goes away when there is none
+                        Glide.with(this).load("https://image.tmdb.org/t/p/original${d.backdrop}")
+                            .listener(object : RequestListener<Drawable> {
+                                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                                    bannerSpinner.visibility = View.GONE
+                                    return false
+                                }
 
-                            override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                                bannerSpinner.visibility = View.GONE
-                                backdrop.animate().alpha(1f).setDuration(250).start()
-                                return false
-                            }
-                        }).into(backdrop)
-                } else bannerSpinner.visibility = View.GONE
-                if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
-                fillTable(table, baseRows + listOf(
-                    "Длительность" to (formatRuntime(d.runtime)),
-                    "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
-                    "Следующая серия" to d.nextEpisode,
-                    "Возраст" to d.age,
-                    "Жанр" to d.genres.joinToString(", "),
-                    "Страна" to d.countries.joinToString(", "),
-                    "Режиссёр" to d.director,
-                ))
-                val info = table.parent as? LinearLayout
-                if (info != null && d.castPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
-                    val row = castRow(d.castPeople)
-                    row.tag = "cast"
-                    info.addView(row)
+                                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                                    bannerSpinner.visibility = View.GONE
+                                    backdrop.animate().alpha(1f).setDuration(250).start()
+                                    return false
+                                }
+                            }).into(backdrop)
+                    } else bannerSpinner.visibility = View.GONE
+                    if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
+                    fillTable(table, baseRows + listOf(
+                        "Длительность" to (formatRuntime(d.runtime)),
+                        "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
+                        "Следующая серия" to d.nextEpisode,
+                        "Возраст" to d.age,
+                        "Жанр" to d.genres.joinToString(", "),
+                        "Страна" to d.countries.joinToString(", "),
+                        "Режиссёр" to d.director,
+                    ))
+                    val info = table.parent as? LinearLayout
+                    if (info != null && d.castPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
+                        val row = castRow(d.castPeople, scroll)
+                        row.tag = "cast"
+                        info.addView(row)
+                    }
                 }
+            } finally {
+                detailsReady.countDown()
             }
         }.start()
     }
@@ -283,7 +291,10 @@ class DetailsActivity : Activity() {
         }
     }
 
+    private val detailsReady = java.util.concurrent.CountDownLatch(1)
+    @Volatile
     private var variants: List<Variant> = emptyList()
+    @Volatile
     private var originalTitle = ""
     private var posterPath: String? = null
     private lateinit var posterView: ImageView
@@ -292,14 +303,14 @@ class DetailsActivity : Activity() {
     private lateinit var bannerSpinner: Spinner
 
     /** Cast of the film: a caption and a carousel of round photos with the name and the role; OK opens the actor page. */
-    private fun castRow(people: List<Tmdb.Person>): View {
+    private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
         block.addView(text("В РОЛЯХ", 18f).apply { setPadding(0, dp(14), 0, dp(8)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(92)
-        people.forEach { person ->
+        people.forEachIndexed { index, person ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
@@ -317,6 +328,23 @@ class DetailsActivity : Activity() {
                 setOnClickListener {
                     startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                         .putExtra("id", person.id).putExtra("name", person.name))
+                }
+                setOnKeyListener { _, code, event ->
+                    if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                    else when (code) {
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                            row.getChildAt(index + step)?.requestFocus()
+                            true
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                            // ScrollView does not scroll back when focus leaves it upwards, so bring the facts back into view
+                            pageScroll.smoothScrollTo(0, 0)
+                            watchButton.requestFocus()
+                            true
+                        }
+                        else -> false
+                    }
                 }
             }
             // initials on a calm green circle sit under the photo: they show while it loads and for an actor who has none
@@ -353,6 +381,30 @@ class DetailsActivity : Activity() {
     private lateinit var watchButton: TextView
     private var opening = false
 
+    /** Waits for the background site search if the user clicks "Смотреть" immediately on opening the card. */
+    private fun startWatching(name: String) {
+        if (opening) return
+        if (Settings.string(this, Settings.SOURCE_MODE, "sites") == "torrents") {
+            openTorrents(name)
+            return
+        }
+        if (detailsReady.count > 0) {
+            opening = true
+            val caption = watchButton.text
+            watchButton.text = "ЗАГРУЖАЕМ…"
+            Thread {
+                detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
+                onUi {
+                    opening = false
+                    watchButton.text = caption
+                    variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
+                }
+            }.start()
+            return
+        }
+        variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
+    }
+
     /**
      * The release is asked for its videos first: a film with one video starts in the player straight from this card,
      * and only a release with several (a series) opens the episode page. No empty page flashes in between.
@@ -364,7 +416,7 @@ class DetailsActivity : Activity() {
         val caption = watchButton.text
         watchButton.text = "ЗАГРУЖАЕМ…"
         Thread {
-            val episodes = runCatching { Sources.all.first { it.id == v.sourceId }.episodes(v) }.getOrNull()
+            val episodes = runCatching { Sources.all.firstOrNull { it.id == v.sourceId }?.episodes(v) }.getOrNull()
             onUi {
                 opening = false
                 watchButton.text = caption
@@ -383,13 +435,13 @@ class DetailsActivity : Activity() {
         startActivity(
             Intent(this, TorrentsActivity::class.java).putExtra("name", name).putExtra("original", originalTitle)
                 .putExtra("year", intent.getStringExtra("year")).putExtra("tv", intent.getBooleanExtra("tv", false))
-                .putExtra("poster", intent.getStringExtra("poster"))
+                .putExtra("poster", posterPath)
         )
     }
 
     /** The history record: with the poster found through TMDB, when the list did not pass one to the card. */
     private fun historyTitle(): Title {
-        val title = titleFrom(intent.extras!!)
+        val title = titleFrom(intent.extras ?: Bundle())
         return if (title.poster == null && posterPath != null) title.copy(poster = posterPath) else title
     }
 

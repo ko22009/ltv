@@ -97,6 +97,23 @@ class EpisodesActivity : Activity() {
         list = ListView(this)
         list.divider = null
         list.selector = ColorDrawable(Color.TRANSPARENT)
+        fun bindRowKeys(container: LinearLayout, onDownToList: Boolean) {
+            for (i in 0 until container.childCount) container.getChildAt(i).setOnKeyListener { view, code, event ->
+                if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                    val visible = (0 until container.childCount).map { container.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
+                    val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    val next = visible.getOrNull(visible.indexOf(view) + step)
+                    if (next != null) next.requestFocus()
+                    next != null || step > 0
+                } else if (onDownToList && code == android.view.KeyEvent.KEYCODE_DPAD_DOWN && episodes.isNotEmpty()) {
+                    list.requestFocus()
+                    true
+                } else false
+            }
+        }
+        bindRowKeys(errorRow, onDownToList = false)
+        bindRowKeys(actions, onDownToList = true)
         val loading = LoadingView(this, scale, "Загружаем список серий…")
         val body = FrameLayout(this)
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
@@ -106,7 +123,10 @@ class EpisodesActivity : Activity() {
         setContentView(root)
 
         Thread {
-            val result = runCatching { Sources.all.first { it.id == variant.sourceId }.episodes(variant) }
+            val result = runCatching {
+                val source = Sources.all.firstOrNull { it.id == variant.sourceId } ?: error("Источник недоступен")
+                source.episodes(variant)
+            }
             onUi {
                 loading.visibility = View.GONE
                 result.onSuccess { loaded ->

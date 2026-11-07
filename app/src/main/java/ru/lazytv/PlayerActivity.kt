@@ -183,7 +183,7 @@ class PlayerActivity : Activity() {
         applyVoicePreference(exo)
         exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
-            val saved = getSharedPreferences("positions", 0).getLong(url, 0)
+            val saved = savedPosition()
             if (saved > 5_000L) {
                 exo.seekTo(saved)
                 Toast.makeText(this, "Продолжено с ${stamp(saved)}", Toast.LENGTH_SHORT).show()
@@ -199,7 +199,7 @@ class PlayerActivity : Activity() {
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
                 if (state == Player.STATE_ENDED) {
-                    getSharedPreferences("positions", 0).edit().remove(url).apply()
+                    clearPosition()
                     advance()
                 }
             }
@@ -255,16 +255,16 @@ class PlayerActivity : Activity() {
     /** The next episode of the queue when the setting is on; the player is reused, only the media item changes. */
     private fun advance() {
         if (releasing || !Settings.bool(this, Settings.AUTO_NEXT) || queueIndex + 1 >= queue.size) return
-        switchTo(queueIndex + 1, toast = true)
+        switchTo(queueIndex + 1, toast = true, saveCurrent = false)
     }
 
     /** Switches to another episode of the queue (also used by the episode buttons in the control row). */
-    private fun switchTo(index: Int, toast: Boolean) {
+    private fun switchTo(index: Int, toast: Boolean, saveCurrent: Boolean = true) {
         if (releasing) return
         val exo = player ?: return
         val item = queue.getOrNull(index) ?: return
         if (index == queueIndex) return
-        save()
+        if (saveCurrent) save()
         queueIndex = index
         url = item.url
         if (item.watchKey.isNotEmpty()) EpisodeState.setWatched(this, item.watchKey, true)
@@ -277,7 +277,7 @@ class PlayerActivity : Activity() {
         duration.text = "0:00"
         exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
-            val saved = getSharedPreferences("positions", 0).getLong(url, 0)
+            val saved = savedPosition()
             if (saved > 5_000L) exo.seekTo(saved)
         }
         exo.prepare()
@@ -723,16 +723,27 @@ class PlayerActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
+    /** Stable episode key when playing from a series/film source, so switching quality or mirror keeps the resume time. */
+    private fun positionKey(): String = queue.getOrNull(queueIndex)?.watchKey?.takeIf { it.isNotEmpty() } ?: url
+
+    private fun savedPosition(): Long {
+        val prefs = getSharedPreferences("positions", 0)
+        return prefs.getLong(positionKey(), 0L).takeIf { it > 0L } ?: prefs.getLong(url, 0L)
+    }
+
+    private fun clearPosition() {
+        getSharedPreferences("positions", 0).edit().remove(positionKey()).remove(url).apply()
+    }
+
     private fun save() {
         val exo = player ?: return
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
             val pos = exo.currentPosition
             val dur = exo.duration
-            val prefs = getSharedPreferences("positions", 0).edit()
             if (dur > 0 && dur != C.TIME_UNSET && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
-                prefs.remove(url).apply()
+                clearPosition()
             } else if (pos >= 5_000L) {
-                prefs.putLong(url, pos).apply()
+                getSharedPreferences("positions", 0).edit().putLong(positionKey(), pos).apply()
             }
         }
     }
