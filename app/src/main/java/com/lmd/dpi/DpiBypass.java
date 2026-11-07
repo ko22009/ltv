@@ -36,6 +36,8 @@ import javax.net.ssl.SSLSocketFactory;
  */
 public final class DpiBypass {
     private static final String TAG = "LmdDpi: ";
+    /** Master switch mirroring Settings.AUTO_BYPASS so toggling it off at runtime disables proxy routing immediately. */
+    public static volatile boolean enabled = true;
     /** Last resort: the HTTP proxy of LazyMedia (used with its developer's permission); switched in the settings. */
     public static volatile boolean appProxyAllowed = true;
     /** The same proxy for the torrent sites (rutor and its mirrors); a separate switch, as in LazyMedia. */
@@ -120,33 +122,40 @@ public final class DpiBypass {
     private DpiBypass() {
     }
 
-    /** Called once from Application.onCreate; never throws. */
+    public static void clearCache() {
+        CACHE.clear();
+    }
+
+    /** Called once from Application.onCreate or when enabled in settings; never throws. */
     public static synchronized void start(String nativeLibraryDir) {
         if (started) {
             return;
         }
         try {
             libDir = nativeLibraryDir;
-            if (!new File(libDir, "libciadpi.so").canExecute()) {
-                log("libciadpi.so not found, bypass disabled");
-                return;
-            }
+            boolean hasLocalBin = new File(libDir, "libciadpi.so").canExecute();
             started = true;
-            POOL.execute(new Runnable() {
-                @Override
-                public void run() {
-                    serveConnect();
-                }
-            });
-            ensureProcess();
+            if (hasLocalBin || externalSocksHost != null) {
+                POOL.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        serveConnect();
+                    }
+                });
+                ensureProcess();
+            } else {
+                log("libciadpi.so not found, using app proxy fallback only");
+            }
             ProxySelector.setDefault(new Selector(ProxySelector.getDefault()));
             log("started");
-            POOL.execute(new Runnable() {
-                @Override
-                public void run() {
-                    tune(false);
-                }
-            });
+            if (hasLocalBin) {
+                POOL.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        tune(false);
+                    }
+                });
+            }
         } catch (Throwable e) {
             log("start failed: " + e);
         }
@@ -257,6 +266,9 @@ public final class DpiBypass {
         if (externalSocksHost != null) {
             return true;
         }
+        if (libDir == null || !new File(libDir, "libciadpi.so").canExecute()) {
+            return false;
+        }
         try {
             if (process != null) {
                 try {
@@ -326,7 +338,7 @@ public final class DpiBypass {
             try {
                 String host = uri.getHost();
                 int port = uri.getPort();
-                if ("https".equalsIgnoreCase(uri.getScheme()) && host != null && !isLocal(host)
+                if (enabled && "https".equalsIgnoreCase(uri.getScheme()) && host != null && !isLocal(host)
                         && (port == -1 || port == 443)) {
                     Proxy p = decide(host.toLowerCase()).proxy;
                     return p == null ? DIRECT : Collections.singletonList(p);

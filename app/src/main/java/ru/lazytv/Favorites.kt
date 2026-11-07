@@ -30,10 +30,12 @@ object Favorites {
     private const val KEY = "favorites"
 
     private fun records(context: Context): List<Pair<Folder, Title>> {
-        val array = JSONArray(Settings.string(context, KEY, "[]"))
-        return (0 until array.length()).map { i ->
-            val o = array.getJSONObject(i)
-            Folder.of(o.optString("folder", Folder.FAVORITES.key)) to o.toTitle()
+        val array = runCatching { JSONArray(Settings.string(context, KEY, "[]")) }.getOrDefault(JSONArray())
+        return (0 until array.length()).mapNotNull { i ->
+            runCatching {
+                val o = array.getJSONObject(i)
+                Folder.of(o.optString("folder", Folder.FAVORITES.key)) to o.toTitle()
+            }.getOrNull()
         }
     }
 
@@ -66,8 +68,8 @@ object History {
     private const val LIMIT = 100
 
     fun all(context: Context): List<Title> {
-        val array = JSONArray(Settings.string(context, KEY, "[]"))
-        return (0 until array.length()).map { array.getJSONObject(it).toTitle() }
+        val array = runCatching { JSONArray(Settings.string(context, KEY, "[]")) }.getOrDefault(JSONArray())
+        return (0 until array.length()).mapNotNull { runCatching { array.getJSONObject(it).toTitle() }.getOrNull() }
     }
 
     fun add(context: Context, title: Title) {

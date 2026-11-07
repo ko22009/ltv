@@ -69,6 +69,24 @@ object Settings {
         prefs(context).edit().remove(key).apply()
     }
 
+    /** Keys in the shared "lazytv" file that hold user data rather than preferences. */
+    private val USER_DATA_KEYS = setOf(
+        "favorites", "history", "watched_titles", "favorite_torrents",
+        "last_backup_at", "recommendation_ids", "recommendation_channel",
+    )
+
+    /** Resets settings, manual addresses and catalog filters while keeping bookmarks, history and watched marks. */
+    fun resetSettingsOnly(context: Context) {
+        val p = prefs(context)
+        val edit = p.edit()
+        for (key in p.all.keys) {
+            if (key !in USER_DATA_KEYS) edit.remove(key)
+        }
+        edit.apply()
+        context.getSharedPreferences("remote", 0).edit().clear().apply()
+        context.getSharedPreferences("catalog_filters", 0).edit().clear().apply()
+    }
+
     /** Changes whenever any setting changes; screens compare it to know when to redraw. */
     fun snapshot(context: Context): String = prefs(context).all.toSortedMap().toString()
 }

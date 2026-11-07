@@ -42,7 +42,7 @@ object TorrentOrder {
     /** "6.96 GB" -> bytes; 0 when the size is missing or unreadable. */
     fun sizeBytes(size: String): Long {
         val match = sizePart.find(size.replace(' ', ' ')) ?: return 0
-        val value = match.groupValues[1].replace(',', '.').toDouble()
+        val value = match.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return 0
         val unit = when (match.groupValues[2].uppercase()) {
             "TB", "ТБ" -> 1L shl 40
             "GB", "ГБ" -> 1L shl 30
@@ -179,8 +179,8 @@ object TorrentSearch {
         val magnet = magnetLink.find(block)?.groupValues?.get(1)?.replace("&amp;", "&") ?: return@mapNotNull null
         val title = titleLink.find(block)?.groupValues?.get(1)?.replace(Regex("<[^>]*>"), "")?.let(::unescape)?.trim() ?: return@mapNotNull null
         val size = sizeCell.find(block)?.groupValues?.get(1)?.replace("&nbsp;", " ")?.trim().orEmpty()
-        Torrent(title, size, seedsCell.find(block)?.groupValues?.get(1)?.toInt() ?: 0,
-            leechCell.find(block)?.groupValues?.get(1)?.toInt() ?: 0, magnet)
+        Torrent(title, size, seedsCell.find(block)?.groupValues?.get(1)?.toIntOrNull() ?: 0,
+            leechCell.find(block)?.groupValues?.get(1)?.toIntOrNull() ?: 0, magnet)
     }.toList()
 
     private fun unescape(s: String) = s.replace("&quot;", "\"").replace("&#039;", "'").replace("&#39;", "'")

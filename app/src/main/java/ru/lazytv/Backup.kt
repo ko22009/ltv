@@ -23,7 +23,7 @@ object Backup {
     private const val MONTH_MS = 30L * 24 * 60 * 60 * 1000L
 
     /** Preferences that hold data; the same names are read back on restore. */
-    private val files = listOf("lazytv", "episodes", "remote")
+    private val files = listOf("lazytv", "episodes", "remote", "positions", "catalog_filters")
 
     fun backupName(): String =
         "LazyTV-backup-" + SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.US).format(Date()) + ".json"

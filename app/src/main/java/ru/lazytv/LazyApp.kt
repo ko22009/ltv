@@ -21,17 +21,19 @@ class LazyApp : Application() {
             override fun onActivityDestroyed(activity: Activity) {}
         })
         RemoteConfig.init(this)
-        if (Settings.bool(this, Settings.AUTO_BYPASS)) {
-            DpiBypass.appProxyAllowed = Settings.bool(this, Settings.APP_PROXY)
-            DpiBypass.appProxyTorrentsAllowed = Settings.bool(this, Settings.APP_PROXY_TORRENTS)
-            // development: "host:port" of a ByeDPI running on the PC, set with adb (emulator cannot run the bundled one)
-            Settings.string(this, "dev_socks", "").takeIf { it.contains(':') }?.let {
-                DpiBypass.externalSocksHost = it.substringBefore(':')
-                DpiBypass.externalSocksPort = it.substringAfter(':').toInt()
+        DpiBypass.enabled = Settings.bool(this, Settings.AUTO_BYPASS)
+        DpiBypass.appProxyAllowed = Settings.bool(this, Settings.APP_PROXY)
+        DpiBypass.appProxyTorrentsAllowed = Settings.bool(this, Settings.APP_PROXY_TORRENTS)
+        // development: "host:port" of a ByeDPI running on the PC, set with adb (emulator cannot run the bundled one)
+        Settings.string(this, "dev_socks", "").takeIf { it.contains(':') }?.let { raw ->
+            val port = raw.substringAfter(':').trim().toIntOrNull()
+            if (port != null && port in 1..65535) {
+                DpiBypass.externalSocksHost = raw.substringBefore(':').trim()
+                DpiBypass.externalSocksPort = port
             }
-            DpiBypass.strategyFile = java.io.File(filesDir, "dpi_strategy")
-            DpiBypass.start(applicationInfo.nativeLibraryDir)
         }
+        DpiBypass.strategyFile = java.io.File(filesDir, "dpi_strategy")
+        if (DpiBypass.enabled) DpiBypass.start(applicationInfo.nativeLibraryDir)
         Thread { ClockCheck.checkOnce() }.start()
         Thread { runCatching { Recommendations.refresh(this) } }.start()
         // the addresses file is renewed once a day in the background; without it the built-in ones stay

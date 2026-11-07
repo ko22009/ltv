@@ -321,8 +321,8 @@ object Seasonvar : VideoSource {
     /** The first translation of the page: `var pl = {'0': "/playls2/…plist.txt"};` plus the optional `pl[n] = …` lines. */
     private fun firstPlaylist(html: String, base: String): String? {
         val main = Regex("var pl = \\{(.*?)\\};", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1).orEmpty()
-        val all = Regex("['\"]?(\\d+)['\"]?\\s*:\\s*\"([^\"]+)\"").findAll(main).map { it.groupValues[1].toInt() to it.groupValues[2] } +
-            Regex("pl\\[(\\d+)]\\s*=\\s*\"([^\"]+)\"").findAll(html).map { it.groupValues[1].toInt() to it.groupValues[2] }
+        val all = Regex("['\"]?(\\d+)['\"]?\\s*:\\s*\"([^\"]+)\"").findAll(main).mapNotNull { m -> m.groupValues[1].toIntOrNull()?.let { it to m.groupValues[2] } } +
+            Regex("pl\\[(\\d+)]\\s*=\\s*\"([^\"]+)\"").findAll(html).mapNotNull { m -> m.groupValues[1].toIntOrNull()?.let { it to m.groupValues[2] } }
         val chosen = all.firstOrNull { it.first == 0 }?.second ?: all.firstOrNull()?.second ?: return null
         return when {
             chosen.startsWith("http") -> chosen

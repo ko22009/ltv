@@ -15,9 +15,9 @@ object ExtraTorrents {
     private fun magnet(hash: String, name: String) = Magnet.link(hash, name)
 
     private fun size(bytes: Long): String = when {
-        bytes >= 1L shl 30 -> "%.2f GB".format(bytes / 1_073_741_824.0)
-        bytes >= 1L shl 20 -> "%.0f MB".format(bytes / 1_048_576.0)
-        else -> "%d KB".format(bytes / 1024)
+        bytes >= 1L shl 30 -> String.format(java.util.Locale.US, "%.2f GB", bytes / 1_073_741_824.0)
+        bytes >= 1L shl 20 -> String.format(java.util.Locale.US, "%.0f MB", bytes / 1_048_576.0)
+        else -> String.format(java.util.Locale.US, "%d KB", bytes / 1024)
     }
 
     private fun words(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 2 }
@@ -148,8 +148,11 @@ object ExtraTorrents {
         }
         var found = emptyList<Torrent>()
         for (i in servers.indices) {
-            found = answers.take()
-            if (found.isNotEmpty()) break
+            val next = answers.poll(12, java.util.concurrent.TimeUnit.SECONDS) ?: break
+            if (next.isNotEmpty()) {
+                found = next
+                break
+            }
         }
         return found.filter { t ->
             val have = words(t.title).toSet()

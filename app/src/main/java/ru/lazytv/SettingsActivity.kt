@@ -205,13 +205,42 @@ class SettingsScreen : GuidedStepSupportFragment() {
         button(actions, "Сохранить копию в файл", "Закладки, история, отметки, настройки") { exportBackup() }
         button(actions, "Восстановить из файла", "Заменит закладки, историю, отметки и настройки") { importBackup() }
         button(actions, "Очистить кэш картинок") {
+            clearFailedPosters()
+            com.bumptech.glide.Glide.get(ctx.applicationContext).clearMemory()
             Thread { com.bumptech.glide.Glide.get(ctx.applicationContext).clearDiskCache() }.start()
+            toast("Кэш картинок очищен")
         }
-        button(actions, "Очистить кэш найденных источников") { ctx.getSharedPreferences("cache", 0).edit().clear().apply() }
-        button(actions, "Очистить историю просмотров") { History.clear(ctx) }
+        button(actions, "Очистить кэш найденных источников") {
+            ctx.getSharedPreferences("cache", 0).edit().clear().apply()
+            toast("Кэш источников очищен")
+        }
+        button(actions, "Очистить историю просмотров") {
+            android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Очистить историю просмотров?")
+                .setMessage("Список недавно открытых фильмов и сериалов будет удалён.")
+                .setPositiveButton("Очистить") { _, _ ->
+                    History.clear(ctx)
+                    toast("История просмотров очищена")
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
+        }
         button(actions, "Сбросить все настройки") {
-            ctx.getSharedPreferences("lazytv", 0).edit().clear().apply()
-            requireActivity().finish()
+            android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Сбросить все настройки?")
+                .setMessage("Закладки, история и отметки просмотра сохранятся.")
+                .setPositiveButton("Сбросить") { _, _ ->
+                    Settings.resetSettingsOnly(ctx)
+                    com.lmd.dpi.DpiBypass.enabled = true
+                    com.lmd.dpi.DpiBypass.appProxyAllowed = true
+                    com.lmd.dpi.DpiBypass.appProxyTorrentsAllowed = true
+                    com.lmd.dpi.DpiBypass.clearCache()
+                    com.lmd.dpi.DpiBypass.start(ctx.applicationInfo.nativeLibraryDir)
+                    toast("Настройки сброшены")
+                    activity?.finish()
+                }
+                .setNegativeButton("Отмена", null)
+                .show()
         }
 
         section(actions, "Помощь")
@@ -277,12 +306,26 @@ class SettingsScreen : GuidedStepSupportFragment() {
 
     /** Side effects of the switches that do something at once, not only when a screen reads them. */
     private fun onCheck(key: String, on: Boolean) {
-        val ctx = requireContext()
+        val app = requireContext().applicationContext
         when (key) {
-            Settings.RECOMMENDATIONS -> if (on) Thread { runCatching { Recommendations.refresh(ctx) } }.start()
-            Settings.AUTO_BYPASS -> if (on) com.lmd.dpi.DpiBypass.start(ctx.applicationInfo.nativeLibraryDir)
-            Settings.APP_PROXY -> com.lmd.dpi.DpiBypass.appProxyAllowed = on
-            Settings.APP_PROXY_TORRENTS -> com.lmd.dpi.DpiBypass.appProxyTorrentsAllowed = on
+            Settings.RECOMMENDATIONS -> Thread {
+                runCatching { if (on) Recommendations.refresh(app) else Recommendations.clear(app) }
+            }.start()
+            Settings.AUTO_BYPASS -> {
+                com.lmd.dpi.DpiBypass.enabled = on
+                com.lmd.dpi.DpiBypass.clearCache()
+                clearFailedPosters()
+                if (on) com.lmd.dpi.DpiBypass.start(app.applicationInfo.nativeLibraryDir)
+            }
+            Settings.APP_PROXY -> {
+                com.lmd.dpi.DpiBypass.appProxyAllowed = on
+                com.lmd.dpi.DpiBypass.clearCache()
+                clearFailedPosters()
+            }
+            Settings.APP_PROXY_TORRENTS -> {
+                com.lmd.dpi.DpiBypass.appProxyTorrentsAllowed = on
+                com.lmd.dpi.DpiBypass.clearCache()
+            }
         }
     }
 
@@ -392,9 +435,11 @@ class SettingsScreen : GuidedStepSupportFragment() {
             return
         }
         toast("Проверяем Jackett…")
+        val app = ctx.applicationContext
         Thread {
-            val result = runCatching { ExtraTorrents.jackettCount(ctx, "матрица") }
-            requireActivity().runOnUiThread {
+            val result = runCatching { ExtraTorrents.jackettCount(app, "матрица") }
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
                 result.onSuccess { toast("Jackett отвечает, найдено раздач: $it") }
                     .onFailure { toast("Jackett не ответил: ${Errors.explain(it)}") }
             }

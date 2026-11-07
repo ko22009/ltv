@@ -28,10 +28,6 @@ object EpisodeState {
     /** Changes whenever a mark or a favourite episode changes; the home screen uses it to redraw the rows. */
     fun revision(context: Context): String = prefs(context).getString(REVISION, "0") ?: "0"
 
-    private fun touch(context: Context) {
-        prefs(context).edit().putString(REVISION, System.currentTimeMillis().toString()).apply()
-    }
-
     /** The stable key of a watched episode: the series page and the episode title (the order may change). */
     fun key(sourceId: String, ref: String, title: String) = "$sourceId|$ref|$title"
 
@@ -40,19 +36,23 @@ object EpisodeState {
     fun setWatched(context: Context, key: String, watched: Boolean) {
         val current = (prefs(context).getStringSet(WATCHED, emptySet()) ?: emptySet()).toMutableSet()
         if (watched) current.add(key) else current.remove(key)
-        prefs(context).edit().putStringSet(WATCHED, current).apply()
-        touch(context)
+        prefs(context).edit()
+            .putStringSet(WATCHED, current)
+            .putString(REVISION, System.currentTimeMillis().toString())
+            .apply()
     }
 
     fun favorites(context: Context): List<FavoriteEpisode> {
         val array = runCatching { JSONArray(prefs(context).getString(FAVORITES, "[]")) }.getOrDefault(JSONArray())
         return (0 until array.length()).mapNotNull { i ->
-            val o = array.getJSONObject(i)
-            FavoriteEpisode(
-                o.optString("sourceId"), o.optString("source"), o.optString("ref"),
-                o.optString("seriesTitle"), o.optString("note"), o.optString("alt"),
-                o.optString("description"), o.optString("episodeTitle"), o.optInt("index"),
-            )
+            runCatching {
+                val o = array.getJSONObject(i)
+                FavoriteEpisode(
+                    o.optString("sourceId"), o.optString("source"), o.optString("ref"),
+                    o.optString("seriesTitle"), o.optString("note"), o.optString("alt"),
+                    o.optString("description"), o.optString("episodeTitle"), o.optInt("index"),
+                )
+            }.getOrNull()
         }
     }
 
@@ -69,12 +69,10 @@ object EpisodeState {
         if (existing != null) {
             list.remove(existing)
             save(context, list)
-            touch(context)
             return false
         }
         list.add(0, episode)
         save(context, list)
-        touch(context)
         return true
     }
 
@@ -85,11 +83,13 @@ object EpisodeState {
                 .put("seriesTitle", f.seriesTitle).put("note", f.note).put("alt", f.alt)
                 .put("description", f.description).put("episodeTitle", f.episodeTitle).put("index", f.index))
         }
-        prefs(context).edit().putString(FAVORITES, array.toString()).apply()
+        prefs(context).edit()
+            .putString(FAVORITES, array.toString())
+            .putString(REVISION, System.currentTimeMillis().toString())
+            .apply()
     }
 
     fun clear(context: Context) {
-        prefs(context).edit().clear().apply()
-        touch(context)
+        prefs(context).edit().clear().putString(REVISION, System.currentTimeMillis().toString()).apply()
     }
 }
