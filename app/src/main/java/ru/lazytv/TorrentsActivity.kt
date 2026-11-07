@@ -575,6 +575,7 @@ class TorrentsActivity : Activity() {
         openPlayer(
             this, TorrServe.streamUrl(this, hash, file), name, "$source • ${file.path.substringAfterLast('/')}",
             mediaTitle = name, originalTitle = original, year = year, tv = tv, poster = poster,
+            tmdbId = intent.getLongExtra("tmdbId", 0L),
         )
     }
 

@@ -292,7 +292,7 @@ class EpisodesActivity : Activity() {
         val year = intent.getStringExtra("year").orEmpty()
         val tv = intent.getBooleanExtra("tv", true)
         val poster = intent.getStringExtra("poster")
-        playEpisode(this, variant, episodes, index, choose, mediaTitle, originalTitle, year, tv, poster)
+        playEpisode(this, variant, episodes, index, choose, mediaTitle, originalTitle, year, tv, poster, intent.getLongExtra("tmdbId", 0L))
         adapter?.notifyDataSetChanged()
     }
 }

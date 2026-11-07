@@ -35,6 +35,7 @@ fun openPlayer(
     activity: Activity, url: String, name: String, meta: String = "",
     playlist: String = "", index: Int = 0,
     mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
+    tmdbId: Long = 0L,
 ) {
     if (Settings.string(activity, Settings.PLAYER, "internal") == "external") {
         runCatching {
@@ -45,7 +46,7 @@ fun openPlayer(
             android.content.Intent(activity, PlayerActivity::class.java).putExtra("url", url).putExtra("name", name)
                 .putExtra("meta", meta).putExtra("playlist", playlist).putExtra("index", index)
                 .putExtra("mediaTitle", mediaTitle).putExtra("originalTitle", originalTitle)
-                .putExtra("year", year).putExtra("tv", tv).putExtra("poster", poster)
+                .putExtra("year", year).putExtra("tv", tv).putExtra("poster", poster).putExtra("tmdbId", tmdbId)
         )
     }
 }
@@ -86,6 +87,8 @@ class PlayerActivity : Activity() {
     private var mediaYear = ""
     private var isTv = false
     private var posterPath: String? = null
+    /** TMDB id of the title on the card the playback started from; 0 when unknown (then nothing goes to "continue watching"). */
+    private var tmdbId = 0L
     private lateinit var bottomContainer: LinearLayout
     private var queue: List<PlayItem> = emptyList()
     private var queueIndex = 0
@@ -173,7 +176,8 @@ class PlayerActivity : Activity() {
         mediaYear = intent.getStringExtra("year").orEmpty()
         isTv = intent.getBooleanExtra("tv", false)
         posterPath = intent.getStringExtra("poster")
-        queue = parseQueue(intent.getStringExtra("playlist").orEmpty())
+        tmdbId = intent.getLongExtra("tmdbId", 0L)
+        queue =parseQueue(intent.getStringExtra("playlist").orEmpty())
         queueIndex = intent.getIntExtra("index", 0).coerceIn(0, maxOf(queue.size - 1, 0))
         if (queue.isNotEmpty()) url = queue[queueIndex].url
 
@@ -524,6 +528,7 @@ class PlayerActivity : Activity() {
                     .putExtra("year", mediaYear)
                     .putExtra("tv", isTv)
                     .putExtra("poster", posterPath)
+                    .putExtra("tmdbId", tmdbId)
             )
             finish()
         }
@@ -913,10 +918,18 @@ class PlayerActivity : Activity() {
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
             val pos = exo.currentPosition
             val dur = exo.duration
-            if (dur > 0 && dur != C.TIME_UNSET && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
+            val known = dur > 0 && dur != C.TIME_UNSET
+            val appContext = applicationContext
+            if (known && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
                 clearPosition()
+                if (tmdbId > 0L) Thread { ContinueWatching.clear(appContext, isTv, tmdbId) }.start()
             } else if (pos >= 5_000L) {
                 getSharedPreferences("positions", 0).edit().putLong(positionKey(), pos).apply()
+                if (tmdbId > 0L && known) {
+                    // the row of the home screen: the provider is written off the main thread
+                    val title = Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear)
+                    Thread { ContinueWatching.update(appContext, title, pos, dur) }.start()
+                }
             }
         }
     }

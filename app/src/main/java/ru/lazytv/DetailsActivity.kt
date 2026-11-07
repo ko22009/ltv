@@ -795,6 +795,7 @@ class DetailsActivity : Activity() {
                         this, v, episodes, 0, choose = false,
                         mediaTitle = currentName.ifEmpty { currentTitle.name },
                         originalTitle = originalTitle, year = currentTitle.year, tv = currentTitle.tv, poster = posterPath,
+                        tmdbId = currentTitle.id,
                     )
                 } else startActivity(
                     Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
@@ -804,6 +805,7 @@ class DetailsActivity : Activity() {
                         .putExtra("originalTitle", originalTitle)
                         .putExtra("year", currentTitle.year).putExtra("tv", currentTitle.tv)
                         .putExtra("poster", posterPath)
+                        .putExtra("tmdbId", currentTitle.id)
                 )
             }
         }.start()
@@ -815,6 +817,7 @@ class DetailsActivity : Activity() {
             Intent(this, TorrentsActivity::class.java).putExtra("name", name).putExtra("original", originalTitle)
                 .putExtra("year", intent.getStringExtra("year")).putExtra("tv", intent.getBooleanExtra("tv", false))
                 .putExtra("poster", posterPath)
+                .putExtra("tmdbId", currentTitle.id)
         )
     }
 

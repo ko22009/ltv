@@ -24,6 +24,7 @@ fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<Str
 fun playEpisode(
     activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, choose: Boolean = false,
     mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
+    tmdbId: Long = 0L,
 ) {
     // opening an episode marks it watched even before the player starts; the button can remove the mark
     EpisodeState.setWatched(activity, EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title), true)
@@ -32,17 +33,18 @@ fun playEpisode(
     if ((choose || wanted == "ask") && episode.streams.size > 1) {
         android.app.AlertDialog.Builder(activity).setTitle("Качество • ${episode.title}")
             .setItems(episode.streams.map { it.first }.toTypedArray()) { _, which ->
-                startPlayer(activity, variant, episodes, index, episode.streams[which].first, mediaTitle, originalTitle, year, tv, poster)
+                startPlayer(activity, variant, episodes, index, episode.streams[which].first, mediaTitle, originalTitle, year, tv, poster, tmdbId)
             }
             .show()
         return
     }
-    startPlayer(activity, variant, episodes, index, null, mediaTitle, originalTitle, year, tv, poster)
+    startPlayer(activity, variant, episodes, index, null, mediaTitle, originalTitle, year, tv, poster, tmdbId)
 }
 
 private fun startPlayer(
     activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, exact: String?,
     mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
+    tmdbId: Long = 0L,
 ) {
     val wanted = Settings.string(activity, Settings.QUALITY, "best")
     val queue = org.json.JSONArray()
@@ -62,6 +64,6 @@ private fun startPlayer(
     val titleForOriginal = originalTitle.ifEmpty { variant.alt }
     openPlayer(
         activity, current.second, "${variant.title} • ${episodes[index].title}", "${variant.source} • ${current.first}",
-        queue.toString(), index, titleForMedia, titleForOriginal, year, tv, poster,
+        queue.toString(), index, titleForMedia, titleForOriginal, year, tv, poster, tmdbId,
     )
 }
