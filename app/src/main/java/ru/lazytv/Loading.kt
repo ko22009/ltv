@@ -96,19 +96,20 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
         return
     }
     spinner?.visibility = View.GONE
-    val showSpinnerTask = Runnable { spinner?.visibility = View.VISIBLE }
-    postDelayed(showSpinnerTask, 200L)
+    val showSpinnerTask = if (spinner != null) {
+        Runnable { spinner.visibility = View.VISIBLE }.also { postDelayed(it, 300L) }
+    } else null
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-            removeCallbacks(showSpinnerTask)
+            showSpinnerTask?.let { removeCallbacks(it) }
             spinner?.visibility = View.GONE
             failedPosters[path] = System.currentTimeMillis()
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
                                      dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-            removeCallbacks(showSpinnerTask)
+            showSpinnerTask?.let { removeCallbacks(it) }
             spinner?.visibility = View.GONE
             failedPosters.remove(path)
             return false
