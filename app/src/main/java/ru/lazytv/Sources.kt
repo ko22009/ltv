@@ -27,7 +27,7 @@ interface VideoSource {
 }
 
 object Sources {
-    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube)
+    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube, Zona)
 
     fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
 
@@ -392,3 +392,4 @@ object Rutube : VideoSource {
         return listOf(Episode("Фильм", listOf("HLS" to hls)))
     }
 }
+
