@@ -6,17 +6,24 @@ Android TV приложение на Kotlin (Leanback + ExoPlayer): катало
 
 ## Сборка
 
+Разработка (эмулятор, быстрая сборка, DebugSeed):
 ```powershell
 $env:JAVA_HOME='<JDK 17>'
 & '<Android SDK>\gradle-8.7\bin\gradle.bat' -p <проект> assembleDebug
 ```
+APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`. Эмулятор: `adb -s emulator-5554`, приставка: `<приставка>:5555`.
+Релиз (приставка, сжатие R8, без отладки, 3.0 МБ):
+```powershell
+$env:JAVA_HOME='<JDK 17>'
+& '<Android SDK>\gradle-8.7\bin\gradle.bat' -p <проект> assembleRelease
+```
+APK: `app/build/outputs/apk/release/app-release.apk`. Эмулятор: `adb -s emulator-5554`, приставка: `<приставка>:5555`.
 Если эмулятор не запущен, запускать его на интерактивном рабочем столе без окна консоли через WMI:
 ```powershell
 $v = "$env:TEMP\launch_tv.vbs"; [IO.File]::WriteAllText($v, 'CreateObject("WScript.Shell").Run """<Android SDK>\emulator\emulator.exe"" -avd tv -gpu host -feature -Vulkan", 0, False', [Text.Encoding]::ASCII); Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "wscript.exe `"$v`"" }
 ```
-После установки приложение открывать сразу: `adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true`. Ключ `restore` возвращает на экран, который был открыт до обновления. Android сам после обновления приложение не запускает.
+После установки приложение открывать сразу: `adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true` (для приставки подставить её адрес). Ключ `restore` возвращает на экран, который был открыт до обновления. Android сам после обновления приложение не запускает.
 
 ## Коммиты
 

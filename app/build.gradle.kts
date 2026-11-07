@@ -30,7 +30,12 @@ android {
     }
     buildFeatures { buildConfig = true }
     // ByeDPI is run from the native library directory, so the libraries must be unpacked on install
-    packaging { jniLibs { useLegacyPackaging = true } }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += "**/libciadpi.so"
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
