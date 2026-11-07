@@ -12,6 +12,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -33,6 +34,11 @@ fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = 
 class SearchBar(private val activity: Activity, private val scale: Float, private val onSubmit: (String) -> Unit) : LinearLayout(activity) {
     val mic = LinearLayout(activity)
     val input = EditText(activity)
+    private val spinner = Spinner(activity, (24 * scale).toInt(), 0xFFDCE8E0.toInt()).apply {
+        visibility = View.GONE
+        isFocusable = false
+        isClickable = false
+    }
 
     /** Left from the microphone: lets a host screen with a Back button to the left of the bar take focus cleanly. */
     var onLeft: (() -> Boolean)? = null
@@ -96,7 +102,19 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
                 else -> false
             }
         }
-        addView(input, LayoutParams(0, px(56), 1f))
+        val inputBox = FrameLayout(activity).apply {
+            addView(input, FrameLayout.LayoutParams(-1, -1))
+            addView(spinner, FrameLayout.LayoutParams(px(24), px(24), Gravity.END or Gravity.CENTER_VERTICAL).apply {
+                rightMargin = px(16)
+            })
+        }
+        addView(inputBox, LayoutParams(0, px(56), 1f))
+    }
+
+    /** Shows or hides a small progress arc inside the right end of the input field while background sources are still reporting. */
+    fun setLoading(loading: Boolean) {
+        spinner.visibility = if (loading) View.VISIBLE else View.GONE
+        input.setPadding(px(18), 0, px(if (loading) 50 else 18), 0)
     }
 
     fun setPhrase(phrase: String) {

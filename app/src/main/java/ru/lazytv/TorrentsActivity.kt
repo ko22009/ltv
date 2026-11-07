@@ -52,6 +52,7 @@ class TorrentsActivity : Activity() {
     private var name = ""
     private var original = ""
     private var searchId = 0
+    private var searching = false
     private var all: List<Torrent> = emptyList()
     private var shown: List<Torrent> = emptyList()
     private var source: String? = null
@@ -205,12 +206,14 @@ class TorrentsActivity : Activity() {
         val title = name
         val originalTitle = original
         val token = ++searchId
+        searching = true
         all = emptyList()
         shown = emptyList()
         list.adapter = null
         chips.removeAllViews()
         options.removeAllViews()
         status.text = ""
+        bar.setLoading(false)
         loading.visibility = View.VISIBLE
         // rutor and the other sources run in parallel; every source adds its rows as soon as it answers
         val pending = java.util.concurrent.atomic.AtomicInteger(2)
@@ -218,11 +221,11 @@ class TorrentsActivity : Activity() {
             if (pending.decrementAndGet() != 0) return
             runOnUiThread {
                 if (token != searchId) return@runOnUiThread
+                searching = false
+                bar.setLoading(false)
                 loading.visibility = View.GONE
-                status.text = when {
-                    all.isNotEmpty() -> ""
-                    ClockCheck.skewed -> ClockCheck.MESSAGE
-                    else -> "Ничего не найдено по запросу «$query»"
+                if (all.isEmpty()) {
+                    status.text = if (ClockCheck.skewed) ClockCheck.MESSAGE else "Ничего не найдено по запросу «$query»"
                 }
             }
         }
@@ -257,7 +260,7 @@ class TorrentsActivity : Activity() {
             select(source)
             if (position > 0) list.setSelection(position)
             if (first && !bar.input.hasFocus() && !bar.mic.hasFocus()) list.requestFocus()
-            status.text = "Ищем ещё…"
+            if (searching) bar.setLoading(true)
         }
     }
 
