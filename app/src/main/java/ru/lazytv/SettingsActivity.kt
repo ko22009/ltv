@@ -168,7 +168,8 @@ class SettingsActivity : FragmentActivity() {
             }
         }
         setContentView(root)
-        cards.firstOrNull()?.requestFocus() ?: back.requestFocus()
+        // the back button first, as on the other nested screens: the cards are one step down
+        back.requestFocus()
     }
 }
 
@@ -290,11 +291,6 @@ class SettingsScreen : GuidedStepSupportFragment() {
         nextCheckSetId = 10
         subOptionRows.clear(); checkRows.clear(); editRows.clear(); buttons.clear()
         val ctx = requireContext()
-
-        section(actions, "Списки")
-        Tmdb.categories.forEach { category ->
-            check(actions, category.title, "Список в левом меню", Tmdb.listKey(category), category.onByDefault)
-        }
 
         section(actions, "Источники видео")
         Sources.all.forEach { source -> check(actions, source.name, "Сайт", Settings.service(source.id)) }

@@ -79,11 +79,9 @@ object Tmdb {
         return parse(download(context, url), collection.tv).also { rememberList(url, it) }
     }
 
-    fun listKey(category: Category) = "list_${category.id}"
-
-    /** Lists that are switched on in the settings. */
-    fun visibleCategories(context: Context): List<Category> =
-        categories.filter { Settings.bool(context, listKey(it), it.onByDefault) }
+    /** Both lists (films and series) are always on the left menu: there is no setting for them any more. */
+    @Suppress("UNUSED_PARAMETER")
+    fun visibleCategories(context: Context): List<Category> = categories
 
     fun load(context: Context, category: Category, sort: String, page: Int = 1, extra: String = ""): List<Title> {
         val url = listUrl(context, category, sort, page, extra)

@@ -47,7 +47,6 @@ private const val MENU_SLIDE_MS = 250L
 data class SettingsSection(val title: String, val description: String)
 
 private val SETTINGS_SECTIONS = listOf(
-    SettingsSection("Списки", "Какие списки показывать слева"),
     SettingsSection("Источники видео", "Сайты и торренты, кэш источников"),
     SettingsSection("Адреса сайтов", "Конфиг с адресами, свои адреса сайтов"),
     SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),
