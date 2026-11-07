@@ -90,22 +90,20 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1B2E23.toInt())
     }
 
-    private val posterSpinner = Spinner(context, px(40f)).apply { visibility = View.GONE }
     private var posterTask: Runnable? = null
 
     /** Cancels pending debounced poster load if the card is recycled or unbounds before delay expires. */
     fun cancelPoster() {
         posterTask?.let { removeCallbacks(it) }
         posterTask = null
-        poster.cancelPosterLoad(posterSpinner)
+        poster.cancelPosterLoad()
     }
 
     /** Shows the poster; debounced so fast scrolling skips requests. */
     fun showPoster(path: String?, debounceMs: Long = 80L) {
         cancelPoster()
-        posterSpinner.visibility = View.GONE
         if (path.isNullOrEmpty()) {
-            poster.showPoster(null, posterSpinner)
+            poster.showPoster(null)
             return
         }
         val url = "https://image.tmdb.org/t/p/w500$path"
@@ -113,11 +111,11 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             return
         }
         if (debounceMs <= 0L) {
-            poster.showPoster(path, posterSpinner)
+            poster.showPoster(path)
         } else {
             val task = Runnable {
                 posterTask = null
-                poster.showPoster(path, posterSpinner)
+                poster.showPoster(path)
             }
             posterTask = task
             postDelayed(task, debounceMs)
@@ -227,7 +225,6 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
         addView(android.widget.FrameLayout(context).apply {
             addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
-            addView(posterSpinner, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)

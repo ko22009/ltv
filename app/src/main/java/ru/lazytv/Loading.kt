@@ -82,11 +82,15 @@ private const val SPINNER_DELAY_MS = 600L
 
 fun clearFailedPosters() = failedPosters.clear()
 
-/** Cancels any pending spinner task and hides the spinner. */
+/** Cancels any pending spinner task, retry task and hides the spinner. */
 fun ImageView.cancelPosterLoad(spinner: View? = null) {
     (getTag(R.id.tag_spinner_task) as? Runnable)?.let {
         removeCallbacks(it)
         setTag(R.id.tag_spinner_task, null)
+    }
+    (getTag(R.id.tag_retry_task) as? Runnable)?.let {
+        removeCallbacks(it)
+        setTag(R.id.tag_retry_task, null)
     }
     spinner?.visibility = View.GONE
 }
@@ -95,7 +99,13 @@ fun ImageView.cancelPosterLoad(spinner: View? = null) {
  * Loads a TMDB poster into the view; the spinner shows until the picture is there.
  * A title without a poster, or a failed load, ends with the stub picture, never with an empty plate.
  */
-fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", stub: Int = R.drawable.no_poster) {
+fun ImageView.showPoster(
+    path: String?,
+    spinner: View? = null,
+    size: String = "w500",
+    stub: Int = R.drawable.no_poster,
+    retryCount: Int = 0,
+) {
     cancelPosterLoad(spinner)
     val url = if (path.isNullOrEmpty()) "" else "https://image.tmdb.org/t/p/$size$path"
     if (url.isNotEmpty() && getTag(R.id.tag_poster_url) == url && drawable != null) {
@@ -112,10 +122,14 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
         setImageResource(stub)
         return
     }
-    if (spinner != null) {
+    if (spinner != null && retryCount == 0) {
         val task = Runnable {
             setTag(R.id.tag_spinner_task, null)
-            spinner.visibility = View.VISIBLE
+            if (drawable == null) {
+                spinner.visibility = View.VISIBLE
+            } else {
+                spinner.visibility = View.GONE
+            }
         }
         setTag(R.id.tag_spinner_task, task)
         postDelayed(task, SPINNER_DELAY_MS)
@@ -125,7 +139,17 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
             cancelPosterLoad(spinner)
             setTag(R.id.tag_poster_url, null)
-            failedPosters[path] = System.currentTimeMillis()
+            if (retryCount < 2) {
+                val nextRetry = retryCount + 1
+                val retryTask = Runnable {
+                    setTag(R.id.tag_retry_task, null)
+                    showPoster(path, spinner, size, stub, nextRetry)
+                }
+                setTag(R.id.tag_retry_task, retryTask)
+                postDelayed(retryTask, 1200L * nextRetry)
+            } else {
+                failedPosters[path] = System.currentTimeMillis()
+            }
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
