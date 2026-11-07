@@ -87,17 +87,17 @@ fun clearFailedPosters() = failedPosters.clear()
  */
 fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", stub: Int = R.drawable.no_poster) {
     val glide = com.bumptech.glide.Glide.with(context)
-    glide.clear(this)
     val failedAt = if (path.isNullOrEmpty()) null else failedPosters[path]
     // a poster that failed moments ago is not requested on every scroll step, while a later retry after network recovery works
     if (path.isNullOrEmpty() || (failedAt != null && System.currentTimeMillis() - failedAt < FAILED_POSTER_TTL_MS)) {
+        glide.clear(this)
         spinner?.visibility = View.GONE
         setImageResource(stub)
         return
     }
     spinner?.visibility = View.GONE
     val showSpinnerTask = if (spinner != null) {
-        Runnable { spinner.visibility = View.VISIBLE }.also { postDelayed(it, 300L) }
+        Runnable { spinner.visibility = View.VISIBLE }.also { postDelayed(it, 400L) }
     } else null
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
@@ -115,5 +115,9 @@ fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", s
             return false
         }
     }
-    glide.load("https://image.tmdb.org/t/p/$size$path").error(stub).listener(done).into(this)
+    glide.load("https://image.tmdb.org/t/p/$size$path")
+        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+        .error(stub)
+        .listener(done)
+        .into(this)
 }
