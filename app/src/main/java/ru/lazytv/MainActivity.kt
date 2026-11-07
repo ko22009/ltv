@@ -12,6 +12,11 @@ class MainActivity : FragmentActivity() {
         (supportFragmentManager.findFragmentById(android.R.id.content) as? MainFragment)?.voiceResult(requestCode, resultCode, data)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        (supportFragmentManager.findFragmentById(android.R.id.content) as? MainFragment)?.permissionsResult(requestCode, permissions, grantResults)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {

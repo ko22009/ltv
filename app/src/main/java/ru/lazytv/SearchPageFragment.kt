@@ -252,6 +252,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         if (::searchBar.isInitialized) searchBar.handleResult(requestCode, resultCode, data)
     }
 
+    fun permissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (::searchBar.isInitialized) searchBar.handlePermissionsResult(requestCode, permissions, grantResults)
+    }
+
     private fun key(title: Title) = title.tv to title.id
 
     /** A card: opens the title, or in the edit mode of the history marks it for deletion. */

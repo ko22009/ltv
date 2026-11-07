@@ -207,6 +207,11 @@ class TorrentsActivity : Activity() {
         bar.handleResult(requestCode, resultCode, data)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        bar.handlePermissionsResult(requestCode, permissions, grantResults)
+    }
+
     private fun load(query: String) {
         val title = name
         val originalTitle = original

@@ -74,6 +74,11 @@ class FiltersActivity : Activity() {
         searchBar?.handleResult(requestCode, resultCode, data)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        searchBar?.handlePermissionsResult(requestCode, permissions, grantResults)
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (onMain) super.onBackPressed() else showMain()

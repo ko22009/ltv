@@ -95,6 +95,10 @@ class MainFragment : Fragment() {
         searchPage?.voiceResult(requestCode, resultCode, data)
     }
 
+    fun permissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        searchPage?.permissionsResult(requestCode, permissions, grantResults)
+    }
+
     private val onClick = OnItemViewClickedListener { _, item, _, _ ->
         when (item) {
             is Title -> startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(item.toExtras()))
