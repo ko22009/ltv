@@ -287,14 +287,10 @@ class DetailsActivity : Activity() {
                         "Режиссёр" to d.director,
                     ), d.directors, scroll)
                     val info = table.parent as? LinearLayout
-                    val linkedDirectors = d.directors.filter { it.id > 0L }
-                    val castMap = d.castPeople.associateBy { it.id }
-                    val mergedPeople = linkedDirectors.map { dir ->
-                        val acted = castMap[dir.id]
-                        if (acted != null && acted.role.isNotEmpty()) dir.copy(role = "${dir.role} • ${acted.role}") else dir
-                    } + d.castPeople.filter { c -> linkedDirectors.none { it.id == c.id } }
+                    // directors already stand in the table above as links: the cast block holds the actors only
+                    val mergedPeople = d.castPeople
                     if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
-                        val row = castRow(mergedPeople, linkedDirectors.isNotEmpty(), scroll)
+                        val row = castRow(mergedPeople, false, scroll)
                         row.tag = "cast"
                         info.addView(row)
                     }
