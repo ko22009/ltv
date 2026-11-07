@@ -177,7 +177,12 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             } else false
         }
 
-        page.addView(grid, titleGridParams(scale))
+        val body = FrameLayout(requireContext()).apply {
+            clipChildren = true
+            clipToPadding = true
+            addView(grid, FrameLayout.LayoutParams(-1, -1))
+        }
+        page.addView(body, titleGridParams(scale))
 
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
