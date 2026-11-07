@@ -34,6 +34,7 @@ import androidx.media3.ui.PlayerView
 fun openPlayer(
     activity: Activity, url: String, name: String, meta: String = "",
     playlist: String = "", index: Int = 0,
+    mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
 ) {
     if (Settings.string(activity, Settings.PLAYER, "internal") == "external") {
         runCatching {
@@ -43,6 +44,8 @@ fun openPlayer(
         activity.startActivity(
             android.content.Intent(activity, PlayerActivity::class.java).putExtra("url", url).putExtra("name", name)
                 .putExtra("meta", meta).putExtra("playlist", playlist).putExtra("index", index)
+                .putExtra("mediaTitle", mediaTitle).putExtra("originalTitle", originalTitle)
+                .putExtra("year", year).putExtra("tv", tv).putExtra("poster", poster)
         )
     }
 }
@@ -78,6 +81,12 @@ class PlayerActivity : Activity() {
     private lateinit var titleView: TextView
     private lateinit var metaView: TextView
     private var baseMeta = ""
+    private var mediaTitle = ""
+    private var originalTitle = ""
+    private var mediaYear = ""
+    private var isTv = false
+    private var posterPath: String? = null
+    private lateinit var bottomContainer: LinearLayout
     private var queue: List<PlayItem> = emptyList()
     private var queueIndex = 0
     private var episodeScroll: android.widget.HorizontalScrollView? = null
@@ -159,6 +168,11 @@ class PlayerActivity : Activity() {
         url = intent.getStringExtra("url").orEmpty()
         val name = intent.getStringExtra("name").orEmpty()
         val meta = intent.getStringExtra("meta").orEmpty()
+        mediaTitle = intent.getStringExtra("mediaTitle").orEmpty().ifEmpty { name.substringBefore(" • ").trim() }
+        originalTitle = intent.getStringExtra("originalTitle").orEmpty()
+        mediaYear = intent.getStringExtra("year").orEmpty()
+        isTv = intent.getBooleanExtra("tv", false)
+        posterPath = intent.getStringExtra("poster")
         queue = parseQueue(intent.getStringExtra("playlist").orEmpty())
         queueIndex = intent.getIntExtra("index", 0).coerceIn(0, maxOf(queue.size - 1, 0))
         if (queue.isNotEmpty()) url = queue[queueIndex].url
@@ -338,6 +352,7 @@ class PlayerActivity : Activity() {
         overlay.addView(top, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
 
         val bottom = LinearLayout(this)
+        bottomContainer = bottom
         bottom.orientation = LinearLayout.VERTICAL
         bottom.background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
         bottom.setPadding(dp(48), dp(60), dp(48), dp(28))
@@ -401,14 +416,26 @@ class PlayerActivity : Activity() {
             LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
         buttons.addView(round(MenuIcons.SUBTITLES) { trackDialog(C.TRACK_TYPE_TEXT, "Субтитры") },
             LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
-        buttons.addView(round(MenuIcons.GEAR) { qualityAndSpeedDialog() }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        buttons.addView(round(MenuIcons.GEAR) { qualityAndSpeedDialog() },
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+        buttons.addView(round(MenuIcons.LINK) { changeSourceDialog() },
+            LinearLayout.LayoutParams(dp(52), dp(52)))
         bottom.addView(buttons)
 
-        // the episode strip of a series: the current episode is highlighted, the others switch the player
+        rebuildEpisodeStrip()
+
+        overlay.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+        return overlay
+    }
+
+    /** Rebuilds the episode strip at the bottom of the player when the series or source changes. */
+    private fun rebuildEpisodeStrip() {
+        episodeScroll?.let { bottomContainer.removeView(it) }
+        episodeScroll = null
+        episodeViews.clear()
         if (queue.size > 1) {
             episodeButtons = LinearLayout(this)
             episodeButtons.orientation = LinearLayout.HORIZONTAL
-            episodeViews.clear()
             queue.forEachIndexed { index, item ->
                 val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
                 val button = label(caption, 15f, 0xFFDCE8E0.toInt()).apply {
@@ -426,12 +453,148 @@ class PlayerActivity : Activity() {
             scroll.isHorizontalScrollBarEnabled = false
             scroll.addView(episodeButtons)
             episodeScroll = scroll
-            bottom.addView(scroll, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(8) })
+            bottomContainer.addView(scroll, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(8) })
             scrollToActiveEpisode()
         }
+    }
 
-        overlay.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
-        return overlay
+    /** Opens a dialog to switch to another video site or torrents without exiting the player. */
+    private fun changeSourceDialog() {
+        val title = mediaTitle.ifEmpty { titleView.text.toString().substringBefore(" • ").trim() }
+        if (title.isEmpty()) {
+            Toast.makeText(this, "Название фильма неизвестно", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val cached = Sources.cachedOnly(this, title, originalTitle, mediaYear)
+        if (cached != null) {
+            showSourcePicker(cached)
+            return
+        }
+        Toast.makeText(this, "Поиск источников…", Toast.LENGTH_SHORT).show()
+        Thread {
+            val list = Sources.searchCached(applicationContext, title, originalTitle, mediaYear)
+            handler.post {
+                if (!isFinishing && !releasing) {
+                    showSourcePicker(list)
+                }
+            }
+        }.start()
+    }
+
+    private fun showSourcePicker(variants: List<Variant>) {
+        val items = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+        val currentItem = queue.getOrNull(queueIndex)
+
+        variants.forEach { v ->
+            val isCurrent = currentItem?.let {
+                (v.ref.isNotEmpty() && it.watchKey.contains(v.ref)) ||
+                    (it.meta.contains(v.source, ignoreCase = true) && it.title.startsWith(v.title))
+            } ?: false
+            val label = buildString {
+                if (isCurrent) append("✓ ")
+                append(v.source)
+                if (v.title.isNotEmpty() && !v.title.equals(mediaTitle, ignoreCase = true)) {
+                    append(" • ")
+                    append(v.title)
+                }
+                if (v.note.isNotEmpty()) {
+                    append(" • ")
+                    append(v.note)
+                }
+            }
+            items.add(label)
+            actions.add {
+                if (isCurrent) {
+                    Toast.makeText(this, "Этот источник уже воспроизводится", Toast.LENGTH_SHORT).show()
+                } else {
+                    switchSource(v)
+                }
+            }
+        }
+
+        val isTorrent = url.contains(":8090") || baseMeta.contains("torr", ignoreCase = true)
+        items.add((if (isTorrent) "✓ " else "") + "Торренты (TorrServe)")
+        actions.add {
+            save()
+            startActivity(
+                android.content.Intent(this, TorrentsActivity::class.java)
+                    .putExtra("name", mediaTitle)
+                    .putExtra("original", originalTitle)
+                    .putExtra("year", mediaYear)
+                    .putExtra("tv", isTv)
+                    .putExtra("poster", posterPath)
+            )
+            finish()
+        }
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Смена источника")
+            .setItems(items.toTypedArray()) { _, which ->
+                actions.getOrNull(which)?.invoke()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun switchSource(v: Variant) {
+        val exo = player ?: return
+        val pos = exo.currentPosition
+        Toast.makeText(this, "Загрузка: ${v.source}…", Toast.LENGTH_SHORT).show()
+        Thread {
+            val episodes = runCatching { Sources.byId(v.sourceId)?.episodes(v) }.getOrNull()
+            handler.post {
+                if (isFinishing || releasing) return@post
+                if (episodes.isNullOrEmpty()) {
+                    Toast.makeText(this@PlayerActivity, "Не удалось загрузить видео из ${v.source}", Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                applyNewVariant(v, episodes, pos)
+            }
+        }.start()
+    }
+
+    private fun applyNewVariant(v: Variant, episodes: List<Episode>, savedPos: Long) {
+        val exo = player ?: return
+        val wanted = Settings.string(this, Settings.QUALITY, "best")
+        val newQueue = mutableListOf<PlayItem>()
+        episodes.forEach { ep ->
+            val stream = streamFor(ep, wanted, null)
+            newQueue.add(
+                PlayItem(
+                    url = stream.second,
+                    title = "${v.title} • ${ep.title}",
+                    meta = "${v.source} • ${stream.first}",
+                    label = shortEpisode(ep.title),
+                    watchKey = EpisodeState.key(v.sourceId, v.ref, ep.title),
+                    streams = ep.streams
+                )
+            )
+        }
+        val targetIndex = queueIndex.coerceIn(0, episodes.size - 1)
+        queue = newQueue
+        queueIndex = targetIndex
+        val item = queue[targetIndex]
+        save()
+        url = item.url
+        if (item.watchKey.isNotEmpty()) EpisodeState.setWatched(this, item.watchKey, true)
+        titleView.text = item.title
+        baseMeta = item.meta
+        metaView.text = item.meta
+        metaView.visibility = if (item.meta.isEmpty()) View.GONE else View.VISIBLE
+        seek.progress = 0
+        position.text = "0:00"
+        duration.text = "0:00"
+        exo.stop()
+        exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+        if (savedPos > 5_000L) {
+            exo.seekTo(savedPos)
+        }
+        exo.prepare()
+        exo.playWhenReady = true
+        rebuildEpisodeStrip()
+        resetHideTimer()
+        Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
     /** Repaints the episode strip: red for the current episode, green while focused. */

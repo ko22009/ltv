@@ -563,7 +563,14 @@ class TorrentsActivity : Activity() {
     }
 
     private fun play(hash: String, file: TorrentFile, name: String, source: String) {
-        openPlayer(this, TorrServe.streamUrl(this, hash, file), name, "$source • ${file.path.substringAfterLast('/')}")
+        val original = intent.getStringExtra("original").orEmpty()
+        val year = intent.getStringExtra("year").orEmpty()
+        val tv = intent.getBooleanExtra("tv", false)
+        val poster = intent.getStringExtra("poster")
+        openPlayer(
+            this, TorrServe.streamUrl(this, hash, file), name, "$source • ${file.path.substringAfterLast('/')}",
+            mediaTitle = name, originalTitle = original, year = year, tv = tv, poster = poster,
+        )
     }
 
     override fun onDestroy() {

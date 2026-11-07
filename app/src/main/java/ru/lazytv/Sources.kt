@@ -27,7 +27,7 @@ interface VideoSource {
 }
 
 object Sources {
-    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube, Zona)
+    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube)
 
     fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
 
@@ -76,6 +76,16 @@ object Sources {
             pruneVariantCache(prefs)
         }
         return found
+    }
+
+    /** Returns cached variants without network search, or null when the cache is empty or expired. */
+    fun cachedOnly(context: Context, title: String, original: String, year: String): List<Variant>? {
+        val key = cacheKey(context, title, original, year)
+        val prefs = context.getSharedPreferences("cache", 0)
+        val raw = prefs.getString(key, null) ?: return null
+        return runCatching { variantFromJson(org.json.JSONObject(raw)) }.getOrNull()?.let { (time, list) ->
+            if (System.currentTimeMillis() - time < 6 * 60 * 60 * 1000L) list else null
+        }
     }
 
     /**

@@ -3,13 +3,13 @@ package ru.lazytv
 import android.app.Activity
 
 /** A short caption for the player's episode strip: "1 серия SD/HD AniDub" becomes "1 серия". */
-private fun shortEpisode(title: String): String {
+fun shortEpisode(title: String): String {
     val first = title.substringBefore(" • ").trim()
     return first.replace(Regex("\\s*SD/HD.*$", RegexOption.IGNORE_CASE), "").trim().ifEmpty { first }
 }
 
 /** The stream of an episode for a quality limit; [exact] (the user's pick) wins when that quality exists. */
-private fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> {
+fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> {
     exact?.let { name -> episode.streams.firstOrNull { it.first == name }?.let { return it } }
     val limit = wanted.toIntOrNull()
     return if (limit == null) episode.streams.first()
@@ -21,7 +21,10 @@ private fun streamFor(episode: Episode, wanted: String, exact: String? = null): 
  * settings is used without asking; "ask" (or [choose], the long press) shows the picker first. Shared by the
  * episode page and by the film card, which opens a one-video release at once.
  */
-fun playEpisode(activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, choose: Boolean = false) {
+fun playEpisode(
+    activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, choose: Boolean = false,
+    mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
+) {
     // opening an episode marks it watched even before the player starts; the button can remove the mark
     EpisodeState.setWatched(activity, EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title), true)
     val episode = episodes[index]
@@ -29,15 +32,18 @@ fun playEpisode(activity: Activity, variant: Variant, episodes: List<Episode>, i
     if ((choose || wanted == "ask") && episode.streams.size > 1) {
         android.app.AlertDialog.Builder(activity).setTitle("Качество • ${episode.title}")
             .setItems(episode.streams.map { it.first }.toTypedArray()) { _, which ->
-                startPlayer(activity, variant, episodes, index, episode.streams[which].first)
+                startPlayer(activity, variant, episodes, index, episode.streams[which].first, mediaTitle, originalTitle, year, tv, poster)
             }
             .show()
         return
     }
-    startPlayer(activity, variant, episodes, index, null)
+    startPlayer(activity, variant, episodes, index, null, mediaTitle, originalTitle, year, tv, poster)
 }
 
-private fun startPlayer(activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, exact: String?) {
+private fun startPlayer(
+    activity: Activity, variant: Variant, episodes: List<Episode>, index: Int, exact: String?,
+    mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
+) {
     val wanted = Settings.string(activity, Settings.QUALITY, "best")
     val queue = org.json.JSONArray()
     episodes.forEach { episode ->
@@ -52,8 +58,10 @@ private fun startPlayer(activity: Activity, variant: Variant, episodes: List<Epi
         )
     }
     val current = streamFor(episodes[index], wanted, exact)
+    val titleForMedia = mediaTitle.ifEmpty { variant.title }
+    val titleForOriginal = originalTitle.ifEmpty { variant.alt }
     openPlayer(
         activity, current.second, "${variant.title} • ${episodes[index].title}", "${variant.source} • ${current.first}",
-        queue.toString(), index,
+        queue.toString(), index, titleForMedia, titleForOriginal, year, tv, poster,
     )
 }

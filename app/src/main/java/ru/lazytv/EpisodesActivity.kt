@@ -287,7 +287,12 @@ class EpisodesActivity : Activity() {
     }
 
     private fun play(episodes: List<Episode>, index: Int, choose: Boolean = false) {
-        playEpisode(this, variant, episodes, index, choose)
+        val mediaTitle = intent.getStringExtra("mediaTitle").orEmpty().ifEmpty { variant.title }
+        val originalTitle = intent.getStringExtra("originalTitle").orEmpty().ifEmpty { variant.alt }
+        val year = intent.getStringExtra("year").orEmpty()
+        val tv = intent.getBooleanExtra("tv", true)
+        val poster = intent.getStringExtra("poster")
+        playEpisode(this, variant, episodes, index, choose, mediaTitle, originalTitle, year, tv, poster)
         adapter?.notifyDataSetChanged()
     }
 }

@@ -42,7 +42,6 @@ object Tmdb {
         Service("kinodb", "KINODB"),
         Service("zetflix", "ZETFLIX"),
         Service("seasonvar", "SEASONVAR"),
-        Service("zona", "ZONA"),
         Service("octopus", "OCTOPUS"),
         Service("lordfilm", "LORDFILM"),
         Service("kinogo", "KINOGO"),

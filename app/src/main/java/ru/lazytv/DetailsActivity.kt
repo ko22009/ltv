@@ -148,7 +148,16 @@ class DetailsActivity : Activity() {
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(389), 0, dp(24), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
-        watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply { id = View.generateViewId() }
+        watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
+            id = View.generateViewId()
+            isLongClickable = true
+            setOnLongClickListener {
+                if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) {
+                    chooseSource(name)
+                }
+                true
+            }
+        }
         back.nextFocusDownId = watchButton.id
         watchButton.nextFocusUpId = back.id
         watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
@@ -213,6 +222,11 @@ class DetailsActivity : Activity() {
                 } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
                     val target = firstDirectorLink ?: (if (overviewView.text.isNotEmpty()) overviewView else firstCastCard)
                     target?.requestFocus() ?: false
+                } else if (btn === watchButton && (code == android.view.KeyEvent.KEYCODE_DPAD_CENTER || code == android.view.KeyEvent.KEYCODE_ENTER)) {
+                    if (event.isLongPress || event.repeatCount == 15) {
+                        chooseSource(name)
+                        true
+                    } else false
                 } else false
             }
         }
@@ -680,6 +694,59 @@ class DetailsActivity : Activity() {
         watchButton.compoundDrawables[0]?.alpha = if (loading) 68 else 255
     }
 
+    private var lastSourceChoiceAt = 0L
+
+    /** Opens a source selection dialog on long-pressing "Смотреть". */
+    private fun chooseSource(name: String) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastSourceChoiceAt < 1000L || opening) return
+        lastSourceChoiceAt = now
+        if (detailsReady.count > 0) {
+            setWatchLoading(true)
+            Thread {
+                detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
+                onUi {
+                    setWatchLoading(false)
+                    showSourceDialog(name)
+                }
+            }.start()
+            return
+        }
+        showSourceDialog(name)
+    }
+
+    private fun showSourceDialog(name: String) {
+        val items = mutableListOf<String>()
+        val actions = mutableListOf<() -> Unit>()
+
+        variants.forEach { v ->
+            val label = buildString {
+                append(v.source)
+                if (v.title.isNotEmpty() && !v.title.equals(name, ignoreCase = true)) {
+                    append(" • ")
+                    append(v.title)
+                }
+                if (v.note.isNotEmpty()) {
+                    append(" • ")
+                    append(v.note)
+                }
+            }
+            items.add(label)
+            actions.add { openVariant(v) }
+        }
+
+        items.add("Торренты (TorrServe)")
+        actions.add { openTorrents(name) }
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Выбор источника")
+            .setItems(items.toTypedArray()) { _, which ->
+                actions.getOrNull(which)?.invoke()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
     /** Waits for the background site search if the user clicks "Смотреть" immediately on opening the card. */
     private fun startWatching(name: String) {
         if (opening) return
@@ -713,11 +780,20 @@ class DetailsActivity : Activity() {
             val episodes = runCatching { Sources.all.firstOrNull { it.id == v.sourceId }?.episodes(v) }.getOrNull()
             onUi {
                 setWatchLoading(false)
-                if (episodes != null && episodes.size == 1) playEpisode(this, v, episodes, 0)
-                else startActivity(
+                if (episodes != null && episodes.size == 1) {
+                    playEpisode(
+                        this, v, episodes, 0, choose = false,
+                        mediaTitle = currentName.ifEmpty { currentTitle.name },
+                        originalTitle = originalTitle, year = currentTitle.year, tv = currentTitle.tv, poster = posterPath,
+                    )
+                } else startActivity(
                     Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
                         .putExtra("title", v.title).putExtra("note", v.note).putExtra("ref", v.ref)
                         .putExtra("alt", v.alt).putExtra("description", v.description)
+                        .putExtra("mediaTitle", currentName.ifEmpty { currentTitle.name })
+                        .putExtra("originalTitle", originalTitle)
+                        .putExtra("year", currentTitle.year).putExtra("tv", currentTitle.tv)
+                        .putExtra("poster", posterPath)
                 )
             }
         }.start()
