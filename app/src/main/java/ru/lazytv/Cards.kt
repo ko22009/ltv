@@ -314,7 +314,56 @@ private const val GRID_TOP_GAP = 14
 fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
     androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
     val side = (GRID_EDGE_SIDE * scale).toInt()
-    return androidx.leanback.widget.VerticalGridView(context).apply {
+    // Leanback's GridLayoutManager allows secondary-axis scroll on touch drags, which slides a vertical grid sideways under a mouse
+    return object : androidx.leanback.widget.VerticalGridView(context) {
+        private var downX = 0f
+        private var downY = 0f
+        private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+
+        override fun onInterceptTouchEvent(e: android.view.MotionEvent): Boolean {
+            when (e.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = e.x
+                    downY = e.y
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dx = kotlin.math.abs(e.x - downX)
+                    val dy = kotlin.math.abs(e.y - downY)
+                    if (dx > slop && dx > dy) return false
+                    val locked = android.view.MotionEvent.obtain(e)
+                    locked.setLocation(downX, e.y)
+                    val taken = super.onInterceptTouchEvent(locked)
+                    locked.recycle()
+                    return taken
+                }
+            }
+            return super.onInterceptTouchEvent(e)
+        }
+
+        override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                downX = e.x
+                downY = e.y
+            } else if (e.actionMasked == android.view.MotionEvent.ACTION_MOVE || e.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                val locked = android.view.MotionEvent.obtain(e)
+                locked.setLocation(downX, e.y)
+                val handled = super.onTouchEvent(locked)
+                locked.recycle()
+                return handled
+            }
+            return super.onTouchEvent(e)
+        }
+
+        override fun fling(velocityX: Int, velocityY: Int): Boolean = super.fling(0, velocityY)
+
+        override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+            if (event.action == android.view.MotionEvent.ACTION_SCROLL &&
+                event.getAxisValue(android.view.MotionEvent.AXIS_HSCROLL) != 0f &&
+                event.getAxisValue(android.view.MotionEvent.AXIS_VSCROLL) == 0f
+            ) return false
+            return super.onGenericMotionEvent(event)
+        }
+    }.apply {
         id = View.generateViewId()
         setNumColumns(columns)
         setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (16 * scale).toInt())
