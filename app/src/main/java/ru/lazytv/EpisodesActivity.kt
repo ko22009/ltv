@@ -187,7 +187,10 @@ class EpisodesActivity : Activity() {
                         override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
                     })
                     val focus = intent.getIntExtra("episodeIndex", -1)
-                    selectedIndex = if (focus in episodes.indices) focus else 0
+                    // opened by hand: the first episode not yet watched (the first one when all are), so OK continues the series
+                    selectedIndex = if (focus in episodes.indices) focus else episodes.indexOfFirst {
+                        !EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, it.title))
+                    }.coerceAtLeast(0)
                     list.setSelection(selectedIndex)
                     actions.visibility = View.VISIBLE
                     updateActions()
