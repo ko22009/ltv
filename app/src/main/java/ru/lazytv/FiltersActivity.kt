@@ -50,15 +50,7 @@ class FiltersActivity : Activity() {
             cornerRadius = px(12).toFloat()
         }
         root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { setMargins(px(40), px(40), px(40), px(40)) })
-        val back = ImageView(this).apply {
-            setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            setPadding(px(12), px(12), px(12), px(12))
-            background = focusShape(scale, 0x66000000, circle = true)
-            isFocusable = true
-            isClickable = true
-            contentDescription = "Назад"
-            setOnClickListener { onBackPressed() }
-        }
+        val back = backButton(this, scale) { onBackPressed() }
         heading = text("", 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL

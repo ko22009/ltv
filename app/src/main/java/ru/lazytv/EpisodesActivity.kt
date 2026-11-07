@@ -55,19 +55,29 @@ class EpisodesActivity : Activity() {
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(40), px(64), px(20))
-        page.addView(label(variant.title, 32f, Color.WHITE).apply {
-            typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            maxLines = 2
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        })
-        // the original name is its own line, not glued to the description
-        if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
-            page.addView(label(variant.alt, 21f, 0xFFAFC4B6.toInt()).apply {
-                setPadding(0, px(2), 0, 0)
-                maxLines = 1
+        val back = backButton(this, scale) { finish() }
+        val titles = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(label(variant.title, 32f, Color.WHITE).apply {
+                typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+                maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })
+            // the original name is its own line, not glued to the description
+            if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
+                addView(label(variant.alt, 21f, 0xFFAFC4B6.toInt()).apply {
+                    setPadding(0, px(2), 0, 0)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                })
+            }
         }
+        val header = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+            addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        page.addView(header)
         page.addView(label("Удерживайте OK, чтобы выбрать качество", 14f, 0xFF8FB39D.toInt()).apply {
             setPadding(0, px(12), 0, px(12))
         })
@@ -97,10 +107,34 @@ class EpisodesActivity : Activity() {
         list = ListView(this)
         list.divider = null
         list.selector = ColorDrawable(Color.TRANSPARENT)
+        back.setOnKeyListener { _, code, event ->
+            if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+            else when (code) {
+                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> when {
+                    actions.visibility == View.VISIBLE -> actionFavorite.requestFocus()
+                    errorRow.visibility == View.VISIBLE -> geoButton.requestFocus()
+                    episodes.isNotEmpty() -> list.requestFocus()
+                    else -> true
+                }
+                android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+                android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+                android.view.KeyEvent.KEYCODE_DPAD_UP -> true
+                else -> false
+            }
+        }
+        list.setOnKeyListener { _, code, event ->
+            if (event.action == android.view.KeyEvent.ACTION_DOWN && code == android.view.KeyEvent.KEYCODE_DPAD_UP && list.selectedItemPosition <= 0) {
+                if (actions.visibility == View.VISIBLE) actionFavorite.requestFocus() else back.requestFocus()
+                true
+            } else false
+        }
         fun bindRowKeys(container: LinearLayout, onDownToList: Boolean) {
             for (i in 0 until container.childCount) container.getChildAt(i).setOnKeyListener { view, code, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) false
-                else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                else if (code == android.view.KeyEvent.KEYCODE_DPAD_UP) {
+                    back.requestFocus()
+                    true
+                } else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                     val visible = (0 until container.childCount).map { container.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
                     val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
                     val next = visible.getOrNull(visible.indexOf(view) + step)
@@ -121,6 +155,7 @@ class EpisodesActivity : Activity() {
         page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        back.requestFocus()
 
         Thread {
             val result = runCatching {

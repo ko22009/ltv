@@ -47,6 +47,7 @@ class TorrentsActivity : Activity() {
     private lateinit var chipsScroll: android.widget.HorizontalScrollView
     private lateinit var options: LinearLayout
     private lateinit var loading: LoadingView
+    private lateinit var back: ImageView
     private lateinit var bar: SearchBar
     private var name = ""
     private var original = ""
@@ -80,10 +81,33 @@ class TorrentsActivity : Activity() {
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(36), px(64), px(20))
 
-        // the query can be changed: typed or spoken, the same bar as on the search screen
+        // the query can be changed: typed or spoken, the same bar as on the search screen, with Back to its left
+        back = backButton(this, scale) { finish() }
         bar = SearchBar(this, scale) { retype(it) }
         bar.setPhrase(query)
-        page.addView(bar, LinearLayout.LayoutParams(-1, px(56)))
+        fun focusBelowHeader(): Boolean = when {
+            chips.childCount > 0 -> chips.getChildAt(0).requestFocus()
+            options.childCount > 0 -> options.getChildAt(0).requestFocus()
+            shown.isNotEmpty() -> list.requestFocus()
+            else -> false
+        }
+        bar.onLeft = { back.requestFocus() }
+        bar.onDown = { focusBelowHeader() }
+        back.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> bar.mic.requestFocus()
+                KeyEvent.KEYCODE_DPAD_DOWN -> focusBelowHeader()
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> true
+                else -> false
+            }
+        }
+        val header = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(14) })
+            addView(bar, LinearLayout.LayoutParams(0, px(56), 1f))
+        }
+        page.addView(header, LinearLayout.LayoutParams(-1, px(56)))
 
         // the line under the query bar only carries messages (nothing found, errors) and hides when empty
         status = label("", 15f, 0xFFAFC4B6.toInt())
@@ -115,8 +139,16 @@ class TorrentsActivity : Activity() {
         list.setOnItemLongClickListener { _, _, position, _ -> toggleFavorite(position); true }
         list.setOnKeyListener { _, keyCode, event ->
             val position = list.selectedItemPosition
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && event.action == KeyEvent.ACTION_DOWN && position >= 0) { toggleFavorite(position); true }
-            else false
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && position >= 0) { toggleFavorite(position); true }
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_UP && position <= 0) {
+                when {
+                    options.childCount > 0 -> options.getChildAt(0).requestFocus()
+                    chips.childCount > 0 -> chips.getChildAt(0).requestFocus()
+                    else -> back.requestFocus()
+                }
+                true
+            } else false
         }
         loading = LoadingView(this, scale, "Ищем раздачи…")
         val body = FrameLayout(this)
@@ -149,7 +181,10 @@ class TorrentsActivity : Activity() {
             all = listOf(torrent)
             select(null)
             start(torrent, name)
-        } else load(query)
+        } else {
+            back.requestFocus()
+            load(query)
+        }
     }
 
     /** A phrase typed or spoken in the bar replaces the title: the original name of the film no longer applies. */
@@ -221,7 +256,7 @@ class TorrentsActivity : Activity() {
             loading.visibility = View.GONE
             select(source)
             if (position > 0) list.setSelection(position)
-            if (first && !bar.input.hasFocus()) list.requestFocus()
+            if (first && !bar.input.hasFocus() && !bar.mic.hasFocus()) list.requestFocus()
             status.text = "Ищем ещё…"
         }
     }
@@ -289,6 +324,30 @@ class TorrentsActivity : Activity() {
         view.setOnFocusChangeListener { _, focused ->
             if (focused && parent === chips) chipsScroll.post {
                 chipsScroll.smoothScrollTo((view.left - px(24)).coerceAtLeast(0), 0)
+            }
+        }
+        view.setOnKeyListener { _, keyCode, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    val step = if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    parent.getChildAt(parent.indexOfChild(view) + step)?.requestFocus()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    // go to Back instead of the search EditText so moving up does not pop up the soft keyboard
+                    if (parent === options && chips.childCount > 0) chips.getChildAt(0).requestFocus()
+                    else back.requestFocus()
+                    true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    when {
+                        parent === chips && options.childCount > 0 -> options.getChildAt(0).requestFocus()
+                        shown.isNotEmpty() -> list.requestFocus()
+                    }
+                    true
+                }
+                else -> false
             }
         }
         parent.addView(view, LinearLayout.LayoutParams(-2, px(44)).apply { rightMargin = px(10) })

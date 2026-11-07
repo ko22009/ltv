@@ -16,6 +16,21 @@ import androidx.leanback.widget.Presenter
 /** Height of the one button of the app (dp of the screen), and of the rows that hold such buttons. */
 const val CHIP_HEIGHT = 44
 
+/** Round 56dp Back button for secondary screens so mouse and remotes without a Back key can always leave the page. */
+fun backButton(context: Context, scale: Float, normalColor: Int = 0x66000000, onClick: () -> Unit): ImageView {
+    val pad = (12 * scale).toInt()
+    return ImageView(context).apply {
+        setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
+        setPadding(pad, pad, pad, pad)
+        background = focusShape(scale, normalColor, circle = true)
+        isFocusable = true
+        isClickable = true
+        id = View.generateViewId()
+        contentDescription = "Назад"
+        setOnClickListener { onClick() }
+    }
+}
+
 /** A button above the rows of a films/series page: it opens the filters or the sort screen of that list. */
 data class CatalogButton(val category: String, val filters: Boolean, val caption: String)
 

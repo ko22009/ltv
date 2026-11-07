@@ -52,16 +52,7 @@ class TitlesGridActivity : Activity() {
         // the focused card grows past the page padding at the sides: the page must not cut it there
         page.clipToPadding = false
         // the way back for a remote with no Back key or a mouse, same round button as on the title card
-        val back = ImageView(this).apply {
-            setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            setPadding(px(12), px(12), px(12), px(12))
-            background = focusShape(scale, 0x66000000, circle = true)
-            isFocusable = true
-            isClickable = true
-            id = View.generateViewId()
-            contentDescription = "Назад"
-            setOnClickListener { finish() }
-        }
+        val back = backButton(this, scale) { finish() }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })

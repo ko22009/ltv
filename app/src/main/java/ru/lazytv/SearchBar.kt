@@ -31,7 +31,11 @@ fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = 
  * [handleResult] from its onActivityResult; a phrase typed (search key) or spoken goes to [onSubmit].
  */
 class SearchBar(private val activity: Activity, private val scale: Float, private val onSubmit: (String) -> Unit) : LinearLayout(activity) {
+    val mic = LinearLayout(activity)
     val input = EditText(activity)
+
+    /** Left from the microphone: lets a host screen with a Back button to the left of the bar take focus cleanly. */
+    var onLeft: (() -> Boolean)? = null
 
     /** Down from the field: the page says where it goes (the browse screen does not find it itself). */
     var onDown: (() -> Boolean)? = null
@@ -40,7 +44,6 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
 
     init {
         gravity = Gravity.CENTER_VERTICAL
-        val mic = LinearLayout(activity)
         mic.gravity = Gravity.CENTER
         mic.isFocusable = true
         mic.isClickable = true
@@ -79,6 +82,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) false
             else when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> onLeft?.invoke() ?: false
                 KeyEvent.KEYCODE_DPAD_RIGHT -> input.requestFocus()
                 KeyEvent.KEYCODE_DPAD_DOWN -> onDown?.invoke() ?: false
                 else -> false
