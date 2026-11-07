@@ -117,8 +117,7 @@ class FiltersActivity : Activity() {
         rows += row("Страны", (CatalogOptions.popularCountries + CatalogOptions.otherCountries)
             .filter { it.first in filter.countries }.joinToString(", ") { it.second }.ifEmpty { "все" }) { showCountries() }
         rows += row("Годы", yearsText()) { showYears() }
-        rows += stepper("Рейтинг от", filter.ratingFrom) { v -> save(filter.copy(ratingFrom = v.coerceAtMost(filter.ratingTo))); filter.ratingFrom }
-        rows += stepper("Рейтинг до", filter.ratingTo) { v -> save(filter.copy(ratingTo = v.coerceAtLeast(filter.ratingFrom))); filter.ratingTo }
+        rows += ratingRow()
         if (!category.tv) rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { showAges() }
         rows += row("Скрывать просмотренное", if (filter.hideWatched) "да" else "нет") { shown ->
             save(filter.copy(hideWatched = !filter.hideWatched))
@@ -132,22 +131,51 @@ class FiltersActivity : Activity() {
         focusFirst(view)
     }
 
-    /** A rating bound: left and right on the remote (or OK) move it by one. */
-    private fun stepper(name: String, start: Int, apply: (Int) -> Int): View {
-        var current = start
-        fun label() = "‹  $current  ›"
-        return row(name, label(), onKey = { code, shown ->
-            val step = when (code) { KeyEvent.KEYCODE_DPAD_LEFT -> -1; KeyEvent.KEYCODE_DPAD_RIGHT -> 1; else -> 0 }
-            if (step == 0) false else {
-                current = apply((current + step).coerceIn(1, 10))
-                shown.text = label()
-                true
+    /** A small focusable value ("от 1", "до 10"): OK opens the list of values to pick from. */
+    private fun segment(caption: String, onClick: (TextView) -> Unit): TextView = text(caption, 17f, 0xFFCFE3D6.toInt()).apply {
+        setPadding(px(14), px(6), px(14), px(6))
+        background = focusShape(scale, 0x33FFFFFF, radius = 4f)
+        isFocusable = true
+        isClickable = true
+        setOnClickListener { onClick(this) }
+    }
+
+    /** A dropdown of whole numbers, the current one marked; the pick closes it. */
+    private fun pickNumber(title: String, values: List<Int>, label: (Int) -> String, current: Int, onPick: (Int) -> Unit) {
+        android.app.AlertDialog.Builder(this).setTitle(title)
+            .setSingleChoiceItems(values.map(label).toTypedArray(), values.indexOf(current)) { dialog, which ->
+                dialog.dismiss()
+                onPick(values[which])
+            }.show()
+    }
+
+    /** One line for the whole rating range: the name, then "от N" and "до N" side by side; left and right walk between them. */
+    private fun ratingRow(): View {
+        val line = LinearLayout(this)
+        line.gravity = Gravity.CENTER_VERTICAL
+        line.setPadding(px(22), px(10), px(22), px(10))
+        line.addView(text("Рейтинг", 20f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
+        lateinit var from: TextView
+        lateinit var to: TextView
+        fun refresh() { from.text = "от ${filter.ratingFrom}"; to.text = "до ${filter.ratingTo}" }
+        val numbers = (1..10).toList()
+        from = segment("") {
+            pickNumber("Рейтинг от", numbers, { it.toString() }, filter.ratingFrom) { v ->
+                save(filter.copy(ratingFrom = v, ratingTo = filter.ratingTo.coerceAtLeast(v))); refresh()
             }
-        }) { shown ->
-            // OK walks the value up and starts over after the top, for a remote that is slow to repeat the arrows
-            current = apply(if (current >= 10) 1 else current + 1)
-            shown.text = label()
         }
+        to = segment("") {
+            pickNumber("Рейтинг до", numbers, { it.toString() }, filter.ratingTo) { v ->
+                save(filter.copy(ratingTo = v, ratingFrom = filter.ratingFrom.coerceAtMost(v))); refresh()
+            }
+        }
+        refresh()
+        // at the ends of the line the focus stays; up and down go to the neighbouring rows as usual
+        from.setOnKeyListener { _, code, e -> e.action == KeyEvent.ACTION_DOWN && (code == KeyEvent.KEYCODE_DPAD_LEFT || (code == KeyEvent.KEYCODE_DPAD_RIGHT && to.requestFocus())) }
+        to.setOnKeyListener { _, code, e -> e.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_RIGHT }
+        line.addView(from, LinearLayout.LayoutParams(-2, -2))
+        line.addView(to, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
+        return line
     }
 
     private fun yearsText(): String = when {
@@ -218,10 +246,10 @@ class FiltersActivity : Activity() {
             if (on) picked += code else picked -= code
             save(filter.copy(countries = picked.toSet()))
         })
-        val view = grid(3) { g ->
+        // one column: names of different length in a several-column grid line up crookedly and the arrows jump around
+        val view = grid(1) { g ->
             g.addCaption("Популярные")
             CatalogOptions.popularCountries.forEach { cell(g, it.first, it.second) }
-            // the caption takes a whole row, so the next cells start on a fresh line
             g.addCaption("По алфавиту")
             CatalogOptions.otherCountries.forEach { cell(g, it.first, it.second) }
         }
@@ -232,14 +260,50 @@ class FiltersActivity : Activity() {
     private fun showYears() {
         onMain = false
         val now = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        val view = grid(3) { g ->
-            CatalogOptions.yearPresets(now).forEach { (name, from, to) ->
-                g.addCell(choice(name, filter.yearFrom == from && filter.yearTo == to, true) {
-                    save(filter.copy(yearFrom = from, yearTo = to))
-                    showMain()
-                })
+        // 0 stands for "no bound"; the list runs from the current year back to 1900
+        val years = listOf(0) + (now downTo 1900).toList()
+        val column = LinearLayout(this)
+        column.orientation = LinearLayout.VERTICAL
+        lateinit var from: TextView
+        lateinit var to: TextView
+        fun refresh() {
+            from.text = "от " + (if (filter.yearFrom == 0) "любого" else filter.yearFrom.toString())
+            to.text = "до " + (if (filter.yearTo == 0) "любого" else filter.yearTo.toString())
+        }
+        fun label(y: Int) = if (y == 0) "любой" else y.toString()
+        from = segment("") {
+            pickNumber("Год от", years, ::label, filter.yearFrom) { v ->
+                val next = if (v != 0 && filter.yearTo != 0 && filter.yearTo < v) filter.copy(yearFrom = v, yearTo = v) else filter.copy(yearFrom = v)
+                save(next); refresh()
             }
         }
+        to = segment("") {
+            pickNumber("Год до", years, ::label, filter.yearTo) { v ->
+                val next = if (v != 0 && filter.yearFrom != 0 && filter.yearFrom > v) filter.copy(yearTo = v, yearFrom = v) else filter.copy(yearTo = v)
+                save(next); refresh()
+            }
+        }
+        refresh()
+        from.setOnKeyListener { _, code, e -> e.action == KeyEvent.ACTION_DOWN && (code == KeyEvent.KEYCODE_DPAD_LEFT || (code == KeyEvent.KEYCODE_DPAD_RIGHT && to.requestFocus())) }
+        to.setOnKeyListener { _, code, e -> e.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_RIGHT }
+        val range = LinearLayout(this)
+        range.gravity = Gravity.CENTER_VERTICAL
+        range.setPadding(px(14), px(8), px(14), px(8))
+        range.addView(text("Промежуток", 18f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
+        range.addView(from, LinearLayout.LayoutParams(-2, -2))
+        range.addView(to, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
+        column.addView(range)
+        val presets = GridLayout(this)
+        presets.columnCount = 3
+        presets.addCaption("Быстрый выбор")
+        CatalogOptions.yearPresets(now).forEach { (name, f, t) ->
+            presets.addCell(choice(name, filter.yearFrom == f && filter.yearTo == t, true) {
+                save(filter.copy(yearFrom = f, yearTo = t))
+                showMain()
+            })
+        }
+        column.addView(presets)
+        val view = ScrollView(this).apply { addView(column) }
         screen("Годы", view) { save(filter.copy(yearFrom = 0, yearTo = 0)); showMain() }
         focusFirst(view)
     }
@@ -256,9 +320,13 @@ class FiltersActivity : Activity() {
         focusFirst(view)
     }
 
+    /** Puts the focus on the first focusable view of a screen, however deep it sits (the old focus is gone with the old screen). */
     private fun focusFirst(scroll: ScrollView) {
-        scroll.post { (scroll.getChildAt(0) as? android.view.ViewGroup)?.let { g ->
-            (0 until g.childCount).map { g.getChildAt(it) }.firstOrNull { it.isFocusable }?.requestFocus()
-        } }
+        fun firstFocusable(v: View): View? {
+            if (v.isFocusable && v !is ScrollView) return v
+            if (v is android.view.ViewGroup) for (i in 0 until v.childCount) firstFocusable(v.getChildAt(i))?.let { return it }
+            return null
+        }
+        scroll.post { firstFocusable(scroll)?.requestFocus() }
     }
 }
