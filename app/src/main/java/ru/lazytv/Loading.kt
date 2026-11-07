@@ -78,44 +78,66 @@ fun android.app.Activity.onUi(block: () -> Unit) = runOnUiThread { if (!isFinish
 
 private val failedPosters = java.util.concurrent.ConcurrentHashMap<String, Long>()
 private const val FAILED_POSTER_TTL_MS = 8 * 1000L
+private val TAG_SPINNER_TASK = android.view.View.generateViewId()
+private val TAG_POSTER_URL = android.view.View.generateViewId()
 
 fun clearFailedPosters() = failedPosters.clear()
+
+/** Cancels any pending spinner task and hides the spinner. */
+fun ImageView.cancelPosterLoad(spinner: View? = null) {
+    (getTag(TAG_SPINNER_TASK) as? Runnable)?.let {
+        removeCallbacks(it)
+        setTag(TAG_SPINNER_TASK, null)
+    }
+    spinner?.visibility = View.GONE
+}
 
 /**
  * Loads a TMDB poster into the view; the spinner shows until the picture is there.
  * A title without a poster, or a failed load, ends with the stub picture, never with an empty plate.
  */
 fun ImageView.showPoster(path: String?, spinner: View?, size: String = "w500", stub: Int = R.drawable.no_poster) {
+    cancelPosterLoad(spinner)
+    val url = if (path.isNullOrEmpty()) "" else "https://image.tmdb.org/t/p/$size$path"
+    if (url.isNotEmpty() && getTag(TAG_POSTER_URL) == url && drawable != null) {
+        spinner?.visibility = View.GONE
+        return
+    }
     val glide = com.bumptech.glide.Glide.with(context)
     val failedAt = if (path.isNullOrEmpty()) null else failedPosters[path]
     // a poster that failed moments ago is not requested on every scroll step, while a later retry after network recovery works
     if (path.isNullOrEmpty() || (failedAt != null && System.currentTimeMillis() - failedAt < FAILED_POSTER_TTL_MS)) {
         glide.clear(this)
+        setTag(TAG_POSTER_URL, null)
         spinner?.visibility = View.GONE
         setImageResource(stub)
         return
     }
-    spinner?.visibility = View.GONE
-    val showSpinnerTask = if (spinner != null) {
-        Runnable { spinner.visibility = View.VISIBLE }.also { postDelayed(it, 400L) }
-    } else null
+    if (spinner != null) {
+        val task = Runnable {
+            setTag(TAG_SPINNER_TASK, null)
+            spinner.visibility = View.VISIBLE
+        }
+        setTag(TAG_SPINNER_TASK, task)
+        postDelayed(task, 200L)
+    }
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
-            showSpinnerTask?.let { removeCallbacks(it) }
-            spinner?.visibility = View.GONE
+            cancelPosterLoad(spinner)
+            setTag(TAG_POSTER_URL, null)
             failedPosters[path] = System.currentTimeMillis()
             return false
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
                                      dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
-            showSpinnerTask?.let { removeCallbacks(it) }
-            spinner?.visibility = View.GONE
+            cancelPosterLoad(spinner)
+            setTag(TAG_POSTER_URL, url)
             failedPosters.remove(path)
             return false
         }
     }
-    glide.load("https://image.tmdb.org/t/p/$size$path")
+    glide.load(url)
         .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
         .error(stub)
         .listener(done)

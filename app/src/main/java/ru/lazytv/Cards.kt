@@ -96,6 +96,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     fun cancelPoster() {
         posterTask?.let { removeCallbacks(it) }
         posterTask = null
+        poster.cancelPosterLoad(posterSpinner)
     }
 
     /** Shows the poster; debounced so fast scrolling skips requests. */
