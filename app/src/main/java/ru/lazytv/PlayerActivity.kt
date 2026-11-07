@@ -70,6 +70,7 @@ class PlayerActivity : Activity() {
     private lateinit var duration: TextView
     private lateinit var titleView: TextView
     private lateinit var metaView: TextView
+    private var baseMeta = ""
     private var queue: List<PlayItem> = emptyList()
     private var queueIndex = 0
     private lateinit var episodeButtons: LinearLayout
@@ -78,6 +79,7 @@ class PlayerActivity : Activity() {
     private var userSeeking = false
     /** True while the screen is closing: ExoPlayer's own "release timed out" is not a playback error then. */
     private var releasing = false
+    private var errorDialog: android.app.AlertDialog? = null
 
     private val saver = object : Runnable {
         override fun run() {
@@ -100,9 +102,37 @@ class PlayerActivity : Activity() {
                 playPause.setImageDrawable(PathDrawable(if (exo.isPlaying) MenuIcons.PAUSE else MenuIcons.PLAY).apply {
                     setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
                 })
+                updateStreamMeta(exo)
             }
             handler.postDelayed(this, 500)
         }
+    }
+
+    /** Appends live video parameters (resolution, codec, bitrate, buffer in seconds) to the top subtitle line. */
+    private fun updateStreamMeta(exo: ExoPlayer) {
+        val parts = mutableListOf<String>()
+        if (baseMeta.isNotEmpty()) parts.add(baseMeta)
+        exo.videoFormat?.let { vf ->
+            if (vf.width > 0 && vf.height > 0) parts.add("${vf.width}×${vf.height}")
+            videoCodecName(vf.sampleMimeType)?.let { parts.add(it) }
+            if (vf.bitrate > 0) parts.add("%.1f Мбит/с".format(vf.bitrate / 1_000_000.0))
+        }
+        val bufSec = ((exo.bufferedPosition - exo.currentPosition) / 1000).coerceAtLeast(0)
+        if (bufSec > 0) parts.add("буфер ${bufSec} с")
+        val combined = parts.joinToString(" · ")
+        if (metaView.text.toString() != combined) {
+            metaView.text = combined
+            metaView.visibility = if (combined.isEmpty()) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun videoCodecName(mime: String?): String? = when (mime) {
+        "video/avc" -> "H.264"
+        "video/hevc" -> "HEVC"
+        "video/x-vnd.on2.vp9" -> "VP9"
+        "video/av01" -> "AV1"
+        "video/mp4v-es" -> "MPEG-4"
+        else -> null
     }
 
     private val hider = Runnable { setControlsVisible(false) }
@@ -149,7 +179,7 @@ class PlayerActivity : Activity() {
             override fun onPlayerError(error: PlaybackException) {
                 android.util.Log.w("LazyTV", "player error: " + error.errorCodeName, error)
                 if (releasing || isFinishing) return
-                Toast.makeText(this@PlayerActivity, "Ошибка воспроизведения: " + error.errorCodeName, Toast.LENGTH_LONG).show()
+                showErrorDialog(error)
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -194,7 +224,9 @@ class PlayerActivity : Activity() {
         queueIndex = index
         url = item.url
         titleView.text = item.title
+        baseMeta = item.meta
         metaView.text = item.meta
+        metaView.visibility = if (item.meta.isEmpty()) View.GONE else View.VISIBLE
         seek.progress = 0
         position.text = "0:00"
         duration.text = "0:00"
@@ -234,9 +266,13 @@ class PlayerActivity : Activity() {
         top.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
         top.setPadding(dp(48), dp(28), dp(48), dp(60))
         titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 24f, Color.WHITE, true)
-        metaView = label(queue.getOrNull(queueIndex)?.meta ?: meta, 15f, 0xFFAFC4B6.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+        baseMeta = queue.getOrNull(queueIndex)?.meta ?: meta
+        metaView = label(baseMeta, 15f, 0xFFAFC4B6.toInt()).apply {
+            setPadding(0, dp(6), 0, 0)
+            visibility = if (baseMeta.isEmpty()) View.GONE else View.VISIBLE
+        }
         if (titleView.text.isNotEmpty()) top.addView(titleView)
-        if (metaView.text.isNotEmpty()) top.addView(metaView)
+        top.addView(metaView)
         overlay.addView(top, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
 
         val bottom = LinearLayout(this)
@@ -437,8 +473,31 @@ class PlayerActivity : Activity() {
         }
     }
 
+    private fun showErrorDialog(error: PlaybackException) {
+        errorDialog?.dismiss()
+        val builder = android.app.AlertDialog.Builder(this)
+            .setTitle("Ошибка воспроизведения")
+            .setMessage(Errors.explainPlayer(error))
+            .setPositiveButton("Открыть во внешнем плеере") { _, _ ->
+                runCatching {
+                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*"))
+                    finish()
+                }.onFailure {
+                    Toast.makeText(this, "Нет внешнего плеера", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Закрыть") { _, _ -> finish() }
+        val cause = error.cause ?: error
+        if (Errors.isSsl(cause)) {
+            builder.setNeutralButton("Настройки даты") { _, _ -> Errors.openDateSettings(this) }
+        }
+        errorDialog = builder.show()
+    }
+
     override fun onStop() {
         super.onStop()
+        errorDialog?.dismiss()
+        errorDialog = null
         save()
         releasing = true
         handler.removeCallbacksAndMessages(null)
