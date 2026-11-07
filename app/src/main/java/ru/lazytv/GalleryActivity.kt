@@ -119,19 +119,27 @@ class GalleryActivity : Activity() {
             loadingView.visibility = View.GONE
             setupGallery()
         } else {
-            loadingView.visibility = View.VISIBLE
-            Thread {
-                val d = runCatching { Tmdb.detailsCached(applicationContext, mediaId, tv) }.getOrNull()
-                onUi {
-                    loadingView.visibility = View.GONE
-                    if (d != null) {
-                        backdrops.clear()
-                        backdrops.addAll(d.allBackdrops)
-                        if (backdrops.isEmpty() && d.backdrop.isNotEmpty()) backdrops.add(d.backdrop)
+            val cached = Tmdb.peekDetails(applicationContext, mediaId, tv)
+            if (cached != null) {
+                loadingView.visibility = View.GONE
+                backdrops.addAll(cached.allBackdrops)
+                if (backdrops.isEmpty() && cached.backdrop.isNotEmpty()) backdrops.add(cached.backdrop)
+                setupGallery()
+            } else {
+                loadingView.visibility = View.VISIBLE
+                Thread {
+                    val d = runCatching { Tmdb.detailsCached(applicationContext, mediaId, tv) }.getOrNull()
+                    onUi {
+                        loadingView.visibility = View.GONE
+                        if (d != null) {
+                            backdrops.clear()
+                            backdrops.addAll(d.allBackdrops)
+                            if (backdrops.isEmpty() && d.backdrop.isNotEmpty()) backdrops.add(d.backdrop)
+                        }
+                        setupGallery()
                     }
-                    setupGallery()
-                }
-            }.start()
+                }.start()
+            }
         }
     }
 
@@ -152,6 +160,21 @@ class GalleryActivity : Activity() {
         root.requestFocus()
     }
 
+    private var imageSpinnerTask: Runnable? = null
+
+    private fun showImageSpinner() {
+        imageSpinnerTask?.let { root.removeCallbacks(it) }
+        val task = Runnable { imageSpinner.visibility = View.VISIBLE }
+        imageSpinnerTask = task
+        root.postDelayed(task, 200L)
+    }
+
+    private fun hideImageSpinner() {
+        imageSpinnerTask?.let { root.removeCallbacks(it) }
+        imageSpinnerTask = null
+        imageSpinner.visibility = View.GONE
+    }
+
     private fun showImage(index: Int) {
         if (index !in backdrops.indices) return
         selectedIndex = index
@@ -160,17 +183,17 @@ class GalleryActivity : Activity() {
         counterView.text = "${index + 1} из ${backdrops.size}"
 
         val prev = mainImage.drawable
-        imageSpinner.visibility = View.VISIBLE
+        showImageSpinner()
         Glide.with(this)
             .load(imageUrl(path))
             .let { if (prev != null) it.placeholder(prev) else it }
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                    imageSpinner.visibility = View.GONE
+                    hideImageSpinner()
                     return false
                 }
                 override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                    imageSpinner.visibility = View.GONE
+                    hideImageSpinner()
                     return false
                 }
             })
@@ -257,5 +280,10 @@ class GalleryActivity : Activity() {
         }
 
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onDestroy() {
+        hideImageSpinner()
+        super.onDestroy()
     }
 }

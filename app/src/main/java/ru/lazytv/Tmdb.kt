@@ -101,8 +101,28 @@ object Tmdb {
         val sortKey = (if (category.tv) sort.replace("primary_release_date", "first_air_date") else sort)
             .replace("year=THIS_YEAR", "$yearParam=$year")
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
-        return "$BASE/discover/$kind?api_key=${BuildConfig.TMDB_KEY}&language=$language" +
-            "&sort_by=$sortKey${category.query}$extra&page=$page"
+        val raw = "api_key=${BuildConfig.TMDB_KEY}&language=$language&sort_by=$sortKey${category.query}$extra&page=$page"
+        return "$BASE/discover/$kind?${cleanParams(raw)}"
+    }
+
+    /** Deduplicates query keys; keeps the highest threshold for vote_count.gte to prevent TMDB 400 Bad Request. */
+    private fun cleanParams(raw: String): String {
+        val params = raw.split('&').filter { it.isNotEmpty() }
+        val map = linkedMapOf<String, String>()
+        for (p in params) {
+            val idx = p.indexOf('=')
+            if (idx == -1) continue
+            val key = p.substring(0, idx)
+            val value = p.substring(idx + 1)
+            if (key == "vote_count.gte") {
+                val current = map[key]?.toIntOrNull() ?: 0
+                val incoming = value.toIntOrNull() ?: 0
+                map[key] = maxOf(current, incoming).toString()
+            } else {
+                map[key] = value
+            }
+        }
+        return map.entries.joinToString("&") { "${it.key}=${it.value}" }
     }
 
     private fun parse(json: String, tv: Boolean): List<Title> {
@@ -188,6 +208,15 @@ object Tmdb {
     /** True when the details are already in the memory cache: the card opens without waiting for the network. */
     fun isCached(context: Context, id: Long, tv: Boolean): Boolean =
         detailCache[detailKey(context, id, tv)]?.let { System.currentTimeMillis() - it.first < DETAIL_TTL_MS } ?: false
+
+    /** Card details if they are already in the memory cache; null otherwise. */
+    fun peekDetails(context: Context, id: Long, tv: Boolean): Details? {
+        val key = detailKey(context, id, tv)
+        val hit = detailCache[key] ?: return null
+        if (System.currentTimeMillis() - hit.first < DETAIL_TTL_MS) return hit.second
+        detailCache.remove(key)
+        return null
+    }
 
     /**
      * Card details with a short memory cache: when the user only moves through the lists, the card is prefetched

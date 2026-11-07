@@ -102,27 +102,13 @@ class DetailsActivity : Activity() {
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
-        bannerSpinner = Spinner(this, dp(44))
+        bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
 
         val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
         if (!passedBackdrop.isNullOrEmpty()) {
-            currentBackdrop = passedBackdrop
-            bannerSpinner.visibility = View.VISIBLE
-            Glide.with(this).load("https://image.tmdb.org/t/p/w1280$passedBackdrop")
-                .listener(object : RequestListener<Drawable> {
-                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                        bannerSpinner.visibility = View.GONE
-                        return false
-                    }
-
-                    override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                        bannerSpinner.visibility = View.GONE
-                        backdrop.animate().alpha(1f).setDuration(250).start()
-                        return false
-                    }
-                }).into(backdrop)
+            loadBackdrop(passedBackdrop)
         }
 
         val appName = ImageView(this).apply {
@@ -326,67 +312,95 @@ class DetailsActivity : Activity() {
         watchButton.requestFocus()
     }
 
+    private var bannerSpinnerTask: Runnable? = null
+
+    private fun showBannerSpinner() {
+        bannerSpinnerTask?.let { bannerSpinner.removeCallbacks(it) }
+        val task = Runnable { bannerSpinner.visibility = View.VISIBLE }
+        bannerSpinnerTask = task
+        bannerSpinner.postDelayed(task, 200L)
+    }
+
+    private fun hideBannerSpinner() {
+        bannerSpinnerTask?.let { bannerSpinner.removeCallbacks(it) }
+        bannerSpinnerTask = null
+        bannerSpinner.visibility = View.GONE
+    }
+
+    private fun loadBackdrop(backdropPath: String) {
+        currentBackdrop = backdropPath
+        showBannerSpinner()
+        Glide.with(this).load("https://image.tmdb.org/t/p/w1280$backdropPath")
+            .listener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
+                    hideBannerSpinner()
+                    return false
+                }
+
+                override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
+                    hideBannerSpinner()
+                    backdrop.animate().alpha(1f).setDuration(250).start()
+                    return false
+                }
+            }).into(backdrop)
+    }
+
+    private fun applyDetails(
+        d: Tmdb.Details, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
+    ) {
+        if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
+            posterPath = d.poster
+            posterView.showPoster(d.poster, posterSpinner)
+        }
+        val backdropPath = d.backdrop.ifEmpty { d.backdrops.firstOrNull().orEmpty() }
+        if (backdropPath.isNotEmpty()) {
+            if (backdropPath != currentBackdrop) {
+                loadBackdrop(backdropPath)
+            }
+        } else if (currentBackdrop.isEmpty()) {
+            hideBannerSpinner()
+        }
+        if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
+        if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
+        fillTable(table, baseRows + listOf(
+            "Длительность" to (formatRuntime(d.runtime)),
+            "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
+            "Следующая серия" to d.nextEpisode,
+            "Возраст" to d.age,
+            "Жанр" to d.genres.joinToString(", "),
+            "Страна" to d.countries.joinToString(", "),
+            "Режиссёр" to d.director,
+        ), d.directors, scroll)
+        val info = table.parent as? LinearLayout
+        // directors already stand in the table above as links: the cast block holds the actors only
+        val mergedPeople = d.castPeople
+        if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
+            val row = castRow(mergedPeople, false, scroll)
+            row.tag = "cast"
+            info.addView(row)
+        }
+        galleryPosters = d.posters
+        galleryBackdrops = d.allBackdrops
+        startBackdrops(d.backdrops)
+    }
+
     /** Fills in what the list does not carry: original title, runtime, age, genres, countries, director, cast. */
     private fun loadDetails(
         title: Title, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
     ) {
+        val cached = Tmdb.peekDetails(applicationContext, title.id, title.tv)
+        if (cached != null) {
+            originalTitle = cached.originalTitle
+            applyDetails(cached, name, baseRows, original, table, scroll)
+        }
         Thread {
             try {
-                val d = runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
+                val d = cached ?: runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
                 originalTitle = d?.originalTitle.orEmpty()
                 if (d == null) {
-                    onUi { bannerSpinner.visibility = View.GONE }
-                } else {
-                    onUi {
-                        if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
-                            posterPath = d.poster
-                            posterView.showPoster(d.poster, posterSpinner)
-                        }
-                        val backdropPath = d.backdrop.ifEmpty { d.backdrops.firstOrNull().orEmpty() }
-                        if (backdropPath.isNotEmpty()) {
-                            if (backdropPath != currentBackdrop) {
-                                currentBackdrop = backdropPath
-                                bannerSpinner.visibility = View.VISIBLE
-                                Glide.with(this).load("https://image.tmdb.org/t/p/w1280$backdropPath")
-                                    .listener(object : RequestListener<Drawable> {
-                                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                                            bannerSpinner.visibility = View.GONE
-                                            return false
-                                        }
-
-                                        override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-                                            bannerSpinner.visibility = View.GONE
-                                            backdrop.animate().alpha(1f).setDuration(250).start()
-                                            return false
-                                        }
-                                    }).into(backdrop)
-                            }
-                        } else if (currentBackdrop.isEmpty()) {
-                            bannerSpinner.visibility = View.GONE
-                        }
-                        if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
-                        if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
-                        fillTable(table, baseRows + listOf(
-                            "Длительность" to (formatRuntime(d.runtime)),
-                            "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
-                            "Следующая серия" to d.nextEpisode,
-                            "Возраст" to d.age,
-                            "Жанр" to d.genres.joinToString(", "),
-                            "Страна" to d.countries.joinToString(", "),
-                            "Режиссёр" to d.director,
-                        ), d.directors, scroll)
-                        val info = table.parent as? LinearLayout
-                        // directors already stand in the table above as links: the cast block holds the actors only
-                        val mergedPeople = d.castPeople
-                        if (info != null && mergedPeople.isNotEmpty() && info.findViewWithTag<View>("cast") == null) {
-                            val row = castRow(mergedPeople, false, scroll)
-                            row.tag = "cast"
-                            info.addView(row)
-                        }
-                        galleryPosters = d.posters
-                        galleryBackdrops = d.allBackdrops
-                        startBackdrops(d.backdrops)
-                    }
+                    onUi { hideBannerSpinner() }
+                } else if (cached == null) {
+                    onUi { applyDetails(d, name, baseRows, original, table, scroll) }
                 }
                 // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
                 variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
@@ -571,6 +585,7 @@ class DetailsActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        hideBannerSpinner()
         backdropHandler.removeCallbacksAndMessages(null)
     }
 
