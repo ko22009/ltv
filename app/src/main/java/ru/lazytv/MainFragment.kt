@@ -76,7 +76,7 @@ class MainFragment : BrowseSupportFragment() {
     /** The page the menu must open after an update; empty when the menu starts as usual (docs/workflow.md). */
     private var pageToRestore = ""
     /** Whether the wide menu was open before the update; the rail stands in its place otherwise. */
-    private var menuToRestore = true
+    private var menuToRestore = false
     private var searchPage: SearchPageFragment? = null
 
     fun voiceResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -179,7 +179,7 @@ class MainFragment : BrowseSupportFragment() {
                 menu.windowAlignmentOffset = 0
             }
             // the first item sits level with the search row of the page and the edges are not tight
-            val side = (28 * scale).toInt()
+            val side = (12 * scale).toInt()
             val top = (27 * scale).toInt()
             val gap = (8 * scale).toInt()
             if (menu.paddingLeft != side || menu.paddingTop != top) {
@@ -225,6 +225,7 @@ class MainFragment : BrowseSupportFragment() {
         })
         // the page stands next to the open menu from the start, not only after the menu was closed and opened once
         view.post { shiftPage(isShowingHeaders()) }
+        if (arguments?.getBoolean(RESTORE, false) != true) view.post { startHeadersTransition(false) }
         // the lists are warmed in the background: the pages and the rows open with the cards, not with skeletons
         val warmContext = requireContext().applicationContext
         Thread {
@@ -260,9 +261,7 @@ class MainFragment : BrowseSupportFragment() {
      * swap under it) must not slide the page.
      */
     private fun shiftPage(menuOpen: Boolean) {
-        val scale = resources.displayMetrics.widthPixels / 1280f
-        // the menu is 30dp narrower than the stock one, so the page comes closer by the same room
-        val shift = if (!menuOpen) 0f else -55 * scale
+        val shift = if (!menuOpen) 0f else -resources.getDimension(androidx.leanback.R.dimen.lb_browse_rows_margin_start)
         val frame = this.view?.findViewById<View>(androidx.leanback.R.id.scale_frame) ?: return
         frame.animate().cancel()
         if (menuOpen == menuWasOpen) frame.translationX = shift
@@ -270,7 +269,7 @@ class MainFragment : BrowseSupportFragment() {
         menuWasOpen = menuOpen
     }
 
-    private var menuWasOpen = true
+    private var menuWasOpen = false
 
     /**
      * The menu shrinks to a narrow rail of icons while a page has the focus: the icons stay where the names were,

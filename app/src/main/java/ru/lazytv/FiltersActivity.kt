@@ -131,7 +131,7 @@ class FiltersActivity : Activity() {
             .filter { it.first in filter.countries }.joinToString(", ") { it.second }.ifEmpty { "все" }) { showCountries() }
         rows += row("Годы", yearsText()) { showYears() }
         rows += row("Рейтинг", ratingText()) { shown -> pickRating(shown) }
-        if (!category.tv) rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { shown ->
+        rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { shown ->
             val marks = listOf("") + CatalogOptions.ages.map { it.first }
             val labels = listOf("Любой") + CatalogOptions.ages.map { "${it.second}  (${it.first})" }
             pickLabel("Возрастной рейтинг", labels, marks.indexOf(filter.age)) { which ->

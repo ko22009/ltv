@@ -23,7 +23,7 @@ data class CatalogFilter(
     val yearTo: Int = 0,
     val ratingFrom: Int = 1,
     val ratingTo: Int = 10,
-    /** Highest age mark allowed, like "16+"; empty — no limit. Applies to films only: TMDB has no marks for series. */
+    /** Highest age mark allowed, like "16+"; empty — no limit. */
     val age: String = "",
     val hideWatched: Boolean = false,
 ) {
@@ -62,7 +62,7 @@ data class CatalogFilter(
         if (ratingFrom != 1 || ratingTo != 10) {
             append("&vote_average.gte=$ratingFrom&vote_average.lte=$ratingTo&vote_count.gte=50")
         }
-        if (age.isNotEmpty() && !tv) append("&certification_country=RU&certification.lte=").append(age.replace("+", "%2B"))
+        if (age.isNotEmpty()) append("&certification_country=RU&certification.lte=").append(age.replace("+", "%2B"))
     }
 
     fun toJson(): String = JSONObject()

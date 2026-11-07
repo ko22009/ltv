@@ -53,5 +53,5 @@ object LastScreen {
         prefs(context).edit().putBoolean(MENU, open).apply()
     }
 
-    fun menuOpen(context: Context): Boolean = prefs(context).getBoolean(MENU, true)
+    fun menuOpen(context: Context): Boolean = prefs(context).getBoolean(MENU, false)
 }

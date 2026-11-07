@@ -154,8 +154,9 @@ class IconHeaderPresenter : RowHeaderPresenter() {
         icon.scaleType = ImageView.ScaleType.FIT_CENTER
         val container = HeaderRow(parent.context, scale)
         container.orientation = LinearLayout.HORIZONTAL
-        container.gravity = Gravity.CENTER_VERTICAL
-        container.addView(icon, LinearLayout.LayoutParams(size, size).apply { rightMargin = size / 2 })
+        container.gravity = Gravity.CENTER
+        container.addView(icon, LinearLayout.LayoutParams(size, size))
+        base.view.visibility = android.view.View.GONE
         container.addView(base.view)
         container.title = findTitle(container)
         container.restyle()
@@ -185,7 +186,10 @@ class IconHeaderPresenter : RowHeaderPresenter() {
         var title: TextView? = null
         init {
             background = plate()
-            setPadding((6 * scale).toInt(), (4 * scale).toInt(), (18 * scale).toInt(), (4 * scale).toInt())
+            val padH = (8 * scale).toInt()
+            val padV = (6 * scale).toInt()
+            setPadding(padH, padV, padH, padV)
+            gravity = Gravity.CENTER
         }
 
         /** A bright plate under the focus and a calmer one under the selected page; nothing otherwise. */
