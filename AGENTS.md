@@ -1,8 +1,8 @@
 # LazyTV — памятка для агентов и людей
 
 Android TV приложение на Kotlin (Leanback + ExoPlayer): каталог TMDB, списки, видеосервисы, поиск,
-торренты через TorrServe, встроенный плеер. Подробности — `PLAN.md`, планы — `plan_future.md`,
-что не делаем — `docs/not-doing.md`, правила git — `docs/workflow.md`.
+торренты через TorrServe, встроенный плеер. Что не делаем: `docs/not-doing.md`, правила git: `docs/workflow.md`,
+дизайн-система: `docs/design-system.md`, конфиг адресов: `docs/remote-config.md`.
 
 ## Сборка
 
