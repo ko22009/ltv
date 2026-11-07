@@ -48,14 +48,15 @@ data class SettingsSection(val title: String, val description: String)
 
 private val SETTINGS_SECTIONS = listOf(
     SettingsSection("Списки", "Какие списки показывать слева"),
-    SettingsSection("Источники видео", "Сайты и торренты, откуда берётся видео"),
-    SettingsSection("Адреса источников", "TorrServe, JacRed, Jackett"),
+    SettingsSection("Источники видео", "Сайты и торренты, кэш источников"),
+    SettingsSection("Адреса сайтов", "Конфиг с адресами, свои адреса сайтов"),
     SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),
-    SettingsSection("Торренты", "Минимум сидов, вид списка"),
-    SettingsSection("Каталог", "Язык описаний, размер карточек"),
+    SettingsSection("Торренты и адреса", "TorrServe, JacRed, Jackett, минимум сидов"),
+    SettingsSection("Каталог", "Язык описаний, рекомендации на ТВ"),
     SettingsSection("Сеть", "Обход блокировок и прокси"),
-    SettingsSection("Данные", "Кэш, история, сброс настроек"),
-    SettingsSection("О приложении", "Версия"),
+    SettingsSection("Данные", "Копия в файл, кэш, история, сброс"),
+    SettingsSection("Помощь", "Частые вопросы: сайты, видео, торренты, время"),
+    SettingsSection("О приложении", "Версия и условия использования"),
 )
 
 /** Opens the settings screen from the tile on the settings page. */
@@ -401,6 +402,7 @@ class MainFragment : BrowseSupportFragment() {
         val ctx = requireContext()
         when (name) {
             OVERVIEW -> {
+                if (ClockCheck.skewed) rows.add(PageNoteRow(ClockCheck.MESSAGE))
                 val favTorrents = FavoriteTorrents.all(ctx)
                 if (favTorrents.isNotEmpty()) {
                     rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
@@ -570,8 +572,11 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
             true
         }
         val appContext = card.context.applicationContext
-        runtimePool.execute {
+        card.runtimeTask?.cancel(false)
+        card.runtimeTask = runtimePool.submit {
+            if (card.shownId != title.id) return@submit
             val details = runCatching { Tmdb.detailsCached(appContext, title.id, title.tv) }.getOrNull()
+            if (card.shownId != title.id) return@submit
             val minutes = details?.runtime ?: 0
             if (minutes > 0) card.post { card.setRuntime(title.id, minutes) }
             // the saved records keep no genre: the card details fill the plate so it has no empty bottom
@@ -600,7 +605,10 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {
-        (holder.view as TitleCard).poster.setImageDrawable(null)
+        val card = holder.view as TitleCard
+        card.runtimeTask?.cancel(false)
+        card.runtimeTask = null
+        card.poster.setImageDrawable(null)
     }
 }
 

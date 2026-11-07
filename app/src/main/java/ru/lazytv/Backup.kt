@@ -19,12 +19,31 @@ import java.util.Locale
 object Backup {
     private const val FORMAT = 1
     private const val APP = "LazyTV"
+    private const val LAST_AT = "last_backup_at"
+    private const val MONTH_MS = 30L * 24 * 60 * 60 * 1000L
 
     /** Preferences that hold data; the same names are read back on restore. */
     private val files = listOf("lazytv", "episodes", "remote")
 
     fun backupName(): String =
         "LazyTV-backup-" + SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.US).format(Date()) + ".json"
+
+    private fun rememberBackup(context: Context) {
+        context.getSharedPreferences("lazytv", 0).edit().putLong(LAST_AT, System.currentTimeMillis()).apply()
+    }
+
+    /** Status line for the settings screen, with a gentle reminder when no copy was made for over a month. */
+    fun status(context: Context): String {
+        val at = context.getSharedPreferences("lazytv", 0).getLong(LAST_AT, 0L)
+            .takeIf { it > 0L } ?: latestDefault(context)?.lastModified() ?: 0L
+        if (at <= 0L) return "Ещё не создавалась. Сохраните копию на случай переустановки"
+        val date = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(at))
+        return if (System.currentTimeMillis() - at > MONTH_MS) {
+            "Давно не обновлялась ($date). Сохраните свежую копию"
+        } else {
+            "Последняя копия: $date"
+        }
+    }
 
     /** Everything as one JSON text: `{"app": "LazyTV", "prefs": {"lazytv": {ключ: {"s": "значение"}}}}`. */
     fun toJson(context: Context): String {
@@ -85,6 +104,7 @@ object Backup {
     fun write(context: Context, uri: Uri, json: String) {
         val stream = context.contentResolver.openOutputStream(uri) ?: error("Файл недоступен для записи")
         stream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+        rememberBackup(context)
     }
 
     fun read(context: Context, uri: Uri): String {
@@ -98,7 +118,7 @@ object Backup {
      */
     fun writeDefault(context: Context, json: String): File {
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        return File(dir, backupName()).apply { writeText(json) }
+        return File(dir, backupName()).apply { writeText(json) }.also { rememberBackup(context) }
     }
 
     /** The newest copy made by [writeDefault], if there is one. */

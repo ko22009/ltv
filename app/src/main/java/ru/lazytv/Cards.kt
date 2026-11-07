@@ -149,6 +149,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** Id of the title the card shows now: a late runtime answer for a recycled card is dropped. */
     var shownId = -1L
         private set
+    /** Pending runtime fetch for this card, cancelled when the card scrolls off screen or is rebound. */
+    var runtimeTask: java.util.concurrent.Future<*>? = null
 
     /** Same size as the year, at the right edge of its line; hidden when TMDB has no rating. */
     private val rating = TextView(context).apply {

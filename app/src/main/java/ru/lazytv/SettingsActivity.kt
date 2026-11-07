@@ -143,7 +143,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         check(actions, "Торренты", "Раздачи для TorrServe", "source_torrents")
         check(actions, "Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
 
-        section(actions, "Адреса источников")
+        section(actions, "Адреса сайтов")
         editable(actions, "Конфиг с адресами (URL)", Settings.REMOTE_URL, "")
         info(actions, "Сейчас", RemoteConfig.status(ctx))
         button(actions, "Обновить адреса из конфига", "Скачать JSON и применить сразу") { refreshRemote() }
@@ -167,29 +167,31 @@ class SettingsScreen : GuidedStepSupportFragment() {
         check(actions, "Запоминать позицию", "Продолжать с места остановки", Settings.REMEMBER_POSITION)
         check(actions, "Следующая серия сама", "После окончания включать следующую серию из списка", Settings.AUTO_NEXT)
 
-        section(actions, "Торренты")
+        section(actions, "Торренты и адреса")
         choice(actions, "Открывать раздачи", Settings.TORRENT_CLIENT, "internal",
             listOf("internal" to "Через TorrServe (адрес ниже)", "external" to "Сторонним приложением (системный выбор)"))
         editable(actions, "Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
         choice(actions, "Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
             Settings.MIN_SEEDS.map { it.toString() to if (it == 0) "Любое количество" else "От $it" })
-        check(actions, "Экспериментальный Searchtor", "Обычный запрос без обхода проверки; если сервер пустит — покажет раздачи", Settings.SEARCHTOR, false)
-        editable(actions, "Серверы JacRed (пусто — из конфига)", Settings.JACRED_SERVERS, "")
+        check(actions, "Экспериментальный Searchtor", "Обычный запрос без обхода проверки: если сервер пустит, покажет раздачи", Settings.SEARCHTOR, false)
+        editable(actions, "Серверы JacRed (пусто: из конфига)", Settings.JACRED_SERVERS, "")
         editable(actions, "Свой Jackett: адрес", Settings.JACKETT_URL, "")
         editable(actions, "Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
         button(actions, "Проверить Jackett", "Запрос к своему Jackett с этими адресом и ключом") { checkJackett() }
-        info(actions, "TorrServe — отдельная программа", "LazyTV только просит её скачать раздачу")
+        info(actions, "TorrServe (отдельная программа)", "LazyTV только просит её скачать раздачу")
         button(actions, "Скачать TorrServe", "Страница загрузки в браузере") { downloadTorrServe() }
 
         section(actions, "Каталог")
         choice(actions, "Язык названий и описаний", Settings.LANGUAGE, "ru-RU",
             listOf("ru-RU" to "Русский", "en-US" to "English", "uk-UA" to "Українська"))
-        choice(actions, "Размер карточек", Settings.CARD_SIZE, "normal",
-            listOf("small" to "Мелкие", "normal" to "Обычные", "large" to "Крупные"))
         check(actions, "Строка «Популярное» на главном экране TV",
             "Рекомендации в ленте Android TV (если лаунчер их показывает)", Settings.RECOMMENDATIONS)
 
         section(actions, "Сеть")
+        if (ClockCheck.skewed) {
+            info(actions, "Часы на устройстве сбились", ClockCheck.MESSAGE)
+            button(actions, "Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
+        }
         check(actions, "Обход блокировок", "Сначала напрямую, затем встроенный обход (ByeDPI)", Settings.AUTO_BYPASS)
         check(actions, "Прокси для сайтов", "Запасной путь, если встроенный обход не помог", Settings.APP_PROXY)
         check(actions, "Прокси для торрентов", "То же для поиска раздач (rutor)", Settings.APP_PROXY_TORRENTS)
@@ -199,6 +201,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         }
 
         section(actions, "Данные")
+        info(actions, "Резервная копия", Backup.status(ctx))
         button(actions, "Сохранить копию в файл", "Закладки, история, отметки, настройки") { exportBackup() }
         button(actions, "Восстановить из файла", "Заменит закладки, историю, отметки и настройки") { importBackup() }
         button(actions, "Очистить кэш картинок") {
@@ -211,8 +214,31 @@ class SettingsScreen : GuidedStepSupportFragment() {
             requireActivity().finish()
         }
 
+        section(actions, "Помощь")
+        info(actions, "Сайт не открывается",
+            "Включите обход блокировок в разделе «Сеть» или нажмите «Подобрать приём обхода». Если показ закрыт для вашего региона, используйте торренты")
+        info(actions, "Видео не запускается или нет звука",
+            "Если встроенный плеер не поддерживает кодек раздачи, выберите внешний плеер в разделе «Воспроизведение» или удерживайте OK на серии для выбора другого качества")
+        info(actions, "Торренты и TorrServe",
+            "LazyTV не скачивает торренты сам: нужна программа TorrServe на приставке или другом устройстве в домашней сети. Выбирайте раздачи с большим числом сидов (▲)")
+        info(actions, "Звук и субтитры",
+            "Во время просмотра нажмите любую кнопку пульта: в нижней строке плеера есть выбор звуковой дорожки, субтитров и пропорций кадра")
+        info(actions, "Дата и время на приставке",
+            "Если после отключения питания на приставке сбились часы, защищённые сайты (HTTPS) перестают открываться. Проверьте дату и время в настройках приставки")
+        info(actions, "Старые приставки (Android 6 и ниже)",
+            "На старых прошивках истекли системные сертификаты безопасности: часть HTTPS-сайтов не открывается без обновления сертификатов системы")
+        button(actions, "Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
+        button(actions, "Подобрать приём обхода", "Перебирает приёмы ByeDPI, запоминает рабочий для этой сети") {
+            com.lmd.dpi.DpiBypass.retune()
+            toast("Подбор запущен, занимает до минуты")
+        }
+
         section(actions, "О приложении")
         info(actions, "Версия", BuildConfig.VERSION_NAME)
+        info(actions, "Как работает приложение",
+            "Поисковая система по открытым источникам сети. Приложение не хранит видеофайлы и не имеет собственных серверов")
+        info(actions, "Условия использования",
+            "Предоставляется «как есть» (AS IS). Доступность сайтов и раздач зависит от вашей сети и самих источников")
 
         // one section per screen: the cards on the settings page open their own screen, not one long list
         val title = arguments?.getString("section").orEmpty().ifEmpty { "Списки" }
@@ -298,7 +324,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         Thread {
             val result = runCatching { RemoteConfig.refresh(ctx) }
             activity?.runOnUiThread {
-                result.onSuccess { toast(it) }.onFailure { toast("Конфиг не скачался: ${it.message}") }
+                result.onSuccess { toast(it) }.onFailure { toast("Конфиг не скачался: ${Errors.explain(it)}") }
                 activity?.recreate()
             }
         }.start()
@@ -319,8 +345,8 @@ class SettingsScreen : GuidedStepSupportFragment() {
             startActivityForResult(intent, requestSave)
         } catch (e: android.content.ActivityNotFoundException) {
             runCatching { Backup.writeDefault(ctx, Backup.toJson(ctx)) }
-                .onSuccess { toast("Файл выбора не найден, копия: ${it.absolutePath}") }
-                .onFailure { toast("Не удалось сохранить: ${it.message}") }
+                .onSuccess { toast("Файл выбора не найден, копия: ${it.absolutePath}"); activity?.recreate() }
+                .onFailure { toast("Не удалось сохранить: ${Errors.explain(it)}") }
         }
     }
 
@@ -338,7 +364,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
             }
             runCatching { Backup.restore(ctx, file.readText()) }
                 .onSuccess { toast("Восстановлено: $it"); activity?.recreate() }
-                .onFailure { toast("Не удалось восстановить: ${it.message}") }
+                .onFailure { toast("Не удалось восстановить: ${Errors.explain(it)}") }
         }
     }
 
@@ -349,11 +375,11 @@ class SettingsScreen : GuidedStepSupportFragment() {
         val ctx = requireContext()
         when (requestCode) {
             requestSave -> runCatching { Backup.write(ctx, uri, Backup.toJson(ctx)) }
-                .onSuccess { toast("Копия сохранена") }
-                .onFailure { toast("Не удалось сохранить: ${it.message}") }
+                .onSuccess { toast("Копия сохранена"); activity?.recreate() }
+                .onFailure { toast("Не удалось сохранить: ${Errors.explain(it)}") }
             requestLoad -> runCatching { Backup.restore(ctx, Backup.read(ctx, uri)) }
                 .onSuccess { toast("Восстановлено: $it"); activity?.recreate() }
-                .onFailure { toast("Не удалось восстановить: ${it.message}") }
+                .onFailure { toast("Не удалось восстановить: ${Errors.explain(it)}") }
         }
     }
 
@@ -370,7 +396,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
             val result = runCatching { ExtraTorrents.jackettCount(ctx, "матрица") }
             requireActivity().runOnUiThread {
                 result.onSuccess { toast("Jackett отвечает, найдено раздач: $it") }
-                    .onFailure { toast("Jackett не ответил: ${it.message}") }
+                    .onFailure { toast("Jackett не ответил: ${Errors.explain(it)}") }
             }
         }.start()
     }
