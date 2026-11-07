@@ -647,6 +647,7 @@ class CardPresenter(private val cardScale: Float = 1f) : Presenter() {
         val card = holder.view as TitleCard
         card.runtimeTask?.cancel(false)
         card.runtimeTask = null
+        com.bumptech.glide.Glide.with(card.context).clear(card.poster)
         card.poster.setImageDrawable(null)
     }
 }

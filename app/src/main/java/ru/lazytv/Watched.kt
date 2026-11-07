@@ -15,7 +15,8 @@ object Watched {
 
     fun set(context: Context, title: Title, watched: Boolean) {
         val all = Settings.string(context, KEY, "")
-        val without = all.replace(token(title), ",")
+        val raw = all.replace(token(title), ",").replace(Regex(",+"), ",")
+        val without = if (raw == ",") "" else raw
         Settings.setString(context, KEY, if (watched) (if (without.isEmpty()) "," else without) + token(title).drop(1) else without)
     }
 

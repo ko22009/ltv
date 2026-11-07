@@ -224,8 +224,8 @@ class TorrentsActivity : Activity() {
         val pending = java.util.concurrent.atomic.AtomicInteger(2)
         fun finishPart() {
             if (pending.decrementAndGet() != 0) return
-            runOnUiThread {
-                if (token != searchId) return@runOnUiThread
+            onUi {
+                if (token != searchId) return@onUi
                 searching = false
                 bar.setLoading(false)
                 loading.visibility = View.GONE
@@ -253,11 +253,11 @@ class TorrentsActivity : Activity() {
     /** Appends one source's rows to the list and redraws the chips at once, without waiting for all sources. */
     private fun addResults(items: List<Torrent>, token: Int) {
         if (items.isEmpty()) return
-        runOnUiThread {
-            if (token != searchId) return@runOnUiThread
+        onUi {
+            if (token != searchId) return@onUi
             val seen = all.mapTo(HashSet()) { it.identity() }
             val fresh = items.filter { seen.add(it.identity()) }
-            if (fresh.isEmpty()) return@runOnUiThread
+            if (fresh.isEmpty()) return@onUi
             val first = all.isEmpty()
             val position = list.selectedItemPosition
             all = all + fresh
@@ -466,7 +466,7 @@ class TorrentsActivity : Activity() {
                 .onFailure { e ->
                     val address = Settings.string(applicationContext, Settings.TORRSERVE, "127.0.0.1:8090")
                     val offline = e is java.io.IOException && e !is java.io.FileNotFoundException
-                    runOnUiThread {
+                    onUi {
                         dialog?.dismiss()
                         preloading = false
                         status.text = if (offline) "TorrServe не отвечает по адресу $address"
@@ -543,8 +543,8 @@ class TorrentsActivity : Activity() {
                 if (!preloading || isFinishing) return
                 Thread {
                     val stat = runCatching { TorrServe.stat(applicationContext, hash) }.getOrNull()
-                    runOnUiThread {
-                        if (!preloading || isFinishing) return@runOnUiThread
+                    onUi {
+                        if (!preloading || isFinishing) return@onUi
                         var ready = System.currentTimeMillis() - started > 60_000
                         if (stat != null) {
                             view.update(stat)

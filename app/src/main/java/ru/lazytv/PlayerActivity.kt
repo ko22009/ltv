@@ -254,7 +254,10 @@ class PlayerActivity : Activity() {
 
     /** The next episode of the queue when the setting is on; the player is reused, only the media item changes. */
     private fun advance() {
-        if (releasing || !Settings.bool(this, Settings.AUTO_NEXT) || queueIndex + 1 >= queue.size) return
+        if (releasing || !Settings.bool(this, Settings.AUTO_NEXT) || queueIndex + 1 >= queue.size) {
+            showControls()
+            return
+        }
         switchTo(queueIndex + 1, toast = true, saveCurrent = false)
     }
 

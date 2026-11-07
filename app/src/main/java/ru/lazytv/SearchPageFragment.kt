@@ -299,9 +299,10 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         // the old cards go away and a spinner stands in the middle of the page until the answer comes
         message.visibility = View.GONE
         setCards(emptyList())
+        val appContext = context?.applicationContext ?: return
         loader.visibility = View.VISIBLE
         Thread {
-            val found = runCatching { Tmdb.search(requireContext().applicationContext, phrase) }
+            val found = runCatching { Tmdb.search(appContext, phrase) }
             activity?.runOnUiThread {
                 if (!isAdded || input.text.toString().trim() != phrase) return@runOnUiThread
                 loader.visibility = View.GONE
@@ -321,7 +322,7 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
             return
         }
         loader.visibility = View.GONE
-        recent = History.all(requireContext())
+        recent = History.all(context ?: return)
         showingRecent = recent.isNotEmpty()
         if (!showingRecent) {
             editing = false
@@ -333,17 +334,20 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         recentHeader.visibility = if (showingRecent) View.VISIBLE else View.GONE
         message.visibility = View.GONE
         renderRecentActions()
-        if (recent.any { it.poster == null }) Thread {
-            val fixed = History.withPosters(requireContext().applicationContext, recent)
-            activity?.runOnUiThread {
-                if (isAdded && showingRecent && fixed != recent) {
-                    recent = fixed
-                    // replaced one by one: clearing the grid would take the remote focus off the cards
-                    if (cards.size() == fixed.size) fixed.forEachIndexed { i, t -> if (cards.get(i) != t) cards.replace(i, t) }
-                    else setCards(fixed)
+        if (recent.any { it.poster == null }) {
+            val appContext = context?.applicationContext ?: return
+            Thread {
+                val fixed = History.withPosters(appContext, recent)
+                activity?.runOnUiThread {
+                    if (isAdded && showingRecent && fixed != recent) {
+                        recent = fixed
+                        // replaced one by one: clearing the grid would take the remote focus off the cards
+                        if (cards.size() == fixed.size) fixed.forEachIndexed { i, t -> if (cards.get(i) != t) cards.replace(i, t) }
+                        else setCards(fixed)
+                    }
                 }
-            }
-        }.start()
+            }.start()
+        }
     }
 
     /** "Редактировать" turns into the buttons of the edit mode; the one that deletes the chosen sits next to "Готово". */
