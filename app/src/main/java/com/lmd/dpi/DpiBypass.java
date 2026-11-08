@@ -104,6 +104,18 @@ public final class DpiBypass {
         return a;
     }
 
+    // Per-site strategies: a site the common strategy does not open is tried with the others, and the one that works is
+    // remembered for that site (kept in a file next to the common strategy). Each extra strategy runs as its own ciadpi
+    // with its own local ports, started only when needed.
+    private static final int EXTRA_SOCKS_BASE = 18100;
+    private static final int EXTRA_CONNECT_BASE = 18200;
+    private static final int EXTRA_PROBE_MS = 3500;
+    private static final long TTL_EXHAUSTED_MS = 10 * 60 * 1000L;
+    private static final ConcurrentHashMap<String, Integer> HOST_STRATEGY = new ConcurrentHashMap<String, Integer>();
+    private static final Process[] EXTRA = new Process[STRATEGIES.length];
+    private static final boolean[] EXTRA_FRONT = new boolean[STRATEGIES.length];
+    private static int commonIndex = 0;
+
     private static String libDir;
     private static Process process;
     private static long lastStart;
@@ -133,13 +145,14 @@ public final class DpiBypass {
         }
         try {
             libDir = nativeLibraryDir;
+            loadHostStrategies();
             boolean hasLocalBin = new File(libDir, "libciadpi.so").canExecute();
             started = true;
             if (hasLocalBin || externalSocksHost != null) {
                 POOL.execute(new Runnable() {
                     @Override
                     public void run() {
-                        serveConnect();
+                        serveConnect(CONNECT_PORT, SOCKS_PORT);
                     }
                 });
                 ensureProcess();
@@ -222,10 +235,15 @@ public final class DpiBypass {
         if (externalSocksHost != null || !started) {
             return;
         }
+        if (force) {
+            HOST_STRATEGY.clear();
+            saveHostStrategies();
+        }
         if (!force) {
             int saved = savedStrategy();
             if (saved >= 0) {
                 strategy = STRATEGIES[saved];
+                commonIndex = saved;
                 restartWith(strategy);
                 log("strategy " + saved + " restored");
                 return;
@@ -246,6 +264,7 @@ public final class DpiBypass {
             for (String host : TEST_HOSTS) {
                 if (handshake(host, new InetSocketAddress(HOST, CONNECT_PORT), DPI_TIMEOUT_MS) == V_OK) {
                     log("strategy " + i + " works against " + host);
+                    commonIndex = i;
                     saveStrategy(i);
                     CACHE.clear();
                     return;
@@ -353,6 +372,8 @@ public final class DpiBypass {
         public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
             if (sa instanceof InetSocketAddress && uri.getHost() != null
                     && (((InetSocketAddress) sa).getPort() == CONNECT_PORT
+                    || (((InetSocketAddress) sa).getPort() >= EXTRA_CONNECT_BASE
+                    && ((InetSocketAddress) sa).getPort() < EXTRA_CONNECT_BASE + STRATEGIES.length)
                     || ((InetSocketAddress) sa).getPort() == APP_PROXY_PORT)) {
                 CACHE.remove(uri.getHost().toLowerCase());
             } else if (previous != null) {
@@ -393,19 +414,207 @@ public final class DpiBypass {
         if (direct != V_BLOCKED) {
             return new Decision(null, TTL_DIRECT_MS);
         }
-        if (ensureProcess()) {
+        // the strategy that opened this site last time goes first
+        Integer own = HOST_STRATEGY.get(host);
+        if (own != null && own != commonIndex && startExtra(own)) {
+            Proxy via = extraProxy(own);
+            int dpi = handshake(host, (InetSocketAddress) via.address(), DPI_TIMEOUT_MS);
+            log(host + " own strategy " + own + ": " + dpi);
+            if (dpi == V_OK) {
+                return new Decision(via, TTL_DPI_MS);
+            }
+            HOST_STRATEGY.remove(host);
+            saveHostStrategies();
+        }
+        boolean common = ensureProcess();
+        if (common) {
             int dpi = handshake(host, new InetSocketAddress(HOST, CONNECT_PORT), DPI_TIMEOUT_MS);
             log(host + " direct blocked, via dpi: " + dpi);
             if (dpi == V_OK) {
                 return new Decision(VIA_DPI, TTL_DPI_MS);
             }
         }
+        // the common strategy did not open it: the other strategies are tried at once, the first that works is kept for this site
+        boolean exhausted = false;
+        if (common && externalSocksHost == null) {
+            int found = tryOtherStrategies(host);
+            if (found >= 0) {
+                saveHostStrategies();
+                return new Decision(extraProxy(found), TTL_DPI_MS);
+            }
+            exhausted = true;
+        }
         if (!(host.contains("rutor") ? appProxyTorrentsAllowed : appProxyAllowed)) {
-            return new Decision(null, TTL_FAILED_MS);
+            return new Decision(null, exhausted ? TTL_EXHAUSTED_MS : TTL_FAILED_MS);
         }
         int app = handshake(host, appProxy(), DPI_TIMEOUT_MS);
         log(host + " via app proxy: " + app);
-        return app == V_OK ? new Decision(new Proxy(Proxy.Type.HTTP, appProxy()), TTL_DPI_MS) : new Decision(null, TTL_FAILED_MS);
+        return app == V_OK ? new Decision(new Proxy(Proxy.Type.HTTP, appProxy()), TTL_DPI_MS)
+                : new Decision(null, exhausted ? TTL_EXHAUSTED_MS : TTL_FAILED_MS);
+    }
+
+    private static Proxy extraProxy(int index) {
+        return new Proxy(Proxy.Type.HTTP, new InetSocketAddress(HOST, EXTRA_CONNECT_BASE + index));
+    }
+
+    /** Starts the ciadpi of strategy [index] on its own ports (once); false when it cannot run. */
+    private static synchronized boolean startExtra(int index) {
+        if (libDir == null || index < 0 || index >= STRATEGIES.length) {
+            return false;
+        }
+        try {
+            Process p = EXTRA[index];
+            if (p != null) {
+                try {
+                    p.exitValue();
+                } catch (IllegalThreadStateException alive) {
+                    return true;
+                }
+            }
+            List<String> cmd = new ArrayList<String>();
+            cmd.add(new File(libDir, "libciadpi.so").getPath());
+            cmd.add("-i");
+            cmd.add(HOST);
+            cmd.add("-p");
+            cmd.add(String.valueOf(EXTRA_SOCKS_BASE + index));
+            Collections.addAll(cmd, STRATEGIES[index]);
+            final Process started = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            EXTRA[index] = started;
+            final InputStream out = started.getInputStream();
+            POOL.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        byte[] buf = new byte[512];
+                        while (out.read(buf) >= 0) {
+                            // drain so the child never blocks on a full pipe
+                        }
+                    } catch (IOException ignored) {
+                    }
+                }
+            });
+            if (!EXTRA_FRONT[index]) {
+                EXTRA_FRONT[index] = true;
+                final int connectPort = EXTRA_CONNECT_BASE + index;
+                final int socksPort = EXTRA_SOCKS_BASE + index;
+                POOL.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        serveConnect(connectPort, socksPort);
+                    }
+                });
+            }
+            Thread.sleep(300);
+            try {
+                started.exitValue();
+                log("extra ciadpi " + index + " exited at once");
+                return false;
+            } catch (IllegalThreadStateException running) {
+                return true;
+            }
+        } catch (Throwable e) {
+            log("extra ciadpi start failed: " + e);
+            return false;
+        }
+    }
+
+    /** An extra ciadpi nobody uses is stopped, so only the working strategies stay running. */
+    private static synchronized void stopExtraIfUnused(int index) {
+        if (HOST_STRATEGY.containsValue(index)) {
+            return;
+        }
+        Process p = EXTRA[index];
+        if (p != null) {
+            p.destroy();
+            EXTRA[index] = null;
+        }
+    }
+
+    /** Tries every strategy except the common one against the site at the same time; returns the first that works or -1. */
+    private static int tryOtherStrategies(final String host) {
+        List<Callable<Integer>> jobs = new ArrayList<Callable<Integer>>();
+        for (int i = 0; i < STRATEGIES.length; i++) {
+            if (i == commonIndex) {
+                continue;
+            }
+            final int index = i;
+            jobs.add(new Callable<Integer>() {
+                @Override
+                public Integer call() throws Exception {
+                    if (!startExtra(index)) {
+                        throw new IOException("no ciadpi");
+                    }
+                    int r = handshake(host, new InetSocketAddress(HOST, EXTRA_CONNECT_BASE + index), EXTRA_PROBE_MS);
+                    if (r != V_OK) {
+                        throw new IOException("blocked " + r);
+                    }
+                    return index;
+                }
+            });
+        }
+        int found = -1;
+        try {
+            found = POOL.invokeAny(jobs, EXTRA_PROBE_MS + 2000, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (Throwable e) {
+            log(host + " no other strategy helped");
+        }
+        if (found >= 0) {
+            HOST_STRATEGY.put(host, found);
+            log(host + " opened by strategy " + found);
+        }
+        for (int i = 0; i < STRATEGIES.length; i++) {
+            if (i != found) {
+                stopExtraIfUnused(i);
+            }
+        }
+        return found;
+    }
+
+    private static File hostsFile() {
+        File f = strategyFile;
+        return f == null ? null : new File(f.getParentFile(), "dpi_hosts");
+    }
+
+    private static void loadHostStrategies() {
+        try {
+            File f = hostsFile();
+            if (f == null || !f.exists()) {
+                return;
+            }
+            java.io.BufferedReader in = new java.io.BufferedReader(new java.io.FileReader(f));
+            try {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    int eq = line.indexOf('=');
+                    if (eq > 0) {
+                        int index = Integer.parseInt(line.substring(eq + 1).trim());
+                        if (index >= 0 && index < STRATEGIES.length) {
+                            HOST_STRATEGY.put(line.substring(0, eq).trim(), index);
+                        }
+                    }
+                }
+            } finally {
+                in.close();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static synchronized void saveHostStrategies() {
+        try {
+            File f = hostsFile();
+            if (f == null) {
+                return;
+            }
+            StringBuilder text = new StringBuilder();
+            for (java.util.Map.Entry<String, Integer> e : HOST_STRATEGY.entrySet()) {
+                text.append(e.getKey()).append('=').append(e.getValue()).append('\n');
+            }
+            java.io.FileOutputStream out = new java.io.FileOutputStream(f);
+            out.write(text.toString().getBytes());
+            out.close();
+        } catch (Throwable ignored) {
+        }
     }
 
     private static boolean usable(InetAddress a) {
@@ -558,15 +767,15 @@ public final class DpiBypass {
     }
 
     /** Local HTTP CONNECT front-end: resolves names with the system DNS (ciadpi cannot on Android). */
-    private static void serveConnect() {
+    private static void serveConnect(final int connectPort, final int socksPort) {
         try {
-            ServerSocket server = new ServerSocket(CONNECT_PORT, 50, InetAddress.getByName(HOST));
+            ServerSocket server = new ServerSocket(connectPort, 50, InetAddress.getByName(HOST));
             while (true) {
                 final Socket client = server.accept();
                 POOL.execute(new Runnable() {
                     @Override
                     public void run() {
-                        tunnel(client);
+                        tunnel(client, socksPort);
                     }
                 });
             }
@@ -575,7 +784,7 @@ public final class DpiBypass {
         }
     }
 
-    private static void tunnel(final Socket client) {
+    private static void tunnel(final Socket client, int socksPort) {
         Socket upstream = null;
         try {
             client.setSoTimeout(15000);
@@ -593,7 +802,7 @@ public final class DpiBypass {
                 throw new IOException("no IPv4 for " + host);
             }
             upstream = new Socket(new Proxy(Proxy.Type.SOCKS, externalSocksHost != null
-                    ? new InetSocketAddress(externalSocksHost, externalSocksPort) : new InetSocketAddress(HOST, SOCKS_PORT)));
+                    ? new InetSocketAddress(externalSocksHost, externalSocksPort) : new InetSocketAddress(HOST, socksPort)));
             upstream.connect(new InetSocketAddress(target, port), 8000);
             client.getOutputStream().write("HTTP/1.1 200 Connection established\r\n\r\n".getBytes("US-ASCII"));
             client.getOutputStream().flush();
