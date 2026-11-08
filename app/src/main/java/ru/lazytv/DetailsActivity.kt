@@ -725,11 +725,12 @@ class DetailsActivity : Activity() {
         showSourceDialog(name)
     }
 
-    private fun showSourceDialog(name: String) {
+    private fun showSourceDialog(name: String, allYears: Boolean = false) {
         val items = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
+        val (shown, hidden) = Sources.forYear(variants, currentTitle.year, currentTitle.tv, allYears)
 
-        variants.forEach { v ->
+        shown.forEach { v ->
             val label = buildString {
                 append(v.source)
                 if (v.title.isNotEmpty() && !v.title.equals(name, ignoreCase = true)) {
@@ -745,6 +746,10 @@ class DetailsActivity : Activity() {
             actions.add { openVariant(v) }
         }
 
+        if (hidden > 0) {
+            items.add("Другие годы и части ($hidden)")
+            actions.add { showSourceDialog(name, true) }
+        }
         items.add("Торренты (TorrServe)")
         actions.add { openTorrents(name) }
 

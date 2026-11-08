@@ -184,6 +184,17 @@ object Sources {
         return if (years.any { kotlin.math.abs(it - wanted) <= 1 }) 0 else 2
     }
 
+    /**
+     * What the source list of a film shows: the variants of its year (or of an unknown one) and how many others are kept back
+     * for "Другие годы"; when no variant fits the year, everything is shown. A series, or [all], shows everything.
+     */
+    fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean): Pair<List<Variant>, Int> {
+        if (tv || all) return variants to 0
+        val fitting = variants.filter { yearRank(it, year) != 2 }
+        if (fitting.isEmpty()) return variants to 0
+        return fitting to (variants.size - fitting.size)
+    }
+
     fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =
         getBytes(address).toString(charset)
 

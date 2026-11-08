@@ -485,10 +485,11 @@ class PlayerActivity : Activity() {
         }.start()
     }
 
-    private fun showSourcePicker(variants: List<Variant>) {
+    private fun showSourcePicker(allVariants: List<Variant>, allYears: Boolean = false) {
         val items = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
         val currentItem = queue.getOrNull(queueIndex)
+        val (variants, hidden) = Sources.forYear(allVariants, mediaYear, isTv, allYears)
 
         variants.forEach { v ->
             val isCurrent = currentItem?.let {
@@ -517,6 +518,10 @@ class PlayerActivity : Activity() {
             }
         }
 
+        if (hidden > 0) {
+            items.add("Другие годы и части ($hidden)")
+            actions.add { showSourcePicker(allVariants, true) }
+        }
         val isTorrent = url.contains(":8090") || baseMeta.contains("torr", ignoreCase = true)
         items.add((if (isTorrent) "✓ " else "") + "Торренты (TorrServe)")
         actions.add {
