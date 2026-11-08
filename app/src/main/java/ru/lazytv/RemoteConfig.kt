@@ -93,6 +93,10 @@ object RemoteConfig {
     /** An address of a site: [id]'s base plus [path], with or without the leading slash. */
     fun url(id: String, path: String): String = base(id).trimEnd('/') + "/" + path.trimStart('/')
 
+    /** When each address last failed (memory only): a dead mirror is skipped for [DEAD_MS] instead of costing its timeout again. */
+    private val failedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val DEAD_MS = 5 * 60 * 1000L
+
     /**
      * Runs [block] with the address of [id] and moves to the next one when it throws (a dead domain, a refused
      * connection, an empty body that is not valid JSON). The first answer that came through is returned with its
@@ -100,10 +104,18 @@ object RemoteConfig {
      */
     fun <T> attempt(id: String, block: (String) -> T): Fetched<T> {
         var last: Throwable? = null
-        for (address in bases(id)) {
+        // an address that failed a moment ago is not asked again while others are left; if all failed lately, all are tried
+        val now = System.currentTimeMillis()
+        val all = bases(id)
+        val fresh = all.filter { now - (failedAt[it] ?: 0L) > DEAD_MS }
+        for (address in fresh.ifEmpty { all }) {
             try {
-                return Fetched(block(address), address)
+                val result = Fetched(block(address), address)
+                failedAt.remove(address)
+                return result
             } catch (t: Throwable) {
+                failedAt[address] = System.currentTimeMillis()
+                android.util.Log.i("LazyTV", "address $address failed: $t")
                 last = t
             }
         }

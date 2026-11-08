@@ -23,7 +23,7 @@ object Kinovibe : VideoSource {
         val pages = LinkedHashMap<String, Page>()
         for (query in listOf(title, original).filter { it.isNotBlank() }) {
             val answer = runCatching {
-                Sources.getAny(id) { base -> Sources.get("$base/?do=search&subaction=search&titleonly=3&story=${Sources.encode(query)}") }
+                RemoteConfig.attempt(id) { base -> Sources.get("$base/?do=search&subaction=search&titleonly=3&story=${Sources.encode(query)}") }
             }.getOrNull() ?: continue
             for (page in parseSearch(answer.value)) pages.putIfAbsent(page.path, page)
         }
@@ -80,7 +80,7 @@ object Kinovibe : VideoSource {
 
     /** The episodes of one season page; [prefix] adds "Сезон N • " when the variant has several seasons. */
     private fun seasonEpisodes(path: String, prefix: Boolean): List<Episode> {
-        val html = Sources.getAny(id) { base -> Sources.get(base + path) }.value
+        val html = RemoteConfig.attempt(id) { base -> Sources.get(base + path) }.value
         val season = seasonNumber.find(Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1).orEmpty())
             ?.groupValues?.get(1)?.toIntOrNull()
         val file = Regex("Playerjs\\(\\{[^}]*?file:\\s*\"([^\"]+)\"").find(html)?.groupValues?.get(1) ?: return emptyList()

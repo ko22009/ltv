@@ -35,7 +35,7 @@ object Hdrezka : VideoSource {
         val found = ArrayList<Variant>()
         for (query in listOf(title, original).filter { it.isNotBlank() }) {
             val answer = runCatching {
-                Sources.getAny(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
+                RemoteConfig.attempt(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
             }.getOrNull() ?: continue
             for (variant in parseSearch(answer.value)) if (seen.add(variant.ref)) found += variant
         }
@@ -73,7 +73,7 @@ object Hdrezka : VideoSource {
     }
 
     private fun page(variant: Variant): String =
-        Sources.getAny(id) { base -> requireSite(Sources.get(base + variant.ref)) }.value
+        RemoteConfig.attempt(id) { base -> requireSite(Sources.get(base + variant.ref)) }.value
 
     override fun episodes(variant: Variant): List<Episode> {
         val fetched = RemoteConfig.attempt(id) { base -> requireSite(Sources.get(base + variant.ref)) to base }
