@@ -215,7 +215,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             return false
         }
         wantCardFocus = false
-        claimGrid()
+        claimGrid(force = true)
         return true
     }
 
@@ -224,12 +224,14 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
      * Repeated after the next layout and the frame that follows it: on a fresh page the grid is not laid out yet, the
      * first request does nothing and the system then focuses the first button by itself.
      */
-    private fun claimGrid() {
-        fun take() {
+    private fun claimGrid(force: Boolean = false) {
+        fun take(always: Boolean = false) {
             val held = activity?.currentFocus
-            if (held == null || listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
+            if (always || held == null || listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
         }
-        take()
+        // [force]: the user pressed "right" or OK on the menu, the focus sits on the menu item and must leave it; the
+        // delayed repeats below stay careful so they do not pull the focus back after the user has gone to the menu
+        take(force)
         grid.doOnLayout { it.post { if (isAdded) take() } }
         // the cards come from the cache at once and the browse screen hands the focus to the first button a little
         // later, at an unknown moment: the request is repeated for the first second (only while the focus is on a button)
