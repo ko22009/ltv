@@ -17,9 +17,11 @@ import java.util.concurrent.ConcurrentHashMap
 object Cinema {
     private const val PREFS = "cinema"
     private const val IDS = "ids"
-    private const val AT = "at"
+    // renamed when the number of pages grew: the list saved by the previous version counts as stale and is renewed at once
+    private const val AT = "at_v2"
     private const val TTL_MS = 6 * 60 * 60 * 1000L
-    private const val PAGES = 3
+    // the whole list (about 5 pages for Russia): a film of a later page would lack the mark though the filter lists it
+    private const val PAGES = 6
 
     private val ids: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 

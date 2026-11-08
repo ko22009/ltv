@@ -67,15 +67,17 @@ data class CatalogFilter(
         // the year bounds and the "released / not released yet" bounds share one field: one value each, the tighter of the two
         val lower = listOfNotNull(if (yearFrom != 0) "$yearFrom-01-01" else null,
             // not out anywhere yet: a film premiered abroad is already on the internet, even if Russia gets it later
-            if (soon) day(1) else null).maxOrNull()
+            if (soon) day(SOON_FROM) else null).maxOrNull()
         if (lower != null) append("&$field.gte=$lower")
         val upper = listOfNotNull(if (yearTo != 0) "$yearTo-12-31" else null, if (!tv && release == "out") today else null).minOrNull()
         if (upper != null) append("&$field.lte=$upper")
         // the cinemas of Russia: wide (3) and limited (2) theatrical releases, as in TMDB's own "now playing" list
         if (!tv && (release == "now" || soon)) {
             append("&region=RU&with_release_type=2%7C3")
-            if (release == "now") append("&release_date.gte=").append(day(-45)).append("&release_date.lte=").append(today)
-            else append("&release_date.gte=").append(day(1))
+            // the same window as TMDB's own "now playing" list, which gives the "В КИНО" mark: otherwise a film
+            // could be in this filter and have no mark (or the other way round)
+            if (release == "now") append("&release_date.gte=").append(day(-NOW_DAYS_BACK)).append("&release_date.lte=").append(day(NOW_DAYS_AHEAD))
+            else append("&release_date.gte=").append(day(SOON_FROM))
         }
         if (ratingFrom != 1 || ratingTo != 10) {
             append("&vote_average.gte=$ratingFrom&vote_average.lte=$ratingTo&vote_count.gte=50")
@@ -90,6 +92,11 @@ data class CatalogFilter(
 
     companion object {
         private const val PREFS = "catalog_filters"
+
+        /** TMDB's "now playing" for Russia: from 39 days back to 3 days ahead; "soon" starts right after it. */
+        private const val NOW_DAYS_BACK = 39
+        private const val NOW_DAYS_AHEAD = 3
+        private const val SOON_FROM = NOW_DAYS_AHEAD + 1
 
         // kept apart from Settings: a change there redraws the whole menu, and the page would jump to its start
         private fun prefs(context: Context) = context.getSharedPreferences(PREFS, 0)
