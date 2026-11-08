@@ -549,7 +549,9 @@ class DetailsActivity : Activity() {
         val limit = cardStarted + 30_000L
         while (!quickReady.await(200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
             val now = System.currentTimeMillis()
-            if (now > limit || (variants.isNotEmpty() && now - cardStarted > 6_000L)) return
+            // a series shows its list of sources earlier: the dialog lets the viewer pick, the films open the right one on their own
+            val patience = if (currentTitle.tv) 3_000L else 6_000L
+            if (now > limit || (variants.isNotEmpty() && now - cardStarted > patience)) return
         }
     }
     @Volatile private var variants: List<Variant> = emptyList()

@@ -477,8 +477,9 @@ public final class DpiBypass {
         return (strategiesTried || appTask != null) ? dead(host) : new Decision(null, TTL_FAILED_MS);
     }
 
-    // how long a site that no way opens is left alone: 10 minutes, an hour, 6 hours, a day (then a day again)
-    private static final long[] DEAD_PAUSES_MS = {10 * 60 * 1000L, 60 * 60 * 1000L, 6 * 60 * 60 * 1000L, 24 * 60 * 60 * 1000L};
+    // how long a site that no way opens is left alone: 2 minutes (a network hiccup is forgiven quickly), then 10 minutes,
+    // an hour, 6 hours, a day (then a day again)
+    private static final long[] DEAD_PAUSES_MS = {2 * 60 * 1000L, 10 * 60 * 1000L, 60 * 60 * 1000L, 6 * 60 * 60 * 1000L, 24 * 60 * 60 * 1000L};
     private static final ConcurrentHashMap<String, long[]> DEAD = new ConcurrentHashMap<String, long[]>();
 
     private static long deadPause(long count) {

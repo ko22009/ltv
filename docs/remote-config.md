@@ -22,7 +22,7 @@
   "addresses": {
     "anilibria":   { "base": "https://anilibria.top", "alt": ["https://anilibria.example"] },
     "seasonvar":   { "base": "https://seasonvar.ru" },
-    "hdrezka":     { "base": "http://hdrezka-fly.net", "alt": ["https://hdrezkavktest.org", "https://rezka.ag", "https://hdrezka-home.tv"] },
+    "hdrezka":     { "base": "https://hdrezka-fly.net", "alt": ["https://hdrezkavktest.org", "https://rezka.ag", "https://hdrezka-home.tv"] },
     "rutube":      { "base": "https://rutube.ru" },
     "rutor":       { "base": "rutor.info", "alt": ["rutor.is"] },
     "octopus":     { "base": "https://045.ultradox.click", "alt": ["https://ultadox.space"] },
