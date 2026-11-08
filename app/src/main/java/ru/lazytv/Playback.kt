@@ -16,15 +16,16 @@ fun shortEpisode(title: String): String {
 }
 
 /**
- * Captions of the player strip for a whole queue: the episode only, and "N сезон, M серия" on the first episode of
- * every season after the first one, so the place where numbering starts over is visible.
+ * Captions of the player strip for a whole queue: "N сезон, M серия" when the series has several seasons (numbering
+ * starts over in each), the episode alone when it has one.
  */
 fun stripLabels(episodes: List<Episode>): List<String> {
     fun season(e: Episode) = e.title.substringBefore(" • ", "").takeIf { it.contains("сезон", ignoreCase = true) }
-    return episodes.mapIndexed { i, e ->
+    val several = episodes.mapNotNull(::season).toSet().size >= 2
+    return episodes.map { e ->
         val short = shortEpisode(e.title)
         val s = season(e)
-        if (s != null && i > 0 && season(episodes[i - 1]) != s) "$s, $short" else short
+        if (several && s != null) "$s, $short" else short
     }
 }
 

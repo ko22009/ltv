@@ -24,10 +24,20 @@ object ContinueWatching {
      * memory); null when nothing was saved, then the card of the title is opened instead.
      */
     fun resumeIntent(context: Context, tv: Boolean, id: Long): Intent? {
-        // a series needs its season and episode to be chosen: its card opens, only a film starts at once
-        if (tv) return null
         val raw = Settings.string(context, resumeKey(tv, id), "").ifEmpty { return null }
         val o = runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return null
+        // a series opens the season and episode screen on the episode to watch next (the saved stream links may be stale)
+        if (o.optBoolean("series")) {
+            return Intent(context, EpisodesActivity::class.java)
+                .putExtra("source", o.optString("source")).putExtra("sourceId", o.optString("sourceId"))
+                .putExtra("title", o.optString("title")).putExtra("note", o.optString("note")).putExtra("ref", o.optString("ref"))
+                .putExtra("alt", o.optString("alt")).putExtra("description", o.optString("description"))
+                .putExtra("mediaTitle", o.optString("mediaTitle")).putExtra("originalTitle", o.optString("originalTitle"))
+                .putExtra("year", o.optString("year")).putExtra("tv", true)
+                .putExtra("poster", o.optString("poster").ifEmpty { null }).putExtra("tmdbId", o.optLong("tmdbId"))
+                .putExtra("episodeIndex", o.optInt("index", -1))
+        }
+        if (tv) return null
         if (o.optString("url").isEmpty()) return null
         return Intent(context, PlayerActivity::class.java)
             .putExtra("url", o.optString("url")).putExtra("name", o.optString("name")).putExtra("meta", o.optString("meta"))
@@ -42,11 +52,12 @@ object ContinueWatching {
      * Adds the title to the row or moves its progress. [resume] is what the player needs to start the same stream again
      * (see [resumeIntent]). Runs the provider calls on the caller's thread: call it off the main thread.
      */
-    fun update(context: Context, title: Title, positionMs: Long, durationMs: Long, resume: String) {
+    fun update(context: Context, title: Title, positionMs: Long, durationMs: Long, resume: String, next: Boolean = false) {
         if (!Settings.bool(context, Settings.RECOMMENDATIONS) || title.id <= 0L || durationMs <= 0L) return
-        if (!title.tv) Settings.setString(context, resumeKey(title.tv, title.id), resume)
+        if (resume.isNotEmpty()) Settings.setString(context, resumeKey(title.tv, title.id), resume)
         val builder = androidx.tvprovider.media.tv.WatchNextProgram.Builder()
-            .setWatchNextType(TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
+            // "next": the episode just finished, the entry offers the following one; otherwise the episode is left half-way
+            .setWatchNextType(if (next) TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT else TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
             .setLastEngagementTimeUtcMillis(System.currentTimeMillis())
             .setType(if (title.tv) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
             .setTitle(title.name)

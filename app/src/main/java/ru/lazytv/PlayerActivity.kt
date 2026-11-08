@@ -930,6 +930,20 @@ class PlayerActivity : Activity() {
             .put("tv", isTv).put("poster", posterPath.orEmpty()).put("tmdbId", tmdbId).toString()
     }
 
+    /**
+     * What the season and episode screen needs to open on episode [index] of this series (see ContinueWatching.resumeIntent);
+     * empty when there is no such episode or the queue does not come from a video service.
+     */
+    private fun seriesResume(index: Int): String {
+        val item = queue.getOrNull(index) ?: return ""
+        val parts = item.watchKey.split("|", limit = 3)
+        if (parts.size < 3 || parts[0].isEmpty() || parts[1].isEmpty()) return ""
+        return org.json.JSONObject().put("series", true).put("sourceId", parts[0]).put("ref", parts[1])
+            .put("source", Sources.byId(parts[0])?.name.orEmpty()).put("title", item.title.substringBefore(" • "))
+            .put("mediaTitle", mediaTitle).put("originalTitle", originalTitle).put("year", mediaYear)
+            .put("poster", posterPath.orEmpty()).put("tmdbId", tmdbId).put("index", index).toString()
+    }
+
     private fun save() {
         val exo = player ?: return
         if (Settings.bool(this, Settings.REMEMBER_POSITION)) {
@@ -939,13 +953,18 @@ class PlayerActivity : Activity() {
             val appContext = applicationContext
             if (known && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
                 clearPosition()
-                if (tmdbId > 0L) Thread { ContinueWatching.clear(appContext, isTv, tmdbId) }.start()
+                val following = seriesResume(queueIndex + 1)
+                if (tmdbId > 0L && isTv && following.isNotEmpty()) {
+                    // a series: the row of the home screen now offers the next episode
+                    val title = Title(tmdbId, mediaTitle, "", posterPath, true, mediaYear)
+                    Thread { ContinueWatching.update(appContext, title, 0L, dur, following, next = true) }.start()
+                } else if (tmdbId > 0L) Thread { ContinueWatching.clear(appContext, isTv, tmdbId) }.start()
             } else if (pos >= 5_000L) {
                 getSharedPreferences("positions", 0).edit().putLong(positionKey(), pos).apply()
                 if (tmdbId > 0L && known) {
                     // the row of the home screen: the provider is written off the main thread
                     val title = Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear)
-                    val resume = resumeData()
+                    val resume = if (isTv) seriesResume(queueIndex).ifEmpty { resumeData() } else resumeData()
                     Thread { ContinueWatching.update(appContext, title, pos, dur, resume) }.start()
                 }
             }
