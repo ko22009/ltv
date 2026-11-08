@@ -533,7 +533,8 @@ class PlayerActivity : Activity() {
             finish()
         }
 
-        showChoice(this, "Смена источника", items, items.indexOfFirst { it.startsWith("✓") }) { which ->
+        // showChoice marks the current item itself: the marks of the labels are dropped, so there is one tick, not two
+        showChoice(this, "Смена источника", items.map { it.removePrefix("✓ ") }, items.indexOfFirst { it.startsWith("✓") }) { which ->
             actions.getOrNull(which)?.invoke()
         }
     }
