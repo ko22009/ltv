@@ -7,10 +7,10 @@ fun shortEpisode(title: String): String {
     fun clean(s: String) = s.replace(Regex("\\s*SD/HD.*$", RegexOption.IGNORE_CASE), "").trim()
     val parts = title.split(" • ")
     val first = parts[0].trim()
-    // "1 сезон • 3 серия": the season alone would make every button of a long series look the same
+    // "1 сезон • 3 серия": the strip shows the episode only, so the buttons stay short (the player title keeps the season)
     if (first.contains("сезон", ignoreCase = true) && parts.size > 1) {
         val episode = clean(parts[1])
-        if (episode.isNotEmpty()) return "$first, $episode"
+        if (episode.isNotEmpty()) return episode
     }
     return clean(first).ifEmpty { first }
 }

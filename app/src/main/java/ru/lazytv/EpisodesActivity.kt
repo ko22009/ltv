@@ -343,7 +343,9 @@ class EpisodesActivity : Activity() {
                 cornerRadius = px(3).toFloat()
             })
         }
-        card.addView(label(episode.title, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
+        // the season is already chosen with the season buttons: the row names only the episode
+        val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
+        card.addView(label(shown, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
             LinearLayout.LayoutParams(0, -2, 1f))
         if (favorite) card.addView(label("★", 20f, 0xFFE0B94F.toInt()).apply { setPadding(px(8), 0, px(4), 0) })
         if (watched) card.addView(label("✓", 20f, 0xFFA5B4FC.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
