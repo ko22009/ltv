@@ -336,10 +336,12 @@ class MainFragment : Fragment() {
         }
 
         val tx = childFragmentManager.beginTransaction()
-        childFragmentManager.fragments.forEach { f ->
-            if (f.isVisible) tx.hide(f)
-        }
         val target = childFragmentManager.findFragmentByTag(name)
+        // every other page is hidden, not only the ones that report themselves visible: a page whose view is not
+        // attached yet (fast switching, slow TV) used to stay shown under the new one, titles drawn over each other
+        childFragmentManager.fragments.forEach { f ->
+            if (f !== target && !f.isHidden) tx.hide(f)
+        }
         if (target != null) {
             tx.show(target)
             if (target is SearchPageFragment) searchPage = target
