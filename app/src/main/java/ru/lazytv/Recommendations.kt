@@ -16,6 +16,10 @@ import org.json.JSONArray
  * player restores the position); a series card opens the title card of the app to choose the season and the episode.
  */
 object ContinueWatching {
+    private const val LIVE = 0
+    private const val HIDDEN = 1
+    private const val GONE = 2
+
     private fun key(tv: Boolean, id: Long) = "continue_watching_${tv}_$id"
     private fun resumeKey(tv: Boolean, id: Long) = "continue_play_${tv}_$id"
 
@@ -74,13 +78,16 @@ object ContinueWatching {
         if (!title.poster.isNullOrEmpty()) builder.setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
         val helper = PreviewChannelHelper(context)
         val remembered = Settings.string(context, key(title.tv, title.id), "").toLongOrNull()
-        // the entry may be gone (removed from the row by the user or dropped by the launcher): updating a missing id
-        // does nothing for good, so then the title is published again
+        // the entry may be gone, or the launcher may keep it hidden after the user removed it from the row: updating
+        // such an entry changes nothing on the screen, so it is deleted and the title is published again
         val saved = remembered?.takeIf { id ->
-            runCatching {
-                context.contentResolver.query(TvContractCompat.buildWatchNextProgramUri(id), arrayOf(android.provider.BaseColumns._ID), null, null, null)
-                    ?.use { it.count > 0 }
-            }.getOrNull() != false
+            val uri = TvContractCompat.buildWatchNextProgramUri(id)
+            val state = runCatching {
+                context.contentResolver.query(uri, arrayOf(TvContractCompat.WatchNextPrograms.COLUMN_BROWSABLE), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) (if (c.getInt(0) == 0) HIDDEN else LIVE) else GONE }
+            }.getOrNull() ?: LIVE // the check itself failed: keep the old behaviour and update
+            if (state == HIDDEN) runCatching { context.contentResolver.delete(uri, null, null) }
+            state == LIVE
         }
         runCatching {
             if (saved != null) {
