@@ -110,7 +110,6 @@ public final class DpiBypass {
     private static final int EXTRA_SOCKS_BASE = 18100;
     private static final int EXTRA_CONNECT_BASE = 18200;
     private static final int EXTRA_PROBE_MS = 3500;
-    private static final long TTL_EXHAUSTED_MS = 10 * 60 * 1000L;
     private static final ConcurrentHashMap<String, Integer> HOST_STRATEGY = new ConcurrentHashMap<String, Integer>();
     private static final Process[] EXTRA = new Process[STRATEGIES.length];
     private static final boolean[] EXTRA_FRONT = new boolean[STRATEGIES.length];
@@ -124,6 +123,8 @@ public final class DpiBypass {
     private static final class Decision {
         final Proxy proxy;
         final long expires;
+        /** True when nothing opened the site: it is left alone for a growing time (see [dead]). */
+        boolean dead;
 
         Decision(Proxy proxy, long ttl) {
             this.proxy = proxy;
@@ -146,6 +147,7 @@ public final class DpiBypass {
         try {
             libDir = nativeLibraryDir;
             loadHostStrategies();
+            loadDead();
             boolean hasLocalBin = new File(libDir, "libciadpi.so").canExecute();
             started = true;
             if (hasLocalBin || externalSocksHost != null) {
@@ -238,6 +240,8 @@ public final class DpiBypass {
         if (force) {
             HOST_STRATEGY.clear();
             saveHostStrategies();
+            DEAD.clear();
+            saveDead();
         }
         if (!force) {
             int saved = savedStrategy();
@@ -391,6 +395,9 @@ public final class DpiBypass {
             @Override
             public Decision call() {
                 Decision d = probe(host);
+                if (!d.dead && DEAD.remove(host) != null) {
+                    saveDead();
+                }
                 CACHE.put(host, d);
                 log(host + " -> " + (d.proxy == null ? "direct" : String.valueOf(d.proxy.address())));
                 return d;
@@ -434,23 +441,114 @@ public final class DpiBypass {
                 return new Decision(VIA_DPI, TTL_DPI_MS);
             }
         }
-        // the common strategy did not open it: the other strategies are tried at once, the first that works is kept for this site
-        boolean exhausted = false;
-        if (common && externalSocksHost == null) {
+        // the common strategy did not open it: the other strategies and the app proxy are tried at the same time;
+        // a strategy that works is kept for this site and wins over the proxy
+        FutureTask<Integer> appTask = null;
+        if (host.contains("rutor") ? appProxyTorrentsAllowed : appProxyAllowed) {
+            final String target = host;
+            appTask = new FutureTask<Integer>(new Callable<Integer>() {
+                @Override
+                public Integer call() {
+                    return handshake(target, appProxy(), DPI_TIMEOUT_MS);
+                }
+            });
+            POOL.execute(appTask);
+        }
+        boolean strategiesTried = common && externalSocksHost == null;
+        if (strategiesTried) {
             int found = tryOtherStrategies(host);
             if (found >= 0) {
                 saveHostStrategies();
                 return new Decision(extraProxy(found), TTL_DPI_MS);
             }
-            exhausted = true;
         }
-        if (!(host.contains("rutor") ? appProxyTorrentsAllowed : appProxyAllowed)) {
-            return new Decision(null, exhausted ? TTL_EXHAUSTED_MS : TTL_FAILED_MS);
+        if (appTask != null) {
+            int app = V_OTHER;
+            try {
+                app = appTask.get();
+            } catch (Exception ignored) {
+            }
+            log(host + " via app proxy: " + app);
+            if (app == V_OK) {
+                return new Decision(new Proxy(Proxy.Type.HTTP, appProxy()), TTL_DPI_MS);
+            }
         }
-        int app = handshake(host, appProxy(), DPI_TIMEOUT_MS);
-        log(host + " via app proxy: " + app);
-        return app == V_OK ? new Decision(new Proxy(Proxy.Type.HTTP, appProxy()), TTL_DPI_MS)
-                : new Decision(null, exhausted ? TTL_EXHAUSTED_MS : TTL_FAILED_MS);
+        // nothing worked: with something actually tried the site counts as dead and is left alone for a growing time
+        return (strategiesTried || appTask != null) ? dead(host) : new Decision(null, TTL_FAILED_MS);
+    }
+
+    // how long a site that no way opens is left alone: 10 minutes, an hour, 6 hours, a day (then a day again)
+    private static final long[] DEAD_PAUSES_MS = {10 * 60 * 1000L, 60 * 60 * 1000L, 6 * 60 * 60 * 1000L, 24 * 60 * 60 * 1000L};
+    private static final ConcurrentHashMap<String, long[]> DEAD = new ConcurrentHashMap<String, long[]>();
+
+    private static long deadPause(long count) {
+        return DEAD_PAUSES_MS[(int) Math.min(Math.max(count - 1, 0), DEAD_PAUSES_MS.length - 1)];
+    }
+
+    private static Decision dead(String host) {
+        long[] old = DEAD.get(host);
+        long count = old == null ? 1 : old[0] + 1;
+        DEAD.put(host, new long[]{count, System.currentTimeMillis()});
+        saveDead();
+        log(host + " does not open any way, left alone for " + deadPause(count) / 60000L + " min");
+        Decision d = new Decision(null, deadPause(count));
+        d.dead = true;
+        return d;
+    }
+
+    private static File deadFile() {
+        File f = strategyFile;
+        return f == null ? null : new File(f.getParentFile(), "dpi_dead");
+    }
+
+    private static synchronized void saveDead() {
+        try {
+            File f = deadFile();
+            if (f == null) {
+                return;
+            }
+            StringBuilder text = new StringBuilder();
+            for (java.util.Map.Entry<String, long[]> e : DEAD.entrySet()) {
+                text.append(e.getKey()).append('=').append(e.getValue()[0]).append('|').append(e.getValue()[1]).append('\n');
+            }
+            java.io.FileOutputStream out = new java.io.FileOutputStream(f);
+            out.write(text.toString().getBytes());
+            out.close();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Sites found dead before the restart stay left alone for the rest of their pause: no probing of them again at start. */
+    private static void loadDead() {
+        try {
+            File f = deadFile();
+            if (f == null || !f.exists()) {
+                return;
+            }
+            java.io.BufferedReader in = new java.io.BufferedReader(new java.io.FileReader(f));
+            try {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    int eq = line.indexOf('=');
+                    int bar = line.indexOf('|');
+                    if (eq > 0 && bar > eq) {
+                        long count = Long.parseLong(line.substring(eq + 1, bar).trim());
+                        long time = Long.parseLong(line.substring(bar + 1).trim());
+                        String host = line.substring(0, eq).trim();
+                        DEAD.put(host, new long[]{count, time});
+                        long left = deadPause(count) - (System.currentTimeMillis() - time);
+                        if (left > 0) {
+                            Decision d = new Decision(null, left);
+                            d.dead = true;
+                            CACHE.put(host, d);
+                        }
+                    }
+                }
+            } finally {
+                in.close();
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private static Proxy extraProxy(int index) {

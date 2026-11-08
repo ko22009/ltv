@@ -39,7 +39,6 @@ object ExtraTorrents {
             jobs.add("YTS" to { related(yts(query)) })
         }
         if (name.isNotBlank()) jobs.add("Octopus" to { octopus(name, original) })
-        if (name.isNotBlank()) jobs.add("Videoplenka" to { videoplenka(name) })
         if (name.isNotBlank()) jobs.add("JacRed" to { jacRed(context, name) })
         if (name.isNotBlank()) jobs.add("TorrentKino" to { torrentKino(name) })
         if (name.isNotBlank() || original.isNotBlank()) jobs.add("Jackett" to { jackett(context, name.ifBlank { original }, original) })
@@ -245,43 +244,6 @@ object ExtraTorrents {
             fun count(cls: String) = Regex("class=\"$cls\"><b>(\\d+)</b>").find(row)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             Torrent(text(topic.groupValues[2]), size(bytes), count("seedmed"), count("leechmed"), nnm() + "viewtopic.php?t=" + topic.groupValues[1], "NNM-Club")
         }
-    }
-
-    private fun vp() = RemoteConfig.base("videoplenka").trimEnd('/')
-
-    /**
-     * Videoplenka (lafa.site): the search lists film pages, a film page carries all its releases in one table —
-     * the magnet hash sits in the mylinks link, so no extra request is needed. Windows-1251 site.
-     */
-    private fun videoplenka(name: String): List<Torrent> {
-        val wanted = words(name).filter { it.length >= 3 }.toSet()
-        val search = Sources.get("${vp()}/torrentz/search/${Sources.encode(name)}/", windows1251)
-        val films = Regex("<div\\s+class=\"c_title\"><a href=\"([^\"]+)\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL)
-            .findAll(search).mapNotNull { m ->
-                val href = m.groupValues[1]
-                val title = htmlText(m.groupValues[2]).ifEmpty { return@mapNotNull null }
-                val have = words(title).toSet()
-                if (wanted.isNotEmpty() && wanted.count { it in have } * 2 < wanted.size) null
-                else (if (href.startsWith("http")) href else vp() + href) to title
-            }.distinctBy { it.first }.take(3).toList()
-        return films.flatMap { (url, title) ->
-            runCatching { videoplenkaPage(Sources.get(url, windows1251), title) }.getOrDefault(emptyList())
-        }
-    }
-
-    private fun videoplenkaPage(html: String, filmTitle: String): List<Torrent> {
-        return Regex("<tr(?![^>]*expand-child)[^>]*>(.*?)</tr>", RegexOption.DOT_MATCHES_ALL).findAll(html).mapNotNull { m ->
-            val row = m.groupValues[1]
-            val hash = Regex("mylinks\\.ws/m/125/([0-9A-Fa-f]{40})").find(row)?.groupValues?.get(1) ?: return@mapNotNull null
-            val id = Regex("data-id=\"(\\d+)\"").find(row)?.groupValues?.get(1) ?: return@mapNotNull null
-            val translation = Regex("class=\"dl_trad\">([^<]*)<").find(row)?.groupValues?.get(1)?.trim().orEmpty()
-            val format = Regex("<td width=\"10%\" align=\"center\">([A-Za-z0-9]{2,5})</td>").find(row)?.groupValues?.get(1).orEmpty()
-            val bytes = Regex("data-sort-value=\"(\\d+)\"").find(row)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
-            val seeds = Regex("seeders_$id\">(\\d+)<").find(html)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val leeches = Regex("leechers_$id\">(\\d+)<").find(html)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val note = listOf(translation, format).filter { it.isNotEmpty() }.joinToString(", ")
-            Torrent("$filmTitle • $note", if (bytes > 0) size(bytes) else "", seeds, leeches, magnet(hash, "$filmTitle $note"), "Videoplenka")
-        }.toList()
     }
 
     /**
