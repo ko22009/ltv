@@ -30,11 +30,16 @@ fun stripLabels(episodes: List<Episode>): List<String> {
 }
 
 /** The stream of an episode for a quality limit; [exact] (the user's pick) wins when that quality exists. */
-fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> {
-    exact?.let { name -> episode.streams.firstOrNull { it.first == name }?.let { return it } }
+fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> =
+    pickStream(episode.streams, wanted, exact)
+
+/** Same for a bare list of streams; an episode whose links are not asked for yet gives an empty pair. */
+fun pickStream(streams: List<Pair<String, String>>, wanted: String, exact: String? = null): Pair<String, String> {
+    if (streams.isEmpty()) return "" to ""
+    exact?.let { name -> streams.firstOrNull { it.first == name }?.let { return it } }
     val limit = wanted.toIntOrNull()
-    return if (limit == null) episode.streams.first()
-    else episode.streams.firstOrNull { (it.first.removeSuffix("p").toIntOrNull() ?: 0) <= limit } ?: episode.streams.last()
+    return if (limit == null) streams.first()
+    else streams.firstOrNull { (it.first.removeSuffix("p").toIntOrNull() ?: 0) <= limit } ?: streams.last()
 }
 
 /**
@@ -47,9 +52,22 @@ fun playEpisode(
     mediaTitle: String = "", originalTitle: String = "", year: String = "", tv: Boolean = false, poster: String? = null,
     tmdbId: Long = 0L,
 ) {
-    // opening an episode marks it watched even before the player starts; the button can remove the mark
-    EpisodeState.setWatched(activity, EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title), true)
     val episode = episodes[index]
+    if (!episode.isResolved) {
+        // the link of this episode is asked for first (a network call, so off the main thread), then the same call goes on
+        android.widget.Toast.makeText(activity, "Загрузка серии…", android.widget.Toast.LENGTH_SHORT).show()
+        Thread {
+            val found = runCatching { episode.resolve() }.getOrDefault(emptyList())
+            activity.runOnUiThread {
+                if (activity.isFinishing) return@runOnUiThread
+                if (found.isEmpty()) android.widget.Toast.makeText(activity, "Не удалось получить ссылку на серию", android.widget.Toast.LENGTH_LONG).show()
+                else playEpisode(activity, variant, episodes, index, choose, mediaTitle, originalTitle, year, tv, poster, tmdbId)
+            }
+        }.start()
+        return
+    }
+    // opening an episode marks it watched even before the player starts; the button can remove the mark
+    EpisodeState.setWatched(activity, EpisodeState.key(variant.sourceId, variant.ref, episode.title), true)
     val wanted = Settings.string(activity, Settings.QUALITY, "best")
     if ((choose || wanted == "ask") && episode.streams.size > 1) {
         showChoice(activity, "Качество • ${episode.title}", episode.streams.map { it.first }, -1) { which ->
@@ -69,6 +87,7 @@ private fun startPlayer(
     val queue = org.json.JSONArray()
     val labels = stripLabels(episodes)
     episodes.forEachIndexed { position, episode ->
+        LazyLinks.register(EpisodeState.key(variant.sourceId, variant.ref, episode.title), episode)
         val stream = streamFor(episode, wanted, exact)
         val streamsJson = org.json.JSONArray()
         episode.streams.forEach { (q, u) -> streamsJson.put(org.json.JSONObject().put("q", q).put("u", u)) }

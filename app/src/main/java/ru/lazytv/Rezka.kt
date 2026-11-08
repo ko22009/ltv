@@ -101,22 +101,11 @@ object Hdrezka : VideoSource {
             .sortedWith(compareBy({ it.first }, { it.second }))
         if (pairs.isEmpty()) return emptyList()
 
-        // one request per episode (the site gives links only one by one); a few at a time so the site is not hammered
-        // упрощено: for a series of hundreds of episodes the first open takes longer; lazy links per episode when it grows
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(10)
-        try {
-            val tasks = pairs.map { (season, episode) ->
-                java.util.concurrent.Callable {
-                    val streams = runCatching {
-                        stream(base, variant.ref, filmId, translator, "get_stream", season, episode)
-                    }.getOrDefault(emptyList())
-                    if (streams.isEmpty()) null else Episode("Сезон $season • Серия $episode", streams)
-                }
+        // the site gives links one episode at a time: the list is made at once, a link is asked for when the episode is opened
+        return pairs.map { (season, episode) ->
+            Episode("Сезон $season • Серия $episode", emptyList()) {
+                stream(base, variant.ref, filmId, translator, "get_stream", season, episode)
             }
-            return pool.invokeAll(tasks, 90, java.util.concurrent.TimeUnit.SECONDS)
-                .mapNotNull { runCatching { it.get() }.getOrNull() }
-        } finally {
-            pool.shutdownNow()
         }
     }
 
@@ -138,7 +127,10 @@ object Hdrezka : VideoSource {
         Regex("\\[([^\\]]+)]([^,\\[]+)").findAll(text).mapNotNull { m ->
             val urls = m.groupValues[2].split(" or ").map { it.trim() }.filter { it.startsWith("http") }
             val url = urls.firstOrNull { it.contains(".mp4") && !it.contains(".m3u8") } ?: urls.firstOrNull() ?: return@mapNotNull null
-            m.groupValues[1].trim() to url
+            // the site marks paid qualities ("1080p Ultra") with a span and an icon: they need a subscription, so they are dropped;
+            // the label of a free quality is plain text, tags are stripped anyway
+            if (m.groupValues[1].contains("prem-quality")) return@mapNotNull null
+            m.groupValues[1].replace(Regex("<[^>]*>"), "").trim() to url
         }.distinctBy { it.first }.sortedByDescending { height(it.first) }.toList()
 
     private fun height(label: String): Int = when {

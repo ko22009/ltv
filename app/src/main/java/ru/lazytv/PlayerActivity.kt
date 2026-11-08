@@ -74,6 +74,7 @@ class PlayerActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var url: String
     private lateinit var view: PlayerView
+    private lateinit var bufferSpinner: View
     private lateinit var overlay: View
     private lateinit var playPause: ImageView
     private lateinit var seek: SeekBar
@@ -189,8 +190,11 @@ class PlayerActivity : Activity() {
         // otherwise the full-screen video surface sits in the D-pad focus search too and steals it from the buttons
         view.isFocusable = false
         view.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
-        view.setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
+        // the buffering circle is the app's own spinner (the same as on the card and in the lists), not the default blue one of the player
+        view.setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
         root.addView(view, FrameLayout.LayoutParams(-1, -1))
+        bufferSpinner = Spinner(this, dp(64))
+        root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
 
         overlay = buildOverlay(name, meta)
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
@@ -216,6 +220,7 @@ class PlayerActivity : Activity() {
 
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
+                bufferSpinner.visibility = if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
                 if (state == Player.STATE_ENDED) {
                     clearPosition()
                     advance()
@@ -285,6 +290,25 @@ class PlayerActivity : Activity() {
         val exo = player ?: return
         val item = queue.getOrNull(index) ?: return
         if (index == queueIndex) return
+        if (item.url.isEmpty()) {
+            // the link of this episode was not asked for yet (HDRezka series): ask now, then switch
+            Toast.makeText(this, "Загрузка серии…", Toast.LENGTH_SHORT).show()
+            Thread {
+                val streams = LazyLinks.resolve(item.watchKey)
+                handler.post {
+                    if (releasing || isFinishing) return@post
+                    if (streams.isEmpty()) {
+                        Toast.makeText(this, "Не удалось получить ссылку на серию", Toast.LENGTH_LONG).show()
+                        return@post
+                    }
+                    val pick = pickStream(streams, Settings.string(this, Settings.QUALITY, "best"))
+                    val meta = if (item.meta.contains(" • ")) item.meta.substringBeforeLast(" • ") + " • " + pick.first else item.meta
+                    queue = queue.toMutableList().also { it[index] = item.copy(url = pick.second, meta = meta, streams = streams) }
+                    switchTo(index, toast, saveCurrent)
+                }
+            }.start()
+            return
+        }
         if (saveCurrent) save()
         queueIndex = index
         url = item.url
@@ -307,6 +331,13 @@ class PlayerActivity : Activity() {
         scrollToActiveEpisode()
         resetHideTimer()
         if (toast) Toast.makeText(this, "Далее: ${item.label.ifEmpty { item.title }}", Toast.LENGTH_SHORT).show()
+        warmNext()
+    }
+
+    /** The link of the next episode is asked for while this one plays, so the switch is not delayed. */
+    private fun warmNext() {
+        val next = queue.getOrNull(queueIndex + 1)?.takeIf { it.url.isEmpty() && it.watchKey.isNotEmpty() } ?: return
+        Thread { LazyLinks.resolve(next.watchKey) }.start()
     }
 
     private fun scrollToActiveEpisode() {
@@ -557,6 +588,8 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Загрузка: ${v.source}…", Toast.LENGTH_SHORT).show()
         Thread {
             val episodes = runCatching { Sources.byId(v.sourceId)?.episodes(v) }.getOrNull()
+            // the episode being played needs its link before the queue is replaced
+            runCatching { episodes?.getOrNull(queueIndex)?.resolve() }
             handler.post {
                 if (isFinishing || releasing) return@post
                 if (episodes.isNullOrEmpty()) {

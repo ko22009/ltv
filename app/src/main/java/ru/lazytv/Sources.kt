@@ -18,7 +18,39 @@ data class Variant(
 )
 
 /** One playable item of a variant (an episode or the whole film) with streams per quality, best first. */
-data class Episode(val title: String, val streams: List<Pair<String, String>>)
+data class Episode(
+    val title: String,
+    private val first: List<Pair<String, String>>,
+    /** A site that gives the links one by one (HDRezka series) lists the episodes at once and asks for a link when it is needed. */
+    private val resolver: (() -> List<Pair<String, String>>)? = null,
+) {
+    @Volatile private var loaded: List<Pair<String, String>>? = null
+
+    val streams: List<Pair<String, String>> get() = loaded ?: first
+
+    /** False for an episode whose links are still to be asked for with [resolve] (network: not on the main thread). */
+    val isResolved: Boolean get() = streams.isNotEmpty() || resolver == null
+
+    fun resolve(): List<Pair<String, String>> {
+        if (isResolved) return streams
+        val found = resolver!!.invoke()
+        if (found.isNotEmpty()) loaded = found
+        return found
+    }
+}
+
+/** Episodes handed to the player whose links are not known yet, by their watch key: the player asks for them when it gets there. */
+object LazyLinks {
+    private val episodes = java.util.concurrent.ConcurrentHashMap<String, Episode>()
+
+    fun register(key: String, episode: Episode) {
+        if (key.isEmpty() || episode.isResolved) return
+        if (episodes.size > 600) episodes.clear()
+        episodes[key] = episode
+    }
+
+    fun resolve(key: String): List<Pair<String, String>> = runCatching { episodes[key]?.resolve() }.getOrNull().orEmpty()
+}
 
 /** A video site. Each source answers a title search and lists the playable items of a found variant. */
 interface VideoSource {
