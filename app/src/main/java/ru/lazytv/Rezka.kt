@@ -37,11 +37,16 @@ object Hdrezka : VideoSource {
         val seen = HashSet<String>()
         val found = ArrayList<Variant>()
         val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
-            RemoteConfig.attempt(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
+            // a mirror that answers with an empty list (one of them does, while the series page opens only there) is not
+            // trusted: the next mirror is asked. Not an IOException, so the mirror is not marked dead for other requests.
+            RemoteConfig.attempt(id) { base ->
+                val html = requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true))
+                parseSearch(html).also { if (it.isEmpty()) throw IllegalStateException("Пустой поиск на $base") }
+            }
         }
         for ((_, answer) in answers) {
             if (answer == null) continue
-            for (variant in parseSearch(answer.value)) if (seen.add(variant.ref)) found += variant
+            for (variant in answer.value) if (seen.add(variant.ref)) found += variant
         }
         return Sources.relevant(found, listOf(title, original), year)
     }
