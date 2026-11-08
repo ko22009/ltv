@@ -40,7 +40,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val OVERVIEW = "ОБЗОР"
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
 
@@ -73,7 +72,7 @@ class MainFragment : Fragment() {
     private var torrentsSignature = ""
     private var watchedMarks = ""
 
-    private var currentPage = OVERVIEW
+    private var currentPage = ""
     /** The page the menu must open after an update; empty when the menu starts as usual (docs/workflow.md). */
     private var pageToRestore = ""
     private var searchPage: SearchPageFragment? = null
@@ -218,7 +217,8 @@ class MainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         buildNavRail()
 
-        val initialPage = pageToRestore.ifEmpty { OVERVIEW }
+        // a page saved by an older version (the removed overview) is not in the menu: start from the home page
+        val initialPage = pageToRestore.takeIf { saved -> navItems.any { it.name == saved } } ?: homePage()
         pageToRestore = ""
         openPage(initialPage, requestContentFocus = true)
 
@@ -241,7 +241,6 @@ class MainFragment : Fragment() {
                     // only the lists: posters are requested by the cards when they come on screen
                     Tmdb.load(warmContext, category, CatalogFilter.sort(warmContext, category.id).sort, 1, filter.query(category.tv))
                 }
-                Tmdb.overview.take(4).forEach { col -> runCatching { Tmdb.loadCollection(warmContext, col) } }
             }
         }.start()
     }
@@ -258,7 +257,7 @@ class MainFragment : Fragment() {
         val iconSize = (28 * scale).toInt()
         val gap = (8 * scale).toInt()
 
-        val names = mutableListOf(OVERVIEW)
+        val names = mutableListOf<String>()
         Tmdb.visibleCategories(ctx).forEach { names.add(it.title.uppercase()) }
         names.add(SEARCH_HEADER)
         names.add(FAVORITES)
@@ -284,9 +283,13 @@ class MainFragment : Fragment() {
         childFragmentManager.fragments.forEach { tx.remove(it) }
         tx.commitAllowingStateLoss()
         buildNavRail()
-        val target = if (navItems.any { it.name == currentPage }) currentPage else OVERVIEW
+        val target = if (navItems.any { it.name == currentPage }) currentPage else homePage()
         openPage(target, requestContentFocus = false)
     }
+
+    /** The first page of the menu: the first visible category, bookmarks when every category is hidden. */
+    private fun homePage(): String =
+        Tmdb.visibleCategories(requireContext()).firstOrNull()?.title?.uppercase() ?: FAVORITES
 
     private fun currentNavItem(): NavItemView? =
         navItems.firstOrNull { it.name == currentPage } ?: navItems.firstOrNull()
@@ -310,6 +313,9 @@ class MainFragment : Fragment() {
                 return
             }
         }
+        // a catalog page opens on its first card, not on the filter buttons above it
+        val catalog = childFragmentManager.findFragmentByTag(currentPage) as? CatalogPageFragment
+        if (catalog != null && catalog.focusFirstCard()) return
         val railItem = currentNavItem()
         val target = if (railItem != null) {
             FocusFinder.getInstance().findNextFocus(rootLayout, railItem, View.FOCUS_RIGHT)
@@ -362,8 +368,8 @@ class MainFragment : Fragment() {
     /**
      * Back button handling:
      * 1. If focus is in page content -> moves focus to the left rail.
-     * 2. If focus is already in rail and not on Overview -> switches to Overview and focuses it.
-     * 3. If focus is in rail and on Overview -> returns false to let system exit app.
+     * 2. If focus is already in rail and not on the home page -> switches to the home page and focuses it.
+     * 3. If focus is in rail and on the home page -> returns false to let system exit app.
      */
     fun handleBack(): Boolean {
         if (!::contentContainer.isInitialized) return false
@@ -372,8 +378,8 @@ class MainFragment : Fragment() {
             currentNavItem()?.requestFocus()
             return true
         }
-        if (currentPage != OVERVIEW) {
-            openPage(OVERVIEW, requestContentFocus = false)
+        if (currentPage != homePage()) {
+            openPage(homePage(), requestContentFocus = false)
             currentNavItem()?.requestFocus()
             return true
         }
@@ -540,7 +546,7 @@ class MainFragment : Fragment() {
         val torNow = Settings.string(ctx, "favorite_torrents", "[]")
         if (torNow != torrentsSignature) {
             torrentsSignature = torNow
-            pages[OVERVIEW]?.let { syncFavoriteTorrents(it, ctx) }
+            favoritesRows?.let { fillFavorites(it, ctx) }
         }
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
@@ -600,17 +606,6 @@ class MainFragment : Fragment() {
         val rows = ArrayObjectAdapter(pageRows(dimOthers = name != SETTINGS))
         val ctx = requireContext()
         when (name) {
-            OVERVIEW -> {
-                if (ClockCheck.skewed) rows.add(PageNoteRow(ClockCheck.MESSAGE))
-                torrentsSignature = Settings.string(ctx, "favorite_torrents", "[]")
-                val favTorrents = FavoriteTorrents.all(ctx)
-                if (favTorrents.isNotEmpty()) {
-                    rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
-                }
-                Tmdb.overview.forEachIndexed { index, collection ->
-                    addRow(rows, collection.title, MoreTile(collection.title, collection = index)) { context -> Tmdb.loadCollection(context, collection) }
-                }
-            }
             FAVORITES -> {
                 favoritesRows = rows
                 favoritesSignature = favoritesState(ctx)
@@ -621,23 +616,9 @@ class MainFragment : Fragment() {
         rows
     }
 
-    private fun syncFavoriteTorrents(rows: ArrayObjectAdapter, ctx: Context) {
-        val existingIndex = (0 until rows.size()).indexOfFirst { (rows.get(it) as? ListRow)?.headerItem?.name == "Избранные раздачи" }
-        val favTorrents = FavoriteTorrents.all(ctx)
-        if (favTorrents.isEmpty()) {
-            if (existingIndex >= 0) rows.removeItems(existingIndex, 1)
-        } else if (existingIndex >= 0) {
-            val adapter = (rows.get(existingIndex) as ListRow).adapter as ArrayObjectAdapter
-            adapter.clear()
-            adapter.addAll(0, favTorrents)
-        } else {
-            val insertAt = if (rows.size() > 0 && rows.get(0) is PageNoteRow) 1 else 0
-            rows.add(insertAt, ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
-        }
-    }
-
     private fun fillFavorites(rows: ArrayObjectAdapter, ctx: Context) {
         rows.clear()
+        torrentsSignature = Settings.string(ctx, "favorite_torrents", "[]")
         val saved = Favorites.all(ctx)
         if (saved.isNotEmpty()) rows.add(ListRow(ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }))
         val episodes = EpisodeState.favorites(ctx)
@@ -645,6 +626,10 @@ class MainFragment : Fragment() {
             rows.add(ListRow(HeaderItem("Избранные серии"), ArrayObjectAdapter(FavoriteEpisodePresenter()).apply {
                 addAll(0, episodes)
             }))
+        }
+        val favTorrents = FavoriteTorrents.all(ctx)
+        if (favTorrents.isNotEmpty()) {
+            rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
         }
         if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"))
     }

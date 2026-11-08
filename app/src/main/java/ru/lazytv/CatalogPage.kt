@@ -200,6 +200,24 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         startOver()
     }
 
+    /** Set while the menu opened the page before the cards arrived: the focus moves to the first card once they stand. */
+    private var wantCardFocus = false
+
+    /**
+     * Puts the focus on the first card of the list instead of the filter buttons. Returns false when the cards are
+     * not there yet (skeletons); the focus is handed over as soon as they arrive.
+     */
+    fun focusFirstCard(): Boolean {
+        if (!::grid.isInitialized) return false
+        if (cards.size() > 0 && !skeletons) {
+            wantCardFocus = false
+            grid.requestFocus()
+            return true
+        }
+        wantCardFocus = true
+        return false
+    }
+
     /** The button above the focused card (or the closest one to it): the first cards go up to the filters, the next ones to the sort. */
     private fun nearestChip(): View {
         val visible = listOf(resetChip, filterChip, sortChip).filter { it.isShown }
@@ -332,6 +350,11 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
                 val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
                 if (loaded.ended) finished = true else nextPage = page + 1
                 if (fresh.isNotEmpty()) cards.addAll(cards.size(), fresh)
+                // only while the focus still sits on a button: if the user went elsewhere meanwhile, it is not taken away
+                if (wantCardFocus && cards.size() > 0) {
+                    wantCardFocus = false
+                    if (listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
+                }
                 if (loaded.ended && cards.size() == 0) {
                     message.text = "Ничего не найдено"
                     message.visibility = View.VISIBLE
