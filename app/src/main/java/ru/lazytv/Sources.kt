@@ -388,6 +388,13 @@ object Sources {
         }
     }
 
+    /** Logs an empty search answer that looks like a stub or a bot check (short page, challenge words): "nothing found" is told apart from "not served". */
+    fun noteEmpty(id: String, html: String) {
+        if (html.length < 4000 || Regex("captcha|anubis|Проверяем|Just a moment|cloudflare", RegexOption.IGNORE_CASE).containsMatchIn(html)) {
+            android.util.Log.i("LazyTV", "source $id: empty answer looks like a stub or a check (${html.length} chars)")
+        }
+    }
+
     fun encode(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     /**
@@ -474,7 +481,9 @@ object Seasonvar : VideoSource {
         }
         for ((_, answer) in answers) {
             if (answer == null) continue
-            for ((variant, _) in parseList(answer.value, answer.base)) {
+            val rows = parseList(answer.value, answer.base)
+            if (rows.isEmpty()) Sources.noteEmpty(id, answer.value)
+            for ((variant, _) in rows) {
                 if (seen.add(variant.ref)) found += variant
             }
         }

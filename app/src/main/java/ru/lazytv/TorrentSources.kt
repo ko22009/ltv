@@ -216,7 +216,7 @@ object ExtraTorrents {
                     return pages.flatMap { (href, _) -> octopusPage(Sources.get(if (href.startsWith("http")) href else base + href)) }
                 }
             }
-            return emptyList()
+            // this mirror answered with nothing: the next one is asked (a mirror may answer empty while another has the title)
         }
         return emptyList()
     }
@@ -335,8 +335,15 @@ object ExtraTorrents {
 
     /** YTS through its open JSON API: a movie carries one entry per quality, the magnet is built from the hash. */
     private fun yts(query: String): List<Torrent> {
-        val obj = JSONObject(Sources.getAny("yts") { "$it/api/v2/list_movies.json?query_term=${Sources.encode(query)}&limit=20" }.value)
-        val movies = obj.optJSONObject("data")?.optJSONArray("movies") ?: return emptyList()
+        // a mirror that lists no movies is not trusted: the next one is asked; nothing anywhere means "not found"
+        val movies = try {
+            RemoteConfig.attempt("yts") { base ->
+                JSONObject(Sources.get("$base/api/v2/list_movies.json?query_term=${Sources.encode(query)}&limit=20"))
+                    .optJSONObject("data")?.optJSONArray("movies") ?: throw IllegalStateException("YTS: пусто")
+            }.value
+        } catch (e: IllegalStateException) {
+            return emptyList()
+        }
         val result = ArrayList<Torrent>()
         for (i in 0 until movies.length()) {
             val movie = movies.getJSONObject(i)

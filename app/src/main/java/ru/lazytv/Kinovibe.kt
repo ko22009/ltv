@@ -26,7 +26,9 @@ object Kinovibe : VideoSource {
         }
         for ((_, answer) in answers) {
             if (answer == null) continue
-            for (page in parseSearch(answer.value)) pages.putIfAbsent(page.path, page)
+            val rows = parseSearch(answer.value)
+            if (rows.isEmpty()) Sources.noteEmpty(id, answer.value)
+            for (page in rows) pages.putIfAbsent(page.path, page)
         }
         // one variant per series: the seasons of a title are gathered under its name without "N сезон" and the year
         val groups = LinkedHashMap<String, MutableList<Page>>()
