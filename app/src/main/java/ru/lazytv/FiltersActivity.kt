@@ -135,6 +135,16 @@ class FiltersActivity : Activity() {
         rows += row("Страны", (CatalogOptions.popularCountries + CatalogOptions.otherCountries)
             .filter { it.first in filter.countries }.joinToString(", ") { it.second }.ifEmpty { "все" }) { showCountries() }
         rows += row("Годы", yearsText()) { showYears() }
+        if (!category.tv) {
+            fun releaseText() = CatalogOptions.releases.first { it.first == filter.release }.second.lowercase()
+            rows += row("Выход", releaseText()) { shown ->
+                val keys = CatalogOptions.releases.map { it.first }
+                pickLabel("Выход", CatalogOptions.releases.map { it.second }, keys.indexOf(filter.release).coerceAtLeast(0)) { which ->
+                    save(filter.copy(release = keys[which]))
+                    shown.text = releaseText()
+                }
+            }
+        }
         rows += row("Рейтинг", ratingText()) { shown -> pickRating(shown) }
         rows += row("Возрастной рейтинг", filter.age.ifEmpty { "любой" }) { shown ->
             val marks = listOf("") + CatalogOptions.ages.map { it.first }

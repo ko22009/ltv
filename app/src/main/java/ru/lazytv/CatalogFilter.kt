@@ -26,10 +26,12 @@ data class CatalogFilter(
     /** Highest age mark allowed, like "16+"; empty — no limit. */
     val age: String = "",
     val hideWatched: Boolean = false,
+    /** Films only: "" any, "soon" not out yet, "now" in the cinemas now, "out" already released (see [CatalogOptions.releases]). */
+    val release: String = "",
 ) {
     val count get() = listOf(
         genres.isNotEmpty(), countries.isNotEmpty(), yearFrom != 0 || yearTo != 0,
-        ratingFrom != 1 || ratingTo != 10, age.isNotEmpty(), hideWatched,
+        ratingFrom != 1 || ratingTo != 10, age.isNotEmpty(), hideWatched, release.isNotEmpty(),
     ).count { it }
 
     /** What is chosen now, comma-separated, for the line under the list's buttons. */
@@ -48,6 +50,7 @@ data class CatalogFilter(
         }
         if (ratingFrom != 1 || ratingTo != 10) parts += "рейтинг $ratingFrom–$ratingTo"
         if (age.isNotEmpty()) parts += age
+        CatalogOptions.releases.firstOrNull { it.first == release && release.isNotEmpty() }?.let { parts += it.second }
         if (hideWatched) parts += "без просмотренных"
         return parts.joinToString(", ")
     }
@@ -58,7 +61,20 @@ data class CatalogFilter(
         if (countries.isNotEmpty()) append("&with_origin_country=").append(countries.joinToString("|"))
         val field = if (tv) "first_air_date" else "primary_release_date"
         if (yearFrom != 0) append("&$field.gte=$yearFrom-01-01")
-        if (yearTo != 0) append("&$field.lte=$yearTo-12-31")
+        // "released" is an upper bound on the same field as the last year: one value, the earlier of the two
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        val released = !tv && release == "out"
+        val upper = listOfNotNull(if (yearTo != 0) "$yearTo-12-31" else null, if (released) today else null).minOrNull()
+        if (upper != null) append("&$field.lte=$upper")
+        // the cinemas of Russia: wide (3) and limited (2) theatrical releases, as in TMDB's own "now playing" list
+        if (!tv && (release == "now" || release == "soon")) {
+            val cal = java.util.Calendar.getInstance()
+            fun day(offset: Int) = (cal.clone() as java.util.Calendar).apply { add(java.util.Calendar.DAY_OF_YEAR, offset) }
+                .let { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(it.time) }
+            append("&region=RU&with_release_type=2%7C3")
+            if (release == "now") append("&release_date.gte=").append(day(-45)).append("&release_date.lte=").append(today)
+            else append("&release_date.gte=").append(day(1))
+        }
         if (ratingFrom != 1 || ratingTo != 10) {
             append("&vote_average.gte=$ratingFrom&vote_average.lte=$ratingTo&vote_count.gte=50")
         }
@@ -68,7 +84,7 @@ data class CatalogFilter(
     fun toJson(): String = JSONObject()
         .put("genres", JSONArray(genres.toList())).put("countries", JSONArray(countries.toList()))
         .put("from", yearFrom).put("to", yearTo).put("rfrom", ratingFrom).put("rto", ratingTo)
-        .put("age", age).put("hide", hideWatched).toString()
+        .put("age", age).put("hide", hideWatched).put("rel", release).toString()
 
     companion object {
         private const val PREFS = "catalog_filters"
@@ -84,6 +100,8 @@ data class CatalogFilter(
                     (0 until o.getJSONArray("genres").length()).map { o.getJSONArray("genres").getInt(it) }.toSet(),
                     (0 until o.getJSONArray("countries").length()).map { o.getJSONArray("countries").getString(it) }.toSet(),
                     o.getInt("from"), o.getInt("to"), o.getInt("rfrom"), o.getInt("rto"), o.getString("age"), o.getBoolean("hide"),
+                    // absent in filters saved by older versions
+                    o.optString("rel"),
                 )
             }.getOrDefault(CatalogFilter())
         }
@@ -130,6 +148,9 @@ object CatalogOptions {
         "SU" to "СССР", "TR" to "Турция", "UA" to "Украина", "FI" to "Финляндия", "CZ" to "Чехия",
         "CH" to "Швейцария", "SE" to "Швеция", "JP" to "Япония",
     )
+
+    /** The "Выход" filter of films: key to caption; the empty key is "any". */
+    val releases = listOf("" to "Любой", "soon" to "Скоро в кино", "now" to "Идёт в кино", "out" to "Вышло")
 
     val ages = listOf("18+" to "Взрослые", "16+" to "Подростки старше 16 лет", "12+" to "Дети старше 12 лет", "6+" to "Дети старше 6 лет", "0+" to "Для самых маленьких")
 
