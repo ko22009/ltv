@@ -21,10 +21,11 @@ object Kinovibe : VideoSource {
 
     override fun search(title: String, original: String, year: String): List<Variant> {
         val pages = LinkedHashMap<String, Page>()
-        for (query in listOf(title, original).filter { it.isNotBlank() }) {
-            val answer = runCatching {
-                RemoteConfig.attempt(id) { base -> Sources.get("$base/?do=search&subaction=search&titleonly=3&story=${Sources.encode(query)}") }
-            }.getOrNull() ?: continue
+        val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
+            RemoteConfig.attempt(id) { base -> Sources.get("$base/?do=search&subaction=search&titleonly=3&story=${Sources.encode(query)}") }
+        }
+        for ((_, answer) in answers) {
+            if (answer == null) continue
             for (page in parseSearch(answer.value)) pages.putIfAbsent(page.path, page)
         }
         // one variant per series: the seasons of a title are gathered under its name without "N сезон" and the year

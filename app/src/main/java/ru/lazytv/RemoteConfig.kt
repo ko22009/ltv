@@ -52,6 +52,31 @@ object RemoteConfig {
     /** Called once from [LazyApp]: the addresses are asked for from screens that have no context of their own. */
     fun init(context: Context) {
         app = context.applicationContext
+        loadHealth()
+    }
+
+    /**
+     * The marks of silent addresses are kept for a short time between starts: the first card after a restart does not pay
+     * for a mirror that was found dead a minute ago. Lines: a|address|time|count, s|id|time|count.
+     */
+    private fun saveHealth() {
+        val keep = System.currentTimeMillis() - pauses.last() * 60_000L
+        val lines = ArrayList<String>()
+        failedAt.forEach { (address, time) -> if (time > keep) lines += "a|$address|$time|${failures[address] ?: 1}" }
+        downAt.forEach { (id, time) -> if (time > keep) lines += "s|$id|$time|${failures["source:$id"] ?: 1}" }
+        app?.getSharedPreferences("mirrors", 0)?.edit()?.putString("health", lines.joinToString("\n"))?.apply()
+    }
+
+    private fun loadHealth() {
+        val text = app?.getSharedPreferences("mirrors", 0)?.getString("health", null) ?: return
+        for (line in text.split('\n')) {
+            val p = line.split('|')
+            if (p.size != 4) continue
+            val time = p[2].toLongOrNull() ?: continue
+            val count = p[3].toIntOrNull() ?: continue
+            if (p[0] == "a") { failedAt[p[1]] = time; failures[p[1]] = count }
+            else if (p[0] == "s") { downAt[p[1]] = time; failures["source:" + p[1]] = count }
+        }
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, 0)
@@ -126,10 +151,10 @@ object RemoteConfig {
         for (address in fresh.ifEmpty { all }) {
             try {
                 val result = Fetched(block(address), address)
-                failedAt.remove(address)
+                val hadMarks = listOf(failedAt.remove(address), downAt.remove(id)).any { it != null }
                 failures.remove(address)
                 failures.remove("source:$id")
-                downAt.remove(id)
+                if (hadMarks) saveHealth()
                 if (address != good) app?.getSharedPreferences("mirrors", 0)?.edit()?.putString(id, address)?.apply()
                 return result
             } catch (t: Throwable) {
@@ -148,6 +173,7 @@ object RemoteConfig {
             downAt[id] = System.currentTimeMillis()
             failures["source:$id"] = (failures["source:$id"] ?: 0) + 1
         }
+        if (unreachable > 0) saveHealth()
         throw last ?: IllegalStateException("Нет адреса для источника «$id»")
     }
 

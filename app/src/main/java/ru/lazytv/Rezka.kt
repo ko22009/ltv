@@ -36,10 +36,11 @@ object Hdrezka : VideoSource {
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = HashSet<String>()
         val found = ArrayList<Variant>()
-        for (query in listOf(title, original).filter { it.isNotBlank() }) {
-            val answer = runCatching {
-                RemoteConfig.attempt(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
-            }.getOrNull() ?: continue
+        val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
+            RemoteConfig.attempt(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
+        }
+        for ((_, answer) in answers) {
+            if (answer == null) continue
             for (variant in parseSearch(answer.value)) if (seen.add(variant.ref)) found += variant
         }
         return Sources.relevant(found, listOf(title, original), year)
@@ -102,7 +103,7 @@ object Hdrezka : VideoSource {
 
         // one request per episode (the site gives links only one by one); a few at a time so the site is not hammered
         // упрощено: for a series of hundreds of episodes the first open takes longer; lazy links per episode when it grows
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(10)
         try {
             val tasks = pairs.map { (season, episode) ->
                 java.util.concurrent.Callable {

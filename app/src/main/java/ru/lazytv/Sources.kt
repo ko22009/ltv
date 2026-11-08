@@ -310,6 +310,21 @@ object Sources {
         }
     }
 
+    /**
+     * The same request for several queries at once (the Russian and the original title): answers come back in the order of
+     * the queries, a failed one as null. Two sequential round trips to a site become one.
+     */
+    fun <T> parallel(queries: List<String>, fetch: (String) -> T): List<Pair<String, T?>> {
+        if (queries.size < 2) return queries.map { it to runCatching { fetch(it) }.getOrNull() }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(queries.size)
+        try {
+            val jobs = queries.map { q -> java.util.concurrent.Callable { runCatching { fetch(q) }.getOrNull() } }
+            return queries.zip(pool.invokeAll(jobs).map { runCatching { it.get() }.getOrNull() })
+        } finally {
+            pool.shutdown()
+        }
+    }
+
     fun encode(s: String): String = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     /**
@@ -332,8 +347,11 @@ object Anilibria : VideoSource {
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = LinkedHashSet<Int>()
         val found = ArrayList<Variant>()
-        for (query in listOf(title, original).filter { it.isNotBlank() }) {
-            val answer = Sources.getAny(id) { base -> "$base/api/v1/app/search/releases?query=${Sources.encode(query)}" }
+        val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
+            Sources.getAny(id) { base -> "$base/api/v1/app/search/releases?query=${Sources.encode(query)}" }
+        }
+        for ((_, answer) in answers) {
+            if (answer == null) continue
             val array = org.json.JSONArray(answer.value)
             for (i in 0 until array.length()) {
                 val r = array.getJSONObject(i)
@@ -388,8 +406,11 @@ object Seasonvar : VideoSource {
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = HashSet<String>()
         val found = ArrayList<Variant>()
-        for (query in listOf(title, original).filter { it.isNotBlank() }) {
-            val answer = runCatching { Sources.getAny(id) { base -> "$base/search?q=${Sources.encode(query)}" } }.getOrNull() ?: continue
+        val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
+            Sources.getAny(id) { base -> "$base/search?q=${Sources.encode(query)}" }
+        }
+        for ((_, answer) in answers) {
+            if (answer == null) continue
             for ((variant, _) in parseList(answer.value, answer.base)) {
                 if (seen.add(variant.ref)) found += variant
             }
@@ -507,10 +528,11 @@ object Rutube : VideoSource {
         val seen = HashSet<String>()
         // one movie is often uploaded several times: keep one card per title, year and length
         val unique = LinkedHashMap<String, Variant>()
-        for (query in listOf(title, original).filter { it.isNotBlank() }) {
-            val json = runCatching {
-                JSONObject(Sources.getAny(id) { base -> "$base/api/search/video/?query=${Sources.encode(query)}" }.value)
-            }.getOrNull() ?: continue
+        val answers = Sources.parallel(listOf(title, original).filter { it.isNotBlank() }) { query ->
+            JSONObject(Sources.getAny(id) { base -> "$base/api/search/video/?query=${Sources.encode(query)}" }.value)
+        }
+        for ((_, json) in answers) {
+            if (json == null) continue
             val results = json.optJSONArray("results") ?: continue
             for (i in 0 until results.length()) {
                 val o = results.getJSONObject(i)
