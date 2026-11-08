@@ -58,7 +58,7 @@ data class MoreTile(val title: String, val collection: Int = -1, val category: S
     }
 }
 
-/** The tile has the size of a title card, so the row keeps its height. */
+/** The tile has the size of a title card, so the row keeps its height; focused, it is painted like the active left-menu item. */
 class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.resources.displayMetrics.widthPixels / 1280f * cardScale
@@ -74,17 +74,24 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        // the tile keeps its plate colour on focus: the focus is shown by the zoom, as on the cards
-        tile.background = GradientDrawable().apply {
-            setColor(0xFF1E222A.toInt())
+        // the focused tile looks like the active item of the left menu: the bright indigo plate and a white icon
+        fun plate(color: Int) = GradientDrawable().apply {
+            setColor(color)
             cornerRadius = px(4f).toFloat()
         }
+        tile.background = android.graphics.drawable.StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), plate(0xFF6366F1.toInt()))
+            addState(intArrayOf(), plate(0xFF1E222A.toInt()))
+        }
         tile.elevation = 0f
-        tile.addView(ImageView(context).apply {
-            setImageDrawable(PathDrawable(MenuIcons.LINK).apply {
-                setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-            })
-        }, LinearLayout.LayoutParams(px(64f), px(64f)))
+        val linkIcon = PathDrawable(MenuIcons.LINK).apply {
+            setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        tile.setOnFocusChangeListener { _, focused ->
+            linkIcon.setColorFilter(if (focused) Color.WHITE else 0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            linkIcon.invalidateSelf()
+        }
+        tile.addView(ImageView(context).apply { setImageDrawable(linkIcon) }, LinearLayout.LayoutParams(px(64f), px(64f)))
         // only the name of the row, as written over it
         tile.addView(TextView(context).apply {
             tag = "caption"
