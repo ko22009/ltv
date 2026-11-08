@@ -185,12 +185,12 @@ object Sources {
     }
 
     /**
-     * What the source list of a film shows: the variants of its year (or of an unknown one) and how many others are kept back
+     * What the source list of a film shows: the variants of its year and how many others (another year, or none known) are kept back
      * for "Другие годы"; when no variant fits the year, everything is shown. A series, or [all], shows everything.
      */
     fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean): Pair<List<Variant>, Int> {
         if (tv || all) return variants to 0
-        val fitting = variants.filter { yearRank(it, year) != 2 }
+        val fitting = variants.filter { yearRank(it, year) == 0 }
         if (fitting.isEmpty()) return variants to 0
         return fitting to (variants.size - fitting.size)
     }
