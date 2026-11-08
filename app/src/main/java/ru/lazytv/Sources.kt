@@ -13,6 +13,8 @@ data class Variant(
     val alt: String = "",
     /** The site's own description, when it has one; shown apart from the titles. */
     val description: String = "",
+    /** The chosen voice-over (translation) of a site that has several; empty means the site's default one. */
+    val voice: String = "",
 )
 
 /** One playable item of a variant (an episode or the whole film) with streams per quality, best first. */
@@ -24,6 +26,8 @@ interface VideoSource {
     val name: String
     fun search(title: String, original: String, year: String): List<Variant>
     fun episodes(variant: Variant): List<Episode>
+    /** Voice-overs the site offers for the variant as (key, name); empty when there is no choice. */
+    fun voices(variant: Variant): List<Pair<String, String>> = emptyList()
 }
 
 object Sources {
@@ -310,7 +314,7 @@ object Seasonvar : VideoSource {
                 blocked = true
                 return@forEachIndexed
             }
-            val playlist = firstPlaylist(html, base) ?: return@forEachIndexed
+            val playlist = firstPlaylist(html, base, variant.voice) ?: return@forEachIndexed
             val episodes = runCatching { org.json.JSONArray(Sources.get(playlist)) }.getOrNull() ?: return@forEachIndexed
             val seasonLabel = Regex("\\d+\\s*сезон\\S*", RegexOption.IGNORE_CASE).find(seasonName)?.value
                 ?: "Сезон ${seasonIndex + 1}"
@@ -328,12 +332,25 @@ object Seasonvar : VideoSource {
         return result
     }
 
-    /** The first translation of the page: `var pl = {'0': "/playls2/…plist.txt"};` plus the optional `pl[n] = …` lines. */
-    private fun firstPlaylist(html: String, base: String): String? {
+    /** The voice-overs of a series page: `<li data-click="translate" data-translate="6">Кубик в кубе</li>`; trailers are not a voice-over. */
+    override fun voices(variant: Variant): List<Pair<String, String>> {
+        val html = Sources.get(variant.ref)
+        val found = Regex("<li[^>]*data-click=\"translate\"[^>]*data-translate=\"(\\d+)\"[^>]*>(.*?)</li>", RegexOption.DOT_MATCHES_ALL)
+            .findAll(html).map { it.groupValues[1] to htmlText(it.groupValues[2]) }
+            .filter { it.second.isNotEmpty() && !it.second.contains("трейлер", ignoreCase = true) }.distinctBy { it.first }.toList()
+        return if (found.size > 1) found else emptyList()
+    }
+
+    /**
+     * The playlist of a translation of the page: `var pl = {'0': "/playls2/…plist.txt"};` plus the optional `pl[n] = …` lines.
+     * [preferred] is the key of the chosen voice-over; a season that does not have it falls back to the default one.
+     */
+    private fun firstPlaylist(html: String, base: String, preferred: String = ""): String? {
         val main = Regex("var pl = \\{(.*?)\\};", RegexOption.DOT_MATCHES_ALL).find(html)?.groupValues?.get(1).orEmpty()
         val all = Regex("['\"]?(\\d+)['\"]?\\s*:\\s*\"([^\"]+)\"").findAll(main).mapNotNull { m -> m.groupValues[1].toIntOrNull()?.let { it to m.groupValues[2] } } +
             Regex("pl\\[(\\d+)]\\s*=\\s*\"([^\"]+)\"").findAll(html).mapNotNull { m -> m.groupValues[1].toIntOrNull()?.let { it to m.groupValues[2] } }
-        val chosen = all.firstOrNull { it.first == 0 }?.second ?: all.firstOrNull()?.second ?: return null
+        val chosen = preferred.toIntOrNull()?.let { key -> all.firstOrNull { it.first == key }?.second }
+            ?: all.firstOrNull { it.first == 0 }?.second ?: all.firstOrNull()?.second ?: return null
         return when {
             chosen.startsWith("http") -> chosen
             chosen.startsWith("//") -> "https:$chosen"

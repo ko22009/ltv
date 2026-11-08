@@ -31,6 +31,9 @@ class EpisodesActivity : Activity() {
     private lateinit var actionWatched: View
     private lateinit var geoButton: View
     private var selectedIndex = 0
+    private lateinit var actionVoice: View
+    private var loadEpisodes: (() -> Unit)? = null
+    private var voiceSwitched = false
 
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
         text = value
@@ -50,6 +53,8 @@ class EpisodesActivity : Activity() {
             intent.getStringExtra("ref").orEmpty(), intent.getStringExtra("alt").orEmpty(),
             intent.getStringExtra("description").orEmpty(),
         )
+        // the voice-over chosen earlier for this series
+        variant = variant.copy(voice = Settings.string(this, voiceKey(), ""))
         val root = FrameLayout(this)
         root.background = calmBackground()
         val page = LinearLayout(this)
@@ -101,6 +106,9 @@ class EpisodesActivity : Activity() {
         actions.visibility = View.GONE
         actionFavorite = actionButton().apply { setOnClickListener { toggleFavorite() } }
         actionWatched = actionButton().apply { setOnClickListener { toggleWatched() } }
+        // shown only when the site offers several voice-overs (see load() below)
+        actionVoice = actionButton().apply { visibility = View.GONE }
+        actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2 })
         page.addView(actions, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
@@ -157,6 +165,11 @@ class EpisodesActivity : Activity() {
         setContentView(root)
         back.requestFocus()
 
+        // loads the episode list of the variant with the chosen voice-over; also called again after another voice-over is picked
+        fun load() {
+        loading.visibility = View.VISIBLE
+        status.visibility = View.GONE
+        errorRow.visibility = View.GONE
         Thread {
             val result = runCatching {
                 val source = Sources.all.firstOrNull { it.id == variant.sourceId } ?: error("Источник недоступен")
@@ -186,7 +199,7 @@ class EpisodesActivity : Activity() {
                         }
                         override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
                     })
-                    val focus = intent.getIntExtra("episodeIndex", -1)
+                    val focus = if (voiceSwitched) -1 else intent.getIntExtra("episodeIndex", -1)
                     // opened by hand: the first episode not yet watched (the first one when all are), so OK continues the series
                     selectedIndex = if (focus in episodes.indices) focus else episodes.indexOfFirst {
                         !EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, it.title))
@@ -208,6 +221,36 @@ class EpisodesActivity : Activity() {
                 }
             }
         }.start()
+        }
+        loadEpisodes = ::load
+        load()
+        // the voice-overs are asked for in the background: the button appears when the site has a choice
+        Thread {
+            val voices = runCatching { Sources.all.firstOrNull { it.id == variant.sourceId }?.voices(variant) }.getOrNull().orEmpty()
+            onUi { setVoices(voices) }
+        }.start()
+    }
+
+    private fun voiceKey() = "voice_${variant.sourceId}_${variant.ref}"
+
+    private fun setVoices(voices: List<Pair<String, String>>) {
+        if (voices.isEmpty()) return
+        fun caption() = "Озвучка: " + (voices.firstOrNull { it.first == variant.voice }?.second ?: voices.first().second)
+        actionVoice.chipCaption = caption()
+        actionVoice.visibility = View.VISIBLE
+        actionVoice.setOnClickListener {
+            android.app.AlertDialog.Builder(this).setTitle("Озвучка")
+                .setItems(voices.map { it.second }.toTypedArray()) { _, which ->
+                    val key = voices[which].first
+                    if (key == variant.voice) return@setItems
+                    variant = variant.copy(voice = key)
+                    Settings.setString(this, voiceKey(), key)
+                    voiceSwitched = true
+                    actionVoice.chipCaption = caption()
+                    loadEpisodes?.invoke()
+                }
+                .setNegativeButton("Отмена", null).show()
+        }
     }
 
     private fun row(position: Int, episode: Episode): View {
