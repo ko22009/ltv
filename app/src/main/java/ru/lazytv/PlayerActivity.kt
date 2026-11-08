@@ -907,6 +907,11 @@ class PlayerActivity : Activity() {
                     return true
                 }
                 resetHideTimer()
+                // up from the episode strip lands exactly on the play/pause button, not on whatever is nearest
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && episodeViews.any { it === focused }) {
+                    playPause.requestFocus()
+                    return true
+                }
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && currentFocus is ImageView) {
                     seek.requestFocus()
                     return true
@@ -940,6 +945,16 @@ class PlayerActivity : Activity() {
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_SPACE -> {
                         togglePlay()
                         showControls()
+                        return true
+                    }
+                    // down opens the panel on the progress bar, up on the episode strip (or the buttons when there are none)
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        setControlsVisible(true, focusSeek = true)
+                        return true
+                    }
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        setControlsVisible(true)
+                        (episodeViews.getOrNull(queueIndex) ?: episodeViews.firstOrNull())?.requestFocus()
                         return true
                     }
                     KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_VOLUME_MUTE -> {
