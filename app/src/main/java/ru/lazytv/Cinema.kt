@@ -38,7 +38,22 @@ object Cinema {
         refreshIfStale(app)
     }
 
-    fun contains(id: Long): Boolean = ids.contains(id)
+    /**
+     * Films that are not out yet but get the same mark with the caption "СКОРО". упрощено: the list is kept by hand
+     * (TMDB ids); a film that appears in the cinemas list gets "В КИНО" instead. When the list grows, take the ids from
+     * TMDB's "upcoming" list.
+     */
+    private val soon = setOf(
+        1003596L, // Мстители: Доктор Дум, 2026-12-16
+    )
+
+    /** The caption of the mark over the poster of a film: "В КИНО", "СКОРО" or null when there is none. */
+    fun caption(id: Long, tv: Boolean): String? = when {
+        tv -> null
+        ids.contains(id) -> "В КИНО"
+        id in soon -> "СКОРО"
+        else -> null
+    }
 
     private fun refreshIfStale(context: Context) {
         if (refreshing || System.currentTimeMillis() - loadedAt < TTL_MS) return
@@ -66,9 +81,8 @@ object Cinema {
         }.start()
     }
 
-    /** The semi-transparent "В КИНО" label over a poster; [px] turns design pixels into real ones for the screen. */
+    /** The semi-transparent label over a poster (the caption comes from [caption]); [px] turns design pixels into real ones. */
     fun label(context: Context, px: (Float) -> Int): TextView = TextView(context).apply {
-        text = "В КИНО"
         setTextColor(0xE6FFFFFF.toInt())
         setTextSize(TypedValue.COMPLEX_UNIT_PX, px(12f).toFloat())
         typeface = Typeface.DEFAULT_BOLD

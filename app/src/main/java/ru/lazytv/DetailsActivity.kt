@@ -85,7 +85,8 @@ class DetailsActivity : Activity() {
         val shownRating = if ((rawRating.toDoubleOrNull() ?: 0.0) > 0.0) rawRating else ""
         val baseRows = listOf(
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
-            "Год" to intent.getStringExtra("year").orEmpty(),
+            // the year stands here until the details arrive with the full date
+            RELEASE to intent.getStringExtra("year").orEmpty(),
             "Рейтинг" to shownRating,
         )
 
@@ -254,9 +255,10 @@ class DetailsActivity : Activity() {
         root.addView(FrameLayout(this).apply {
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-            // the same label as on the cards: the film is in the cinemas now
-            if (!currentTitle.tv && Cinema.contains(currentTitle.id)) {
-                addView(Cinema.label(this@DetailsActivity) { dp(it.toInt()) }.apply { visibility = android.view.View.VISIBLE },
+            // the same label as on the cards: the film is in the cinemas now or comes soon
+            val mark = Cinema.caption(currentTitle.id, currentTitle.tv)
+            if (mark != null) {
+                addView(Cinema.label(this@DetailsActivity) { dp(it.toInt()) }.apply { text = mark; visibility = android.view.View.VISIBLE },
                     FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { topMargin = dp(8); leftMargin = dp(8) })
             }
         }, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
@@ -397,7 +399,11 @@ class DetailsActivity : Activity() {
         }
         if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
-        fillTable(table, baseRows + listOf(
+        // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
+        val rows = baseRows.map { (caption, value) ->
+            if (caption == RELEASE) caption to formatReleaseDate(d.date).ifEmpty { value } else caption to value
+        }
+        fillTable(table, rows + listOf(
             "Длительность" to (formatRuntime(d.runtime)),
             "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
             "Следующая серия" to d.nextEpisode,
@@ -531,7 +537,7 @@ class DetailsActivity : Activity() {
                 row.addView(ratingView, LinearLayout.LayoutParams(0, -2, 1f))
             } else {
                 val valueView = text(value, 18f, Color.WHITE).apply {
-                    if (caption in listOf("Год", "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
+                    if (caption in listOf(RELEASE, "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
                 }
                 row.addView(valueView, LinearLayout.LayoutParams(0, -2, 1f))
             }
@@ -921,4 +927,9 @@ class DetailsActivity : Activity() {
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    private companion object {
+        /** The caption of the date row of the card's table. */
+        const val RELEASE = "Дата выхода"
+    }
 }

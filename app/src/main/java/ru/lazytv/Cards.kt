@@ -289,7 +289,9 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         shownId = title.id
         shown = title
         applyWatched(title)
-        cinema.visibility = if (!title.tv && Cinema.contains(title.id)) View.VISIBLE else View.GONE
+        val mark = Cinema.caption(title.id, title.tv)
+        cinema.text = mark.orEmpty()
+        cinema.visibility = if (mark != null) View.VISIBLE else View.GONE
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
@@ -323,6 +325,12 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 }
 
 /** "2 ч 32 мин" reads faster than "152 мин"; empty when the runtime is unknown. */
+/** "2026-12-16" as "16 декабря 2026"; empty when TMDB gave no full date. */
+fun formatReleaseDate(date: String): String = runCatching {
+    val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(date) ?: return@runCatching ""
+    java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale("ru")).format(parsed)
+}.getOrDefault("")
+
 fun formatRuntime(minutes: Int): String = when {
     minutes <= 0 -> ""
     minutes < 60 -> "$minutes мин"
