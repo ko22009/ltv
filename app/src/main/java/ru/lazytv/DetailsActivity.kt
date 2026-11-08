@@ -781,7 +781,14 @@ class DetailsActivity : Activity() {
             showSourceDialog(name)
             return
         }
-        variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
+        val first = variants.firstOrNull()
+        // a film of another year only (a part or a remake of the same name): the user picks from the list instead of getting a guess
+        if (first != null && !currentTitle.tv && currentTitle.year.isNotEmpty() && Sources.yearRank(first, currentTitle.year) == 2) {
+            Toast.makeText(this, "Точной копии нет, показаны похожие", Toast.LENGTH_LONG).show()
+            showSourceDialog(name)
+            return
+        }
+        first?.let { openVariant(it) } ?: openTorrents(name)
     }
 
     /**
