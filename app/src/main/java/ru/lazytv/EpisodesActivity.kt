@@ -192,7 +192,8 @@ class EpisodesActivity : Activity() {
         val body = FrameLayout(this)
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
         body.addView(loading, FrameLayout.LayoutParams(-1, -1))
-        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f))
+        // a small gap under the buttons row: the first episode no longer touches the voice-over button
+        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(10) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         back.requestFocus()
