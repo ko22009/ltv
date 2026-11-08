@@ -770,9 +770,21 @@ class DetailsActivity : Activity() {
                 detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
                 onUi {
                     setWatchLoading(false)
-                    variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
+                    openDefaultVariant(name)
                 }
             }.start()
+            return
+        }
+        openDefaultVariant(name)
+    }
+
+    /**
+     * A film opens its first release; a series with several releases (seasons, sources) asks which one first, because the
+     * first one is not necessarily the season the viewer wants.
+     */
+    private fun openDefaultVariant(name: String) {
+        if (currentTitle.tv && variants.size > 1) {
+            showSourceDialog(name)
             return
         }
         variants.firstOrNull()?.let { openVariant(it) } ?: openTorrents(name)
@@ -790,7 +802,8 @@ class DetailsActivity : Activity() {
             val episodes = runCatching { Sources.all.firstOrNull { it.id == v.sourceId }?.episodes(v) }.getOrNull()
             onUi {
                 setWatchLoading(false)
-                if (episodes != null && episodes.size == 1) {
+                // only a film with one video starts at once; a series always shows its episodes to choose from
+                if (episodes != null && episodes.size == 1 && !currentTitle.tv) {
                     playEpisode(
                         this, v, episodes, 0, choose = false,
                         mediaTitle = currentName.ifEmpty { currentTitle.name },
