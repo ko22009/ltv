@@ -197,8 +197,8 @@ object Sources {
             o.optLong("t") to o.optBoolean("k")
         }.getOrDefault(0L to false)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants14_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants14_") }.associateWith { entry(it) }
+        keys.filter { !it.startsWith("variants15_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants15_") }.associateWith { entry(it) }
         val dayMs = 24 * 60 * 60 * 1000L
         fun expired(e: Pair<Long, Boolean>) = now - e.first > (if (e.second) 3 * dayMs else dayMs)
         current.filter { expired(it.value) }.keys.forEach { edit.remove(it) }
@@ -213,7 +213,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants14_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants15_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
@@ -232,7 +232,8 @@ object Sources {
     fun relevant(found: List<Variant>, wanted: List<String>, year: String): List<Variant> {
         // articles and linking words are not part of a name: "the" alone must not tie "The Dark Knight" to "Thor: The Dark World"
         val stop = setOf("the", "and", "for", "with", "from", "part", "movie", "film", "что", "как", "это", "фильм", "часть")
-        fun words(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in stop }.toSet()
+        // "ё" and "е" are one letter for the sites: TMDB writes "Тёмный", HDRezka "Темный"
+        fun words(s: String) = s.lowercase().replace('ё', 'е').split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in stop }.toSet()
         val titles = wanted.map { words(it) }.filter { it.isNotEmpty() }
         // a Russian query must not match only the English original of an unrelated Russian title:
         // "Интерстеллар" must not offer "Я злой лорд…" just because its English name carries "Interstellar"
@@ -278,7 +279,7 @@ object Sources {
 
     /** True when the title of the variant (or one of its parts split by "|" and "/", without brackets) is exactly one of [names]. */
     private fun hasName(variant: Variant, names: List<String>): Boolean {
-        fun plain(s: String) = s.lowercase().replace(Regex("\\([^)]*\\)"), " ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        fun plain(s: String) = s.lowercase().replace('ё', 'е').replace(Regex("\\([^)]*\\)"), " ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
         val wanted = names.map { plain(it) }.filter { it.isNotEmpty() }.toSet()
         val parts = (listOf(variant.title) + variant.title.split('|', '/') + variant.alt.split('|', '/')).map { plain(it) }
         return parts.any { it in wanted }
