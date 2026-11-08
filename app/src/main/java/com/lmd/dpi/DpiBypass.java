@@ -241,6 +241,30 @@ public final class DpiBypass {
         }
     }
 
+    /** One short line for the error screen: what the bypass is doing about [host] (for finding why a site does not open). */
+    public static String status(String host) {
+        if (!enabled) {
+            return "обход выключен";
+        }
+        StringBuilder s = new StringBuilder("обход: ");
+        s.append(started ? "запущен" : "не запущен");
+        Process p = process;
+        boolean alive = false;
+        if (p != null) {
+            try {
+                p.exitValue();
+            } catch (IllegalThreadStateException running) {
+                alive = true;
+            }
+        }
+        s.append(", ciadpi ").append(alive ? "работает" : "не работает").append(", приём ").append(commonIndex);
+        Decision d = CACHE.get(host);
+        if (d != null) {
+            s.append(", ").append(host).append(": ").append(d.dead ? "пауза" : d.proxy == null ? "напрямую" : "через обход");
+        }
+        return s.toString();
+    }
+
     /** Picks the strategy again (settings button "find a bypass"). */
     public static void retune() {
         POOL.execute(new Runnable() {

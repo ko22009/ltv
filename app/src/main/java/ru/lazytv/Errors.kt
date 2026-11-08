@@ -109,6 +109,18 @@ object Errors {
             Regex("response code: 5\\d\\d").containsMatchIn(m)
     }
 
+    /** Short technical tail for a catalog that did not load: the exception and the state of the bypass, to read off a photo of the screen. */
+    fun details(t: Throwable, host: String): String {
+        val root = unwrap(t)
+        val reason = when (root) {
+            is SocketTimeoutException -> "таймаут"
+            is UnknownHostException -> "адрес не найден (DNS)"
+            is ConnectException -> "отказ соединения"
+            else -> root.javaClass.simpleName + root.message?.let { ": " + it.take(60) }.orEmpty()
+        }
+        return "$reason · " + com.lmd.dpi.DpiBypass.status(host)
+    }
+
     /** Human-readable explanation of [t], one or two calm sentences without technical codes. */
     fun explain(t: Throwable): String {
         val root = unwrap(t)

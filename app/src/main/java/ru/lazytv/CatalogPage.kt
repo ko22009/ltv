@@ -342,7 +342,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
             }.onFailure {
                 finished = true
                 if (cards.size() == 0) {
-                    message.text = Errors.explain(it)
+                    message.text = Errors.explain(it) + "\n" + Errors.details(it, "api.themoviedb.org")
                     message.visibility = View.VISIBLE
                 }
             }
