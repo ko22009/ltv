@@ -73,7 +73,15 @@ object ContinueWatching {
                 .putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
         if (!title.poster.isNullOrEmpty()) builder.setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
         val helper = PreviewChannelHelper(context)
-        val saved = Settings.string(context, key(title.tv, title.id), "").toLongOrNull()
+        val remembered = Settings.string(context, key(title.tv, title.id), "").toLongOrNull()
+        // the entry may be gone (removed from the row by the user or dropped by the launcher): updating a missing id
+        // does nothing for good, so then the title is published again
+        val saved = remembered?.takeIf { id ->
+            runCatching {
+                context.contentResolver.query(TvContractCompat.buildWatchNextProgramUri(id), arrayOf(android.provider.BaseColumns._ID), null, null, null)
+                    ?.use { it.count > 0 }
+            }.getOrNull() != false
+        }
         runCatching {
             if (saved != null) {
                 helper.updateWatchNextProgram(builder.build(), saved)
