@@ -15,6 +15,19 @@ fun shortEpisode(title: String): String {
     return clean(first).ifEmpty { first }
 }
 
+/**
+ * Captions of the player strip for a whole queue: the episode only, and "N сезон, M серия" on the first episode of
+ * every season after the first one, so the place where numbering starts over is visible.
+ */
+fun stripLabels(episodes: List<Episode>): List<String> {
+    fun season(e: Episode) = e.title.substringBefore(" • ", "").takeIf { it.contains("сезон", ignoreCase = true) }
+    return episodes.mapIndexed { i, e ->
+        val short = shortEpisode(e.title)
+        val s = season(e)
+        if (s != null && i > 0 && season(episodes[i - 1]) != s) "$s, $short" else short
+    }
+}
+
 /** The stream of an episode for a quality limit; [exact] (the user's pick) wins when that quality exists. */
 fun streamFor(episode: Episode, wanted: String, exact: String? = null): Pair<String, String> {
     exact?.let { name -> episode.streams.firstOrNull { it.first == name }?.let { return it } }
@@ -53,13 +66,14 @@ private fun startPlayer(
 ) {
     val wanted = Settings.string(activity, Settings.QUALITY, "best")
     val queue = org.json.JSONArray()
-    episodes.forEach { episode ->
+    val labels = stripLabels(episodes)
+    episodes.forEachIndexed { position, episode ->
         val stream = streamFor(episode, wanted, exact)
         val streamsJson = org.json.JSONArray()
         episode.streams.forEach { (q, u) -> streamsJson.put(org.json.JSONObject().put("q", q).put("u", u)) }
         queue.put(
             org.json.JSONObject().put("u", stream.second).put("t", "${variant.title} • ${episode.title}")
-                .put("m", "${variant.source} • ${stream.first}").put("e", shortEpisode(episode.title))
+                .put("m", "${variant.source} • ${stream.first}").put("e", labels[position])
                 .put("k", EpisodeState.key(variant.sourceId, variant.ref, episode.title))
                 .put("s", streamsJson)
         )

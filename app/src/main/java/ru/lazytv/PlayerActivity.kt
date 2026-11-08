@@ -563,14 +563,15 @@ class PlayerActivity : Activity() {
         val exo = player ?: return
         val wanted = Settings.string(this, Settings.QUALITY, "best")
         val newQueue = mutableListOf<PlayItem>()
-        episodes.forEach { ep ->
+        val labels = stripLabels(episodes)
+        episodes.forEachIndexed { position, ep ->
             val stream = streamFor(ep, wanted, null)
             newQueue.add(
                 PlayItem(
                     url = stream.second,
                     title = "${v.title} • ${ep.title}",
                     meta = "${v.source} • ${stream.first}",
-                    label = shortEpisode(ep.title),
+                    label = labels[position],
                     watchKey = EpisodeState.key(v.sourceId, v.ref, ep.title),
                     streams = ep.streams
                 )
