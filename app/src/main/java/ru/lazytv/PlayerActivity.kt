@@ -646,7 +646,7 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
-    /** Repaints the episode strip: dark indigo for the current episode, the lighter theme indigo for the focused one, so the two never look alike. */
+    /** Repaints the episode strip: a light outline for the current episode, the filled theme indigo for the focused one, so the two never look alike. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
             val active = index == queueIndex
@@ -656,7 +656,9 @@ class PlayerActivity : Activity() {
                     setColor(0xFF6366F1.toInt()); cornerRadius = dp(3).toFloat()
                 })
                 addState(intArrayOf(), GradientDrawable().apply {
-                    setColor(if (active) 0xFF3730A3.toInt() else 0x55000000)
+                    setColor(0x55000000)
+                    // the current episode is outlined in the light accent: it never looks like the filled focus
+                    if (active) setStroke(dp(2), 0xFFA5B4FC.toInt())
                     cornerRadius = dp(3).toFloat()
                 })
             }
