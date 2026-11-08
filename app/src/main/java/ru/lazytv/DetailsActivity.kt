@@ -730,6 +730,10 @@ class DetailsActivity : Activity() {
         val actions = mutableListOf<() -> Unit>()
         val (shown, hidden) = Sources.forYear(variants, currentTitle.year, currentTitle.tv, allYears)
 
+        if (allYears) {
+            items.add("‹ Назад")
+            actions.add { showSourceDialog(name, false) }
+        }
         shown.forEach { v ->
             val label = buildString {
                 append(v.source)

@@ -491,6 +491,10 @@ class PlayerActivity : Activity() {
         val currentItem = queue.getOrNull(queueIndex)
         val (variants, hidden) = Sources.forYear(allVariants, mediaYear, isTv, allYears)
 
+        if (allYears) {
+            items.add("‹ Назад")
+            actions.add { showSourcePicker(allVariants, false) }
+        }
         variants.forEach { v ->
             val isCurrent = currentItem?.let {
                 (v.ref.isNotEmpty() && it.watchKey.contains(v.ref)) ||

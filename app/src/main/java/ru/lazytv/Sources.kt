@@ -61,7 +61,13 @@ object Sources {
             val ranked = relevant(combined, listOf(title, original), year)
             // a film of the wanted year comes first, then the ones whose year is not known, then the other parts and remakes:
             // nothing is hidden (the user may want just the title), but the card opens the right one
-            if (tv) ranked else ranked.sortedBy { yearRank(it, year) }
+            if (tv) ranked else {
+                // the same film uploaded by several channels (same year, length to 5 minutes) is one "copy": the first of them
+                // keeps its place, the repeats go to the end of their year group, still in the same list
+                val seen = HashSet<String>()
+                val repeat = ranked.associateWith { !seen.add(copyKey(it)) }
+                ranked.sortedWith(compareBy({ yearRank(it, year) }, { repeat[it] == true }))
+            }
         } finally {
             pool.shutdownNow()
         }
@@ -114,8 +120,8 @@ object Sources {
             org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
         }.getOrDefault(0L)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants10_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants10_") }.associateWith { timeOf(it) }
+        keys.filter { !it.startsWith("variants12_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants12_") }.associateWith { timeOf(it) }
         current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
         val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
         if (alive.size > 80) {
@@ -127,7 +133,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants10_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants12_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
@@ -144,7 +150,9 @@ object Sources {
      * enough for a longer title), best match first (same year wins a tie).
      */
     fun relevant(found: List<Variant>, wanted: List<String>, year: String): List<Variant> {
-        fun words(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 }.toSet()
+        // articles and linking words are not part of a name: "the" alone must not tie "The Dark Knight" to "Thor: The Dark World"
+        val stop = setOf("the", "and", "for", "with", "from", "part", "movie", "film", "что", "как", "это", "фильм", "часть")
+        fun words(s: String) = s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in stop }.toSet()
         val titles = wanted.map { words(it) }.filter { it.isNotEmpty() }
         // a Russian query must not match only the English original of an unrelated Russian title:
         // "Интерстеллар" must not offer "Я злой лорд…" just because its English name carries "Interstellar"
@@ -179,7 +187,7 @@ object Sources {
         val wanted = year.take(4).toIntOrNull() ?: return 1
         val fromNote = Regex("^(\\d{4})").find(variant.note)?.groupValues?.get(1)?.toIntOrNull()
         val years = if (fromNote != null) listOf(fromNote)
-        else Regex("\\b(19|20)\\d{2}\\b").findAll(variant.title + " " + variant.alt).map { it.value.toInt() }.toList()
+        else Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").findAll(variant.title + " " + variant.alt).map { it.value.toInt() }.toList()
         if (years.isEmpty()) return 1
         return if (years.any { kotlin.math.abs(it - wanted) <= 1 }) 0 else 2
     }
@@ -193,6 +201,13 @@ object Sources {
         val fitting = variants.filter { yearRank(it, year) == 0 }
         if (fitting.isEmpty()) return variants to 0
         return fitting to (variants.size - fitting.size)
+    }
+
+    /** Identity of an upload of a film: source, year and length (from the note, to 5 minutes); a variant without a length is its own copy. */
+    private fun copyKey(v: Variant): String {
+        val minutes = Regex("(\\d+) мин").find(v.note)?.groupValues?.get(1)?.toIntOrNull() ?: return v.sourceId + "|" + v.ref
+        val year = Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").find(v.title + " " + v.alt + " " + v.note)?.value.orEmpty()
+        return v.sourceId + "|" + year + "|" + Math.round(minutes / 5.0)
     }
 
     fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =
@@ -440,15 +455,12 @@ object Rutube : VideoSource {
                 if (category.isNotEmpty() && category != "Фильмы" && category != "Сериалы") continue
                 val name = o.optString("title")
                 if (name.isEmpty()) continue
-                if (Regex("обзор|трейлер|разбор|рецензи|реакци|нарезк|рейтинг|топ ", RegexOption.IGNORE_CASE).containsMatchIn(name)) continue
+                if (Regex("обзор|трейлер|разбор|рецензи|реакци|нарезк|рейтинг|топ |смотрим с", RegexOption.IGNORE_CASE).containsMatchIn(name)) continue
                 val minutes = duration / 60
                 val author = o.optJSONObject("author")?.optString("name").orEmpty()
                 val note = listOf("Фильм", "$minutes мин", author).filter { it.isNotEmpty() }.joinToString(" • ")
-                val yearInName = Regex("\\b(19|20)\\d{2}\\b").find(name)?.value.orEmpty()
-                // the same film is uploaded by many channels under different names ("Тёмный рыцарь" / "The Dark Knight"):
-                // with a year in the name, the year and the length (to 5 minutes) are the identity; the first upload (best match) stays
-                val key = if (yearInName.isNotEmpty()) "$yearInName|${Math.round(duration / 300.0)}"
-                else normalizedTitle(name) + "||" + (duration / 600)
+                val yearInName = Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").find(name)?.value.orEmpty()
+                val key = normalizedTitle(name) + "|" + yearInName + "|" + (duration / 600)
                 if (!unique.containsKey(key)) unique[key] = Variant(this.name, "rutube", name, note, id)
             }
         }
