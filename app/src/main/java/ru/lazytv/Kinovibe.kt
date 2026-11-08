@@ -15,6 +15,10 @@ object Kinovibe : VideoSource {
 
     private data class Page(val path: String, val title: String, val season: Int?, val year: String, val description: String)
 
+    /** A page of a series carries "N сезон" in its name, a film does not: each card gets only its own kind. */
+    override fun search(title: String, original: String, year: String, tv: Boolean): List<Variant> =
+        search(title, original, year).filter { it.note.contains("сезон") == tv }
+
     override fun search(title: String, original: String, year: String): List<Variant> {
         val pages = LinkedHashMap<String, Page>()
         for (query in listOf(title, original).filter { it.isNotBlank() }) {

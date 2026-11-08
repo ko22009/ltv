@@ -27,7 +27,6 @@ class EpisodesActivity : Activity() {
     private var adapter: ArrayAdapter<Int>? = null
     private lateinit var list: ListView
     private lateinit var actions: LinearLayout
-    private lateinit var actionFavorite: View
     private lateinit var actionWatched: View
     private lateinit var geoButton: View
     private var selectedIndex = 0
@@ -119,7 +118,6 @@ class EpisodesActivity : Activity() {
         actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
         actions.visibility = View.GONE
-        actionFavorite = actionButton().apply { setOnClickListener { toggleFavorite() } }
         actionWatched = actionButton().apply { setOnClickListener { startEdit() } }
         actionApply = actionButton().apply { chipCaption = "Применить"; visibility = View.GONE; setOnClickListener { applyEdit() } }
         actionAll = actionButton().apply { chipCaption = "Весь сезон"; visibility = View.GONE; setOnClickListener { markAllShown() } }
@@ -127,7 +125,6 @@ class EpisodesActivity : Activity() {
         // shown only when the site offers several voice-overs (see load() below)
         actionVoice = actionButton().apply { visibility = View.GONE }
         actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2; rightMargin = px(12) })
         actions.addView(actionApply, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionAll, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
@@ -148,7 +145,7 @@ class EpisodesActivity : Activity() {
             else when (code) {
                 android.view.KeyEvent.KEYCODE_DPAD_DOWN -> when {
                     seasonScroll.visibility == View.VISIBLE -> activeSeasonChip().requestFocus()
-                    actions.visibility == View.VISIBLE -> actionFavorite.requestFocus()
+                    actions.visibility == View.VISIBLE -> firstAction().requestFocus()
                     errorRow.visibility == View.VISIBLE -> geoButton.requestFocus()
                     episodes.isNotEmpty() -> list.requestFocus()
                     else -> true
@@ -161,7 +158,7 @@ class EpisodesActivity : Activity() {
         }
         list.setOnKeyListener { _, code, event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && code == android.view.KeyEvent.KEYCODE_DPAD_UP && list.selectedItemPosition <= 0) {
-                if (actions.visibility == View.VISIBLE) actionFavorite.requestFocus() else back.requestFocus()
+                if (actions.visibility == View.VISIBLE) firstAction().requestFocus() else back.requestFocus()
                 true
             } else false
         }
@@ -293,7 +290,7 @@ class EpisodesActivity : Activity() {
                             true
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> { back().requestFocus(); true }
-                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { if (actions.visibility == View.VISIBLE) actionFavorite.requestFocus() else list.requestFocus(); true }
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { if (actions.visibility == View.VISIBLE) firstAction().requestFocus() else list.requestFocus(); true }
                         else -> false
                     }
                 }
@@ -352,7 +349,6 @@ class EpisodesActivity : Activity() {
         // [position] is the index in the whole episode list (favourites remember it), not the place in the shown season
         val key = EpisodeState.key(variant.sourceId, variant.ref, episode.title)
         val watched = if (editMode) pending[key] ?: EpisodeState.isWatched(this, key) else EpisodeState.isWatched(this, key)
-        val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(14), px(20), px(14))
@@ -370,7 +366,6 @@ class EpisodesActivity : Activity() {
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         card.addView(label(shown, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
             LinearLayout.LayoutParams(0, -2, 1f))
-        if (favorite) card.addView(label("★", 20f, 0xFFE0B94F.toInt()).apply { setPadding(px(8), 0, px(4), 0) })
         if (watched) card.addView(label("✓", 20f, 0xFFA5B4FC.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
         card.addView(label(episode.streams.joinToString("  ") { it.first }, 14f,
             if (watched) 0xFF475569.toInt() else 0xFF94A3B8.toInt()).apply {
@@ -390,23 +385,12 @@ class EpisodesActivity : Activity() {
         val position = selectedIndex.coerceIn(0, episodes.lastIndex)
         val episode = episodes[position]
         val watched = EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episode.title))
-        val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
-        actionFavorite.chipCaption = if (favorite) "Убрать из избранного" else "Добавить в избранное"
         actionWatched.chipCaption = "Отметить просмотренные"
     }
 
-    private fun toggleFavorite() {
-        val position = selectedIndex.coerceIn(0, episodes.lastIndex)
-        val episode = episodes[position]
-        val added = EpisodeState.toggleFavorite(this, FavoriteEpisode(
-            variant.sourceId, variant.source, variant.ref, variant.title, variant.note,
-            variant.alt, variant.description, episode.title, position,
-        ))
-        adapter?.notifyDataSetChanged()
-        updateActions()
-        android.widget.Toast.makeText(this, if (added) "Серия в избранном" else "Серия убрана из избранного",
-            android.widget.Toast.LENGTH_SHORT).show()
-    }
+    /** The first button of the action row that is shown now (the series as a whole is bookmarked on its card, not here). */
+    private fun firstAction(): View =
+        (0 until actions.childCount).map { actions.getChildAt(it) }.first { it.visibility == View.VISIBLE }
 
     private fun keyOf(index: Int) = EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title)
 

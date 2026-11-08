@@ -24,6 +24,12 @@ object Hdrezka : VideoSource {
         return html
     }
 
+    /** The kind comes with each result (the address says "series" or "films"): the other kind is dropped. */
+    override fun search(title: String, original: String, year: String, tv: Boolean): List<Variant> =
+        search(title, original, year).filter { v ->
+            if (tv) !v.note.endsWith("Фильм") else !v.note.endsWith("Сериал")
+        }
+
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = HashSet<String>()
         val found = ArrayList<Variant>()

@@ -30,6 +30,10 @@ interface VideoSource {
     fun voices(variant: Variant): List<Pair<String, String>> = emptyList()
     /** False for a source that has no usable episode list (a series there is one long video). */
     val forSeries: Boolean get() = true
+    /** False for a source that only has series: a film card must not offer it. */
+    val forFilms: Boolean get() = true
+    /** [search] knowing whether a series or a film is wanted; a source that mixes both drops the other kind. */
+    fun search(title: String, original: String, year: String, tv: Boolean): List<Variant> = search(title, original, year)
 }
 
 object Sources {
@@ -39,7 +43,7 @@ object Sources {
 
     /** Sources the user left switched on in the settings (a change applies at once). */
     fun enabled(context: Context, tv: Boolean = false) =
-        all.filter { Settings.bool(context, Settings.service(it.id)) && (!tv || it.forSeries) }
+        all.filter { Settings.bool(context, Settings.service(it.id)) && (if (tv) it.forSeries else it.forFilms) }
 
     /** Searches every enabled source at once; a source that fails or finds nothing simply adds no tiles. */
     fun search(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant> {
@@ -48,13 +52,15 @@ object Sources {
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         return try {
             val tasks = list.map { source ->
-                java.util.concurrent.Callable { runCatching { source.search(title, original, year) }.getOrDefault(emptyList()) }
+                java.util.concurrent.Callable { runCatching { source.search(title, original, year, tv) }.getOrDefault(emptyList()) }
             }
             // one slow site must not hold the card: whatever did not answer in 20 seconds is skipped
             val combined = pool.invokeAll(tasks, 20, java.util.concurrent.TimeUnit.SECONDS)
                 .flatMap { future -> runCatching { future.get() }.getOrDefault(emptyList()) }
             // each source ranks its own answers; the combined list has to be ranked across sources again
-            relevant(combined, listOf(title, original), year)
+            val ranked = relevant(combined, listOf(title, original), year)
+            // a film is told apart from its namesakes by the year: a known year that is more than one off is another film
+            if (tv) ranked else ranked.filter { sameFilmYear(it.note, year) }
         } finally {
             pool.shutdownNow()
         }
@@ -107,8 +113,8 @@ object Sources {
             org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
         }.getOrDefault(0L)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants6_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants6_") }.associateWith { timeOf(it) }
+        keys.filter { !it.startsWith("variants7_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants7_") }.associateWith { timeOf(it) }
         current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
         val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
         if (alive.size > 80) {
@@ -120,7 +126,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants6_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants7_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
@@ -161,6 +167,13 @@ object Sources {
                 .thenByDescending { it.third }
                 .thenByDescending { it.first.note.startsWith(year) })
             .map { it.first }
+    }
+
+    /** True when the variant's note starts with a year close to [year] (±1), or either year is unknown. */
+    fun sameFilmYear(note: String, year: String): Boolean {
+        val wanted = year.take(4).toIntOrNull() ?: return true
+        val found = Regex("^(\\d{4})").find(note)?.groupValues?.get(1)?.toIntOrNull() ?: return true
+        return kotlin.math.abs(found - wanted) <= 1
     }
 
     fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =
@@ -209,6 +222,10 @@ object Anilibria : VideoSource {
     override val id = "anilibria"
     override val name = "ANILIBRIA"
 
+    /** The release type says whether it is a film (MOVIE) or a series (TV, ONA, OVA…): a card gets only its own kind. */
+    override fun search(title: String, original: String, year: String, tv: Boolean): List<Variant> =
+        search(title, original, year).filter { if (tv) !it.note.endsWith("Фильм") else it.note.endsWith("Фильм") }
+
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = LinkedHashSet<Int>()
         val found = ArrayList<Variant>()
@@ -221,7 +238,9 @@ object Anilibria : VideoSource {
                 val names = r.getJSONObject("name")
                 found += Variant(
                     name, id, names.optString("main"),
-                    r.optInt("year").toString().takeIf { it != "0" }.orEmpty(),
+                    listOf(r.optInt("year").toString().takeIf { it != "0" }.orEmpty(),
+                        if (r.optJSONObject("type")?.optString("value") == "MOVIE") "Фильм" else "")
+                        .filter { it.isNotEmpty() }.joinToString(" • "),
                     r.getInt("id").toString(), names.optString("english"),
                 )
             }
@@ -261,6 +280,7 @@ fun htmlText(html: String): String = html
 object Seasonvar : VideoSource {
     override val id = "seasonvar"
     override val name = "SEASONVAR"
+    override val forFilms get() = false
 
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = HashSet<String>()
