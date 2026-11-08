@@ -80,7 +80,6 @@ object MenuIcons {
 
     private val byName = mapOf(
         "ПОИСК" to SEARCH_ICON,
-        "ОБЗОР" to DASHBOARD,
         "ФИЛЬМЫ" to MOVIE,
         "СЕРИАЛЫ" to TV,
         "МУЛЬТФИЛЬМЫ" to SMILE,

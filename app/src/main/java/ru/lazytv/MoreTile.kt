@@ -15,15 +15,13 @@ import android.widget.TextView
 import androidx.leanback.widget.Presenter
 
 /**
- * The "show all" tile at the end of a catalog row. It knows which list the row came from: either a ready TMDB
- * collection (by its place in [Tmdb.overview]) or a category with a sort order.
+ * The "show all" tile at the end of a catalog row. It knows which list the row came from: a category with a sort order.
  */
-data class MoreTile(val title: String, val collection: Int = -1, val category: String = "", val sort: String = "", val filtered: Boolean = false) {
+data class MoreTile(val title: String, val category: String = "", val sort: String = "", val filtered: Boolean = false) {
     /** One TMDB page: what is left of it after "hide watched", and whether TMDB had nothing on it at all. */
     class Loaded(val titles: List<Title>, val ended: Boolean)
 
     fun loadPage(context: Context, page: Int): Loaded {
-        if (collection >= 0) return Tmdb.loadCollection(context, Tmdb.overview[collection], page).let { Loaded(it, it.isEmpty()) }
         val list = Tmdb.categories.first { it.id == category }
         if (!filtered) return Tmdb.load(context, list, sort, page).let { Loaded(it, it.isEmpty()) }
         // the filters chosen on the list page are read at the moment of loading, so every page of the grid agrees
@@ -44,14 +42,14 @@ data class MoreTile(val title: String, val collection: Int = -1, val category: S
     }
 
     fun toIntent(context: Context): Intent = Intent(context, TitlesGridActivity::class.java)
-        .putExtra("title", title).putExtra("collection", collection).putExtra("category", category).putExtra("sort", sort).putExtra("filtered", filtered)
+        .putExtra("title", title).putExtra("category", category).putExtra("sort", sort).putExtra("filtered", filtered)
 
     companion object {
         /** How many pages in a row may hold only watched titles before the row gives up. */
         private const val MAX_SKIPPED_PAGES = 5
 
         fun from(intent: Intent) = MoreTile(
-            intent.getStringExtra("title").orEmpty(), intent.getIntExtra("collection", -1),
+            intent.getStringExtra("title").orEmpty(),
             intent.getStringExtra("category").orEmpty(), intent.getStringExtra("sort").orEmpty(),
             intent.getBooleanExtra("filtered", false),
         )

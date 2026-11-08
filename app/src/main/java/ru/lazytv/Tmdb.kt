@@ -58,18 +58,8 @@ object Tmdb {
         "Лучшее в этом году" to "vote_average.desc&vote_count.gte=200&year=THIS_YEAR",
     )
 
-    /** Overview rows built from ready-made TMDB lists: title, kind (movie/tv), list path, extra query. */
+    /** A ready-made TMDB list: title, kind (movie/tv), list path, extra query. */
     class Collection(val title: String, val tv: Boolean, val path: String, val extra: String = "")
-
-    val overview = listOf(
-        Collection("Популярное", false, "popular"),
-        Collection("Сейчас в кино", false, "now_playing", "&region=RU"),
-        Collection("Скоро в кино", false, "upcoming", "&region=RU"),
-        Collection("Топ фильмов", false, "top_rated"),
-        Collection("Популярные сериалы", true, "popular"),
-        Collection("Сейчас в эфире", true, "on_the_air"),
-        Collection("Топ сериалов", true, "top_rated"),
-    )
 
     fun loadCollection(context: Context, collection: Collection, page: Int = 1): List<Title> {
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")

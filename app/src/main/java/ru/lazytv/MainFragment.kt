@@ -121,40 +121,6 @@ class MainFragment : Fragment() {
         }
     }
 
-    private val ROW_AHEAD = 6 // titles left in a row when the next page is asked for
-
-    /** The next pages of an overview row: asked for while the cursor nears the end of the row. */
-    private class RowPager(val more: MoreTile, val cards: ArrayObjectAdapter) {
-        var next = 2
-        var busy = false
-        var ended = false
-    }
-
-    private val pagers = HashMap<ListRow, RowPager>()
-
-    private fun loadMoreOf(row: ListRow, item: Any?) {
-        val pager = pagers[row] ?: return
-        val index = pager.cards.indexOf(item)
-        if (pager.busy || pager.ended || index < pager.cards.size() - ROW_AHEAD) return
-        pager.busy = true
-        val ctx = requireContext().applicationContext
-        val page = pager.next
-        lifecycleScope.launch {
-            val loaded = withContext(Dispatchers.IO) { runCatching { pager.more.loadPage(ctx, page) }.getOrNull() }
-            pager.busy = false
-            if (loaded == null) return@launch
-            // titles already in the row are not added twice when TMDB repeats one on the next page
-            val fresh = loaded.titles.filter { t -> (0 until pager.cards.size()).none { (pager.cards.get(it) as? Title)?.id == t.id } }
-            if (loaded.ended) pager.ended = true else pager.next = page + 1
-            if (fresh.isNotEmpty()) pager.cards.addAll(pager.cards.size(), fresh)
-            // a page that held only watched titles adds nothing: the next one is asked for at once
-            else if (!loaded.ended) loadMoreOf(row, pager.cards.get(pager.cards.size() - 1))
-        }
-    }
-
-    /** Rows of the overview that wait to be loaded until they come near the screen. */
-    private val pendingLoads = HashMap<ListRow, () -> Unit>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (arguments?.getBoolean(RESTORE, false) == true) {
@@ -276,8 +242,6 @@ class MainFragment : Fragment() {
 
     private fun rebuildNavRail() {
         pages.clear()
-        pendingLoads.clear()
-        pagers.clear()
         favoritesRows = null
         val tx = childFragmentManager.beginTransaction()
         childFragmentManager.fragments.forEach { tx.remove(it) }
@@ -305,6 +269,10 @@ class MainFragment : Fragment() {
 
     private fun requestContentFocus() {
         if (!::contentContainer.isInitialized) return
+        // a catalog page opens on its first card, not on the filter buttons above it. Asked before the check below:
+        // on a cold start the system has already put the focus on the first button by then
+        val catalog = childFragmentManager.findFragmentByTag(currentPage) as? CatalogPageFragment
+        if (catalog != null && catalog.focusFirstCard()) return
         if (contentContainer.findFocus() != null) return
         if (currentPage == SEARCH_HEADER) {
             val mic = searchPage?.micView
@@ -313,9 +281,6 @@ class MainFragment : Fragment() {
                 return
             }
         }
-        // a catalog page opens on its first card, not on the filter buttons above it
-        val catalog = childFragmentManager.findFragmentByTag(currentPage) as? CatalogPageFragment
-        if (catalog != null && catalog.focusFirstCard()) return
         val railItem = currentNavItem()
         val target = if (railItem != null) {
             FocusFinder.getInstance().findNextFocus(rootLayout, railItem, View.FOCUS_RIGHT)
@@ -528,8 +493,53 @@ class MainFragment : Fragment() {
     private fun favoritesState(ctx: Context): String =
         Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx)
 
+    private var clockDialog: android.app.AlertDialog? = null
+
+    /**
+     * A wrong device clock breaks every HTTPS request, so the warning is a window that cannot be closed with Back:
+     * it goes away by itself once the clock is right. The check runs again each time the app comes back (from the
+     * clock settings, for one). Limit: if the check cannot reach the network, the window stays until a request succeeds.
+     */
+    private fun checkClock() {
+        val app = requireContext().applicationContext
+        Thread {
+            ClockCheck.checkOnce()
+            val host = activity ?: return@Thread
+            host.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                if (!ClockCheck.skewed) {
+                    clockDialog?.dismiss()
+                    clockDialog = null
+                } else if (clockDialog == null) {
+                    clockDialog = android.app.AlertDialog.Builder(host, android.R.style.Theme_Material_Dialog_Alert)
+                        .setTitle("Сбились дата и время")
+                        .setMessage(ClockCheck.MESSAGE)
+                        .setCancelable(false)
+                        .setPositiveButton("Настроить часы", null)
+                        .create().also { dialog ->
+                            dialog.setCanceledOnTouchOutside(false)
+                            dialog.show()
+                            // set after show(): the default handler would close the window on the button press
+                            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                                val flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(flags)) }
+                                    .onFailure { runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(flags)) } }
+                            }
+                        }
+                }
+            }
+        }.start()
+    }
+
+    override fun onDestroyView() {
+        clockDialog?.dismiss()
+        clockDialog = null
+        super.onDestroyView()
+    }
+
     override fun onResume() {
         super.onResume()
+        checkClock()
         val ctx = requireContext()
         if (pageToRestore.isEmpty()) LastScreen.rememberPage(ctx, currentPage)
         if (shown != menuSignature(ctx)) {
@@ -570,7 +580,6 @@ class MainFragment : Fragment() {
         override fun onBindRowViewHolder(holder: RowPresenter.ViewHolder, item: Any) {
             super.onBindRowViewHolder(holder, item)
             showCaption(holder)
-            pendingLoads.remove(item)?.invoke()
             val grid = (holder as? ListRowPresenter.ViewHolder)?.gridView ?: return
             if (grid.tag != "glide_scroll") {
                 grid.tag = "glide_scroll"
@@ -634,26 +643,6 @@ class MainFragment : Fragment() {
         if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"))
     }
 
-    private fun addRow(rows: ArrayObjectAdapter, title: String, more: MoreTile, load: (Context) -> List<Title>) {
-        val presenters = ClassPresenterSelector()
-            .addClassPresenter(Title::class.java, CardPresenter())
-            .addClassPresenter(MoreTile::class.java, MoreTilePresenter())
-            .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter())
-        val cards = ArrayObjectAdapter(presenters)
-        repeat(SKELETONS) { cards.add(SkeletonCard) }
-        val row = ListRow(HeaderItem(title), cards)
-        rows.add(row)
-        val ctx = requireContext().applicationContext
-        pendingLoads[row] = {
-            lifecycleScope.launch {
-                val loaded = withContext(Dispatchers.IO) { runCatching { load(ctx) }.getOrDefault(emptyList()) }
-                cards.clear()
-                cards.addAll(0, if (loaded.isEmpty()) loaded else listOf<Any>(more) + loaded)
-                if (loaded.isNotEmpty()) pagers[row] = RowPager(more, cards)
-            }
-        }
-    }
-
     private fun createPageFragment(name: String): Fragment {
         if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
         if (name == SETTINGS) return SettingsPageFragment()
@@ -672,9 +661,6 @@ class MainFragment : Fragment() {
         val rows = pageFor(name)
         page.adapter = rows
         page.onItemViewClickedListener = onClick
-        page.onItemViewSelectedListener = OnItemViewSelectedListener { _, item, _, row ->
-            if (row is ListRow) loadMoreOf(row, item)
-        }
         return page
     }
 
@@ -725,7 +711,6 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
     override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
 }
 
-private const val SKELETONS = 7
 
 class SkeletonPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =

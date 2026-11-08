@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnLayout
 import androidx.fragment.app.Fragment
 import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.ArrayObjectAdapter
@@ -208,14 +209,31 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
      * not there yet (skeletons); the focus is handed over as soon as they arrive.
      */
     fun focusFirstCard(): Boolean {
-        if (!::grid.isInitialized) return false
-        if (cards.size() > 0 && !skeletons) {
-            wantCardFocus = false
-            grid.requestFocus()
-            return true
+        // asked before the page is built or filled (a cold start): remembered, done when the cards stand
+        if (!::grid.isInitialized || cards.size() == 0 || skeletons) {
+            wantCardFocus = true
+            return false
         }
-        wantCardFocus = true
-        return false
+        wantCardFocus = false
+        claimGrid()
+        return true
+    }
+
+    /**
+     * Gives the focus to the grid when nobody has it or it sits on a button; the menu or another page keeps theirs.
+     * Repeated after the next layout and the frame that follows it: on a fresh page the grid is not laid out yet, the
+     * first request does nothing and the system then focuses the first button by itself.
+     */
+    private fun claimGrid() {
+        fun take() {
+            val held = activity?.currentFocus
+            if (held == null || listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
+        }
+        take()
+        grid.doOnLayout { it.post { if (isAdded) take() } }
+        // the cards come from the cache at once and the browse screen hands the focus to the first button a little
+        // later, at an unknown moment: the request is repeated for the first second (only while the focus is on a button)
+        for (delay in longArrayOf(150, 500, 1200)) grid.postDelayed({ if (isAdded) take() }, delay)
     }
 
     /** The button above the focused card (or the closest one to it): the first cards go up to the filters, the next ones to the sort. */
@@ -353,7 +371,7 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
                 // only while the focus still sits on a button: if the user went elsewhere meanwhile, it is not taken away
                 if (wantCardFocus && cards.size() > 0) {
                     wantCardFocus = false
-                    if (listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
+                    claimGrid()
                 }
                 if (loaded.ended && cards.size() == 0) {
                     message.text = "Ничего не найдено"

@@ -8,7 +8,6 @@ object Settings {
 
     const val SHOW_ADULT = "show_adult"
     const val SHOW_HORROR = "show_horror"
-    const val SHOW_OVERVIEW = "show_overview"
     const val LANGUAGE = "language"
     const val SOURCE_MODE = "source_mode"
     const val PLAYER = "player"
