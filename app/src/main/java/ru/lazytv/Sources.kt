@@ -445,7 +445,10 @@ object Rutube : VideoSource {
                 val author = o.optJSONObject("author")?.optString("name").orEmpty()
                 val note = listOf("Фильм", "$minutes мин", author).filter { it.isNotEmpty() }.joinToString(" • ")
                 val yearInName = Regex("\\b(19|20)\\d{2}\\b").find(name)?.value.orEmpty()
-                val key = normalizedTitle(name) + "|" + yearInName + "|" + (duration / 600)
+                // the same film is uploaded by many channels under different names ("Тёмный рыцарь" / "The Dark Knight"):
+                // with a year in the name, the year and the length (to 5 minutes) are the identity; the first upload (best match) stays
+                val key = if (yearInName.isNotEmpty()) "$yearInName|${Math.round(duration / 300.0)}"
+                else normalizedTitle(name) + "||" + (duration / 600)
                 if (!unique.containsKey(key)) unique[key] = Variant(this.name, "rutube", name, note, id)
             }
         }
