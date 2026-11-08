@@ -236,7 +236,8 @@ class PlayerActivity : Activity() {
         player = exo
         handler.postDelayed(saver, 10_000)
         handler.post(ticker)
-        showControls()
+        // on opening the focus stands on the progress bar: left and right rewind at once
+        setControlsVisible(true, focusSeek = true)
     }
 
     /** Applies the default voice/subtitle preference from settings before the stream starts. */
@@ -854,9 +855,12 @@ class PlayerActivity : Activity() {
 
     // --- show/hide ---------------------------------------------------------------------------------
 
-    private fun setControlsVisible(visible: Boolean) {
+    private fun setControlsVisible(visible: Boolean, focusSeek: Boolean = false) {
         overlay.visibility = if (visible) View.VISIBLE else View.GONE
-        if (visible) { resetHideTimer(); playPause.requestFocus() } else handler.removeCallbacks(hider)
+        if (visible) {
+            resetHideTimer()
+            if (focusSeek) seek.requestFocus() else playPause.requestFocus()
+        } else handler.removeCallbacks(hider)
     }
 
     private fun showControls() = setControlsVisible(true)
@@ -887,6 +891,18 @@ class PlayerActivity : Activity() {
             }
             if (overlay.visibility == View.VISIBLE) {
                 if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                    setControlsVisible(false)
+                    return true
+                }
+                // up from the progress bar and down from the lowest row hide the panel
+                val focused = currentFocus
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focused === seek) {
+                    setControlsVisible(false)
+                    return true
+                }
+                if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN &&
+                    (if (episodeViews.isEmpty()) focused is ImageView else episodeViews.any { it === focused })
+                ) {
                     setControlsVisible(false)
                     return true
                 }
