@@ -197,8 +197,8 @@ object Sources {
             o.optLong("t") to o.optBoolean("k")
         }.getOrDefault(0L to false)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants13_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants13_") }.associateWith { entry(it) }
+        keys.filter { !it.startsWith("variants14_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants14_") }.associateWith { entry(it) }
         val dayMs = 24 * 60 * 60 * 1000L
         fun expired(e: Pair<Long, Boolean>) = now - e.first > (if (e.second) 3 * dayMs else dayMs)
         current.filter { expired(it.value) }.keys.forEach { edit.remove(it) }
@@ -213,7 +213,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants13_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants14_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
