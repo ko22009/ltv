@@ -165,7 +165,11 @@ public final class DpiBypass {
     /** Forgets the decision and the dead mark of [host]: the next request decides again (the "check sources" button). */
     public static void forget(String host) {
         String key = host.toLowerCase();
-        CACHE.remove(key);
+        // a working way is kept (no new probe, the answer time stays honest); only a "dead" decision is thrown away
+        Decision known = CACHE.get(key);
+        if (known == null || known.dead) {
+            CACHE.remove(key);
+        }
         if (DEAD.remove(key) != null) {
             saveDead();
         }
