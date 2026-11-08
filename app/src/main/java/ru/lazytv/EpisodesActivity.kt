@@ -42,6 +42,12 @@ class EpisodesActivity : Activity() {
     private var visible: List<Int> = emptyList()
     private var loadEpisodes: (() -> Unit)? = null
     private var voiceSwitched = false
+    /** Marking mode: boxes next to the episodes; the choices wait in [pending] until "Применить". */
+    private var editMode = false
+    private val pending = HashMap<String, Boolean>()
+    private lateinit var actionApply: View
+    private lateinit var actionCancel: View
+    private lateinit var actionAll: View
 
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
         text = value
@@ -92,7 +98,7 @@ class EpisodesActivity : Activity() {
             addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         }
         page.addView(header)
-        page.addView(label("Удерживайте OK, чтобы выбрать качество", 14f, 0xFF94A3B8.toInt()).apply {
+        page.addView(label("Удерживайте OK, чтобы отметить серию просмотренной или снять отметку", 14f, 0xFF94A3B8.toInt()).apply {
             setPadding(0, px(12), 0, px(12))
         })
         val status = label("", 15f, 0xFFCBD5E1.toInt())
@@ -114,12 +120,18 @@ class EpisodesActivity : Activity() {
         actions.orientation = LinearLayout.HORIZONTAL
         actions.visibility = View.GONE
         actionFavorite = actionButton().apply { setOnClickListener { toggleFavorite() } }
-        actionWatched = actionButton().apply { setOnClickListener { toggleWatched() } }
+        actionWatched = actionButton().apply { setOnClickListener { startEdit() } }
+        actionApply = actionButton().apply { chipCaption = "Применить"; visibility = View.GONE; setOnClickListener { applyEdit() } }
+        actionAll = actionButton().apply { chipCaption = "Весь сезон"; visibility = View.GONE; setOnClickListener { markAllShown() } }
+        actionCancel = actionButton().apply { chipCaption = "Отмена"; visibility = View.GONE; setOnClickListener { endEdit() } }
         // shown only when the site offers several voice-overs (see load() below)
         actionVoice = actionButton().apply { visibility = View.GONE }
         actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2 })
+        actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2; rightMargin = px(12) })
+        actions.addView(actionApply, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
+        actions.addView(actionAll, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
+        actions.addView(actionCancel, LinearLayout.LayoutParams(-2, -1))
         seasonRow = LinearLayout(this)
         seasonScroll = android.widget.HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
@@ -204,8 +216,17 @@ class EpisodesActivity : Activity() {
                         geoButton.requestFocus()
                         return@onSuccess
                     }
-                    list.setOnItemClickListener { _, _, position, _ -> visible.getOrNull(position)?.let { play(episodes, it) } }
-                    list.setOnItemLongClickListener { _, _, position, _ -> visible.getOrNull(position)?.let { play(episodes, it, true) }; true }
+                    list.setOnItemClickListener { _, _, position, _ ->
+                        visible.getOrNull(position)?.let { if (editMode) togglePending(it) else play(episodes, it) }
+                    }
+                    // long OK: the "watched" mark of that episode on or off (the quality can still be asked for in the settings)
+                    list.setOnItemLongClickListener { _, _, position, _ ->
+                        visible.getOrNull(position)?.let {
+                            selectedIndex = it
+                            if (editMode) togglePending(it) else toggleWatched()
+                        }
+                        true
+                    }
                     list.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
                         override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
                             visible.getOrNull(position)?.let { selectedIndex = it }
@@ -330,7 +351,7 @@ class EpisodesActivity : Activity() {
     private fun row(position: Int, episode: Episode): View {
         // [position] is the index in the whole episode list (favourites remember it), not the place in the shown season
         val key = EpisodeState.key(variant.sourceId, variant.ref, episode.title)
-        val watched = EpisodeState.isWatched(this, key)
+        val watched = if (editMode) pending[key] ?: EpisodeState.isWatched(this, key) else EpisodeState.isWatched(this, key)
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
@@ -343,6 +364,8 @@ class EpisodesActivity : Activity() {
                 cornerRadius = px(3).toFloat()
             })
         }
+        if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, if (watched) 0xFFA5B4FC.toInt() else 0xFF94A3B8.toInt())
+            .apply { setPadding(0, 0, px(14), 0) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         card.addView(label(shown, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
@@ -369,7 +392,7 @@ class EpisodesActivity : Activity() {
         val watched = EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episode.title))
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
         actionFavorite.chipCaption = if (favorite) "Убрать из избранного" else "Добавить в избранное"
-        actionWatched.chipCaption = if (watched) "Снять отметку «просмотрено»" else "Пометить просмотренным"
+        actionWatched.chipCaption = "Отметить просмотренные"
     }
 
     private fun toggleFavorite() {
@@ -383,6 +406,65 @@ class EpisodesActivity : Activity() {
         updateActions()
         android.widget.Toast.makeText(this, if (added) "Серия в избранном" else "Серия убрана из избранного",
             android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    private fun keyOf(index: Int) = EpisodeState.key(variant.sourceId, variant.ref, episodes[index].title)
+
+    private fun watchedNow(index: Int) = pending[keyOf(index)] ?: EpisodeState.isWatched(this, keyOf(index))
+
+    private fun togglePending(index: Int) {
+        pending[keyOf(index)] = !watchedNow(index)
+        adapter?.notifyDataSetChanged()
+    }
+
+    /** Switches the mode on: the boxes show the current marks, the usual buttons give way to "Применить" / "Весь сезон" / "Отмена". */
+    private fun startEdit() {
+        editMode = true
+        pending.clear()
+        actionWatched.visibility = View.GONE
+        actionApply.visibility = View.VISIBLE
+        actionAll.visibility = View.VISIBLE
+        actionCancel.visibility = View.VISIBLE
+        adapter?.notifyDataSetChanged()
+        list.requestFocus()
+    }
+
+    private fun endEdit() {
+        editMode = false
+        pending.clear()
+        actionApply.visibility = View.GONE
+        actionAll.visibility = View.GONE
+        actionCancel.visibility = View.GONE
+        actionWatched.visibility = View.VISIBLE
+        adapter?.notifyDataSetChanged()
+        updateActions()
+        list.requestFocus()
+    }
+
+    /** Writes the marks chosen in the mode; only the episodes whose box differs from the saved mark are touched. */
+    private fun applyEdit() {
+        var changed = 0
+        for (index in episodes.indices) {
+            val key = keyOf(index)
+            val want = pending[key] ?: continue
+            if (want != EpisodeState.isWatched(this, key)) {
+                EpisodeState.setWatched(this, key, want)
+                changed++
+            }
+        }
+        endEdit()
+        android.widget.Toast.makeText(this, if (changed == 0) "Без изменений" else "Сохранено: $changed", android.widget.Toast.LENGTH_SHORT).show()
+    }
+
+    /** "Весь сезон": every shown episode gets a mark, or loses it when all of them already have one. */
+    private fun markAllShown() {
+        val all = visible.all { watchedNow(it) }
+        visible.forEach { pending[keyOf(it)] = !all }
+        adapter?.notifyDataSetChanged()
+    }
+
+    override fun onBackPressed() {
+        if (editMode) endEdit() else super.onBackPressed()
     }
 
     private fun toggleWatched() {
