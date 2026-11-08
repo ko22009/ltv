@@ -423,7 +423,7 @@ class MainFragment : Fragment() {
             val focused = isFocused
             val bg = when {
                 focused -> 0xFF6366F1.toInt()
-                isCur -> 0xFF3730A3.toInt()
+                isCur -> 0xFF6366F1.toInt()
                 else -> Color.TRANSPARENT
             }
             val iconColor = when {

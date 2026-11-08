@@ -195,7 +195,7 @@ class IconHeaderPresenter : RowHeaderPresenter() {
         /** A bright plate under the focus and a calmer one under the selected page; nothing otherwise. */
         private fun plate() = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), shape(0xFF6366F1.toInt()))
-            addState(intArrayOf(android.R.attr.state_selected), shape(0xFF3730A3.toInt()))
+            addState(intArrayOf(android.R.attr.state_selected), shape(0xFF6366F1.toInt()))
             addState(intArrayOf(), shape(Color.TRANSPARENT))
         }
 
