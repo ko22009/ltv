@@ -33,7 +33,7 @@ interface VideoSource {
 }
 
 object Sources {
-    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Hdrezka, Rutube)
+    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Hdrezka, Kinovibe, Rutube)
 
     fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
 

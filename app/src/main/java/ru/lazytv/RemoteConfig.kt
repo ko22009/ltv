@@ -31,6 +31,7 @@ object RemoteConfig {
         "anilibria" to listOf("https://anilibria.top"),
         "seasonvar" to listOf("https://seasonvar.ru"),
         "hdrezka" to listOf("http://hdrezka-fly.net", "https://hdrezkavktest.org", "https://rezka.ag", "https://hdrezka-home.tv", "https://hdrezka.ag", "https://rezka.fi", "https://rezka.si"),
+        "kinovibe" to listOf("https://kinovibe.cc"),
         "rutube" to listOf("https://rutube.ru"),
         "rutor" to listOf("rutor.info", "rutor.is", "rutor.lib"),
         "octopus" to listOf("https://045.ultradox.click", "https://ultadox.space"),
