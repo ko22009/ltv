@@ -182,6 +182,8 @@ object Tmdb {
         /** All backdrop paths from TMDB for the gallery. */
         val allBackdrops: List<String> = emptyList(),
         val overview: String = "",
+        /** A film shown again in the cinemas of Russia years after its premiere: the date of that run ("yyyy-MM-dd"); empty otherwise. */
+        val cinemaDate: String = "",
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -307,6 +309,7 @@ object Tmdb {
         val uniqueDirectors = directorPeople.distinctBy { if (it.id > 0L) it.id else it.name }
         val director = uniqueDirectors.joinToString(", ") { it.name }
         var age = ""
+        var cinemaDate = ""
         if (tv) {
             val a = o.optJSONObject("content_ratings")?.optJSONArray("results")
             if (a != null) for (i in 0 until a.length()) {
@@ -315,16 +318,27 @@ object Tmdb {
             }
         } else {
             val a = o.optJSONObject("release_dates")?.optJSONArray("results")
+            // the latest theatrical date in Russia that has already come (or comes within the "now playing" window, 3 days)
+            val limit = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(
+                java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, 3) }.time)
+            var theatrical = ""
             if (a != null) for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
                 if (r.str("iso_3166_1") == "RU") {
                     val list = r.optJSONArray("release_dates")
                     if (list != null) for (j in 0 until list.length()) {
-                        val c = list.getJSONObject(j).str("certification")
-                        if (c.isNotEmpty()) { age = c; break }
+                        val item = list.getJSONObject(j)
+                        val c = item.str("certification")
+                        if (age.isEmpty() && c.isNotEmpty()) age = c
+                        val date = item.str("release_date").take(10)
+                        if ((item.optInt("type") == 2 || item.optInt("type") == 3) && date <= limit && date > theatrical) theatrical = date
                     }
                 }
             }
+            // a re-release: the cinema date is years after the first premiere ("Донни Дарко", 2001, in the cinemas again in 2026)
+            val first = o.str("release_date").take(4).toIntOrNull()
+            val again = theatrical.take(4).toIntOrNull()
+            if (first != null && again != null && again - first >= 2) cinemaDate = theatrical
         }
         val runtime = if (tv) o.optJSONArray("episode_run_time")?.optInt(0) ?: 0 else o.optInt("runtime")
         // TMDB names the countries in English whatever the language is: take the name from the country code instead
@@ -375,7 +389,7 @@ object Tmdb {
             o.str("release_date").ifEmpty { o.str("first_air_date") }, director, cast,
             o.optInt("number_of_seasons"), mainBackdrop, nextEpisode, castPeople,
             o.str("poster_path"), uniqueDirectors, distinctBackdrops,
-            allPosters, allBackdrops, o.str("overview"),
+            allPosters, allBackdrops, o.str("overview"), cinemaDate,
         )
     }
 

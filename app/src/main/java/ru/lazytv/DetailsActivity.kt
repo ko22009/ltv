@@ -400,8 +400,13 @@ class DetailsActivity : Activity() {
         if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
-        val rows = baseRows.map { (caption, value) ->
-            if (caption == RELEASE) caption to formatReleaseDate(d.date).ifEmpty { value } else caption to value
+        // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
+        val rows = baseRows.flatMap { (caption, value) ->
+            if (caption != RELEASE) listOf(caption to value)
+            else listOf(
+                caption to formatReleaseDate(d.date).ifEmpty { value },
+                "В кино с" to formatReleaseDate(d.cinemaDate).let { if (it.isEmpty()) "" else "$it (повторный прокат)" },
+            )
         }
         fillTable(table, rows + listOf(
             "Длительность" to (formatRuntime(d.runtime)),
