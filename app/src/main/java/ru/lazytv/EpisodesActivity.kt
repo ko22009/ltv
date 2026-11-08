@@ -199,8 +199,7 @@ class EpisodesActivity : Activity() {
         errorRow.visibility = View.GONE
         Thread {
             val result = runCatching {
-                val source = Sources.all.firstOrNull { it.id == variant.sourceId } ?: error("Источник недоступен")
-                source.episodes(variant)
+                Sources.episodesCached(variant)
             }
             onUi {
                 loading.visibility = View.GONE

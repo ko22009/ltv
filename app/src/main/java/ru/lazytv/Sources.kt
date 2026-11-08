@@ -73,23 +73,33 @@ object Sources {
         }
     }
 
+    private const val CACHE_MS = 6 * 60 * 60 * 1000L
+    /** A title in the bookmarks keeps its found sources longer: it is opened again and again. */
+    private const val CACHE_KEPT_MS = 3 * 24 * 60 * 60 * 1000L
+
+    private fun cacheLife(o: JSONObject) = if (o.optBoolean("k")) CACHE_KEPT_MS else CACHE_MS
+
     /**
-     * [search] with a six-hour cache of found variants (the setting can switch it off): opening the same card
-     * again does not hit every site once more. The cache lives in its own preferences, so it is not a setting.
+     * [search] with a six-hour cache of found variants (three days for a bookmarked title, [keep]); the setting can
+     * switch it off. Opening the same card again does not hit every site once more. The cache lives in its own
+     * preferences, so it is not a setting.
      */
-    fun searchCached(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant> {
+    fun searchCached(context: Context, title: String, original: String, year: String, tv: Boolean = false, keep: Boolean = false): List<Variant> {
         if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year, tv)
         val key = cacheKey(context, title, original, year, tv)
         val prefs = context.getSharedPreferences("cache", 0)
         val raw = prefs.getString(key, null)
         if (raw != null) {
-            runCatching { variantFromJson(org.json.JSONObject(raw)) }.getOrNull()?.let { (time, list) ->
-                if (System.currentTimeMillis() - time < 6 * 60 * 60 * 1000L) return list
+            runCatching {
+                val o = org.json.JSONObject(raw)
+                variantFromJson(o).let { (time, list) -> Triple(time, list, cacheLife(o)) }
+            }.getOrNull()?.let { (time, list, life) ->
+                if (System.currentTimeMillis() - time < life) return list
             }
         }
         val found = search(context, title, original, year, tv)
         if (found.isNotEmpty()) {
-            val json = org.json.JSONObject().put("t", System.currentTimeMillis()).put("v", org.json.JSONArray().apply {
+            val json = org.json.JSONObject().put("t", System.currentTimeMillis()).put("k", keep).put("v", org.json.JSONArray().apply {
                 found.forEach { put(variantToJson(it)) }
             })
             prefs.edit().putString(key, json.toString()).apply()
@@ -103,29 +113,37 @@ object Sources {
         val key = cacheKey(context, title, original, year, tv)
         val prefs = context.getSharedPreferences("cache", 0)
         val raw = prefs.getString(key, null) ?: return null
-        return runCatching { variantFromJson(org.json.JSONObject(raw)) }.getOrNull()?.let { (time, list) ->
-            if (System.currentTimeMillis() - time < 6 * 60 * 60 * 1000L) list else null
+        return runCatching {
+            val o = org.json.JSONObject(raw)
+            variantFromJson(o).let { (time, list) -> Triple(time, list, cacheLife(o)) }
+        }.getOrNull()?.let { (time, list, life) ->
+            if (System.currentTimeMillis() - time < life) list else null
         }
     }
 
     /**
      * The variant cache is a convenience, not an archive: drop entries of older cache versions, entries older
-     * than a day and the oldest beyond 80 titles, so the preferences file cannot grow on the TV forever.
+     * than a day (three days for bookmarked titles) and the oldest beyond 80 titles (not bookmarked ones first),
+     * so the preferences file cannot grow on the TV forever.
      */
     private fun pruneVariantCache(prefs: android.content.SharedPreferences) {
         val now = System.currentTimeMillis()
         val keys = prefs.all.keys.filter { it.startsWith("variants") }
         if (keys.isEmpty()) return
-        fun timeOf(key: String): Long = runCatching {
-            org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
-        }.getOrDefault(0L)
+        fun entry(key: String): Pair<Long, Boolean> = runCatching {
+            val o = org.json.JSONObject(prefs.getString(key, "{}") ?: "{}")
+            o.optLong("t") to o.optBoolean("k")
+        }.getOrDefault(0L to false)
         val edit = prefs.edit()
         keys.filter { !it.startsWith("variants12_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants12_") }.associateWith { timeOf(it) }
-        current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
-        val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
+        val current = keys.filter { it.startsWith("variants12_") }.associateWith { entry(it) }
+        val dayMs = 24 * 60 * 60 * 1000L
+        fun expired(e: Pair<Long, Boolean>) = now - e.first > (if (e.second) 3 * dayMs else dayMs)
+        current.filter { expired(it.value) }.keys.forEach { edit.remove(it) }
+        val alive = current.filter { !expired(it.value) }
         if (alive.size > 80) {
-            alive.entries.sortedBy { it.value }.take(alive.size - 80).forEach { edit.remove(it.key) }
+            alive.entries.sortedWith(compareBy({ it.value.second }, { it.value.first }))
+                .take(alive.size - 80).forEach { edit.remove(it.key) }
         }
         edit.apply()
     }
@@ -210,6 +228,24 @@ object Sources {
         val minutes = Regex("(\\d+) мин").find(v.note)?.groupValues?.get(1)?.toIntOrNull() ?: return v.sourceId + "|" + v.ref
         val year = Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").find(v.title + " " + v.alt + " " + v.note)?.value.orEmpty()
         return v.sourceId + "|" + year + "|" + Math.round(minutes / 5.0)
+    }
+
+    private val episodeCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Episode>>>()
+
+    /**
+     * The video list of a variant, kept in memory for ten minutes: the card asks for it ahead of the "Смотреть" press and the
+     * episode screen reuses the answer. Not kept longer, the links of some sites (HDRezka) expire within the hour.
+     */
+    fun episodesCached(variant: Variant): List<Episode> {
+        val key = variant.sourceId + "|" + variant.ref + "|" + variant.voice
+        episodeCache[key]?.let { (at, list) -> if (System.currentTimeMillis() - at < 10 * 60 * 1000L) return list }
+        val source = byId(variant.sourceId) ?: error("Источник недоступен")
+        val list = source.episodes(variant)
+        if (list.isNotEmpty()) {
+            if (episodeCache.size > 8) episodeCache.entries.minByOrNull { it.value.first }?.let { episodeCache.remove(it.key) }
+            episodeCache[key] = System.currentTimeMillis() to list
+        }
+        return list
     }
 
     fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =

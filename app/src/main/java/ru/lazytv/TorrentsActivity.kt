@@ -230,7 +230,7 @@ class TorrentsActivity : Activity() {
         bar.setLoading(false)
         loading.visibility = View.VISIBLE
         // rutor and the other sources run in parallel; every source adds its rows as soon as it answers
-        val pending = java.util.concurrent.atomic.AtomicInteger(2)
+        val pending = java.util.concurrent.atomic.AtomicInteger(1)
         fun finishPart() {
             if (pending.decrementAndGet() != 0) return
             onUi {
@@ -243,20 +243,9 @@ class TorrentsActivity : Activity() {
                 }
             }
         }
-        Thread {
-            // the year narrows the search, but many releases do not carry it in the title: retry with the name alone
-            val rutor = runCatching {
-                TorrentSearch.search(query).ifEmpty { if (query != title) TorrentSearch.search(title) else emptyList() }
-            }.getOrNull().orEmpty()
-            addResults(rutor, token)
-            finishPart()
-        }.start()
-        Thread {
-            runCatching {
-                ExtraTorrents.search(applicationContext, title, originalTitle) { _, list -> addResults(list, token) }
-            }
-            finishPart()
-        }.start()
+        // the search may already be running or finished: the card starts it ahead of the screen (see TorrentPrefetch)
+        val job = TorrentPrefetch.start(applicationContext, query, title, originalTitle)
+        TorrentPrefetch.join(job, { items -> addResults(items, token) }, { finishPart() })
     }
 
     /** Appends one source's rows to the list and redraws the chips at once, without waiting for all sources. */

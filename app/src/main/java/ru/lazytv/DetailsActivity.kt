@@ -201,7 +201,11 @@ class DetailsActivity : Activity() {
         seen.nextFocusUpId = back.id
         seen.setCompoundDrawables(seenIcon(), null, null, null)
         bar.addView(seen)
-        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }.apply { nextFocusUpId = back.id }
+        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }.apply {
+            nextFocusUpId = back.id
+            // the cursor is on the button: the torrent search starts now, not after the press
+            setOnFocusChangeListener { _, has -> if (has) startTorrentSearch(name) }
+        }
         val trailerButton = button(MenuIcons.TRAILER, "Трейлер") { openTrailer(title) }.apply {
             (layoutParams as LinearLayout.LayoutParams).rightMargin = 0
             nextFocusUpId = back.id
@@ -432,7 +436,9 @@ class DetailsActivity : Activity() {
                     onUi { applyDetails(d, name, baseRows, original, table, scroll) }
                 }
                 // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
-                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv) }.getOrDefault(emptyList())
+                val kept = Favorites.folderOf(applicationContext, title) != null
+                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv, kept) }.getOrDefault(emptyList())
+                warmUp(name, title)
             } finally {
                 detailsReady.countDown()
             }
@@ -817,7 +823,7 @@ class DetailsActivity : Activity() {
         setWatchLoading(true)
         History.add(this, historyTitle())
         Thread {
-            val episodes = runCatching { Sources.all.firstOrNull { it.id == v.sourceId }?.episodes(v) }.getOrNull()
+            val episodes = runCatching { Sources.episodesCached(v) }.getOrNull()
             onUi {
                 setWatchLoading(false)
                 // only a film with one video starts at once; a series always shows its episodes to choose from
@@ -840,6 +846,22 @@ class DetailsActivity : Activity() {
                 )
             }
         }.start()
+    }
+
+    /**
+     * Ahead of the "Смотреть" press: a film asks its first source for the video list (the press then starts at once), and when
+     * there is no site for it, or the torrents are chosen in the settings, the torrent search starts too.
+     */
+    private fun warmUp(name: String, title: Title) {
+        val first = variants.firstOrNull()?.takeIf { Sources.yearRank(it, title.year) != 2 || title.tv }
+        if (first != null && !title.tv) Thread { runCatching { Sources.episodesCached(first) } }.start()
+        if (variants.isEmpty() || Settings.string(this, Settings.SOURCE_MODE, "sites") == "torrents") startTorrentSearch(name)
+    }
+
+    private fun startTorrentSearch(name: String) {
+        val title = currentTitle
+        val query = if (title.tv || title.year.isEmpty()) name else "$name ${title.year}"
+        TorrentPrefetch.start(applicationContext, query, name, originalTitle)
     }
 
     private fun openTorrents(name: String) {
