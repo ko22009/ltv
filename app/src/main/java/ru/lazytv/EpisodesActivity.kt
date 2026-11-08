@@ -32,6 +32,9 @@ class EpisodesActivity : Activity() {
     private lateinit var geoButton: View
     private var selectedIndex = 0
     private lateinit var actionVoice: View
+    private lateinit var actionSeason: View
+    /** Seasons of the list as (caption, index of its first episode); empty when the list has fewer than two. */
+    private var seasonStarts: List<Pair<String, Int>> = emptyList()
     private var loadEpisodes: (() -> Unit)? = null
     private var voiceSwitched = false
 
@@ -108,6 +111,8 @@ class EpisodesActivity : Activity() {
         actionWatched = actionButton().apply { setOnClickListener { toggleWatched() } }
         // shown only when the site offers several voice-overs (see load() below)
         actionVoice = actionButton().apply { visibility = View.GONE }
+        actionSeason = actionButton().apply { visibility = View.GONE }
+        actions.addView(actionSeason, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2 })
@@ -206,6 +211,7 @@ class EpisodesActivity : Activity() {
                     }.coerceAtLeast(0)
                     list.setSelection(selectedIndex)
                     actions.visibility = View.VISIBLE
+                    setupSeasons()
                     updateActions()
                     list.requestFocus()
                 }.onFailure { err ->
@@ -229,6 +235,30 @@ class EpisodesActivity : Activity() {
             val voices = runCatching { Sources.all.firstOrNull { it.id == variant.sourceId }?.voices(variant) }.getOrNull().orEmpty()
             onUi { setVoices(voices) }
         }.start()
+    }
+
+    /** The season of an episode is the part of its title before " • " when that part names a season ("Сезон 2 • Серия 5"). */
+    private fun seasonOf(episode: Episode): String? =
+        episode.title.substringBefore(" • ", "").takeIf { it.contains("сезон", ignoreCase = true) }
+
+    /** The "Сезон" button jumps to the first episode of a season; the list itself stays whole, the marks and favorites keep their places. */
+    private fun setupSeasons() {
+        val starts = LinkedHashMap<String, Int>()
+        episodes.forEachIndexed { index, episode -> seasonOf(episode)?.let { starts.putIfAbsent(it, index) } }
+        seasonStarts = if (starts.size >= 2) starts.map { it.key to it.value } else emptyList()
+        if (seasonStarts.isEmpty()) {
+            actionSeason.visibility = View.GONE
+            return
+        }
+        actionSeason.visibility = View.VISIBLE
+        actionSeason.setOnClickListener {
+            android.app.AlertDialog.Builder(this).setTitle("Сезон")
+                .setItems(seasonStarts.map { it.first }.toTypedArray()) { _, which ->
+                    list.setSelection(seasonStarts[which].second)
+                    list.requestFocus()
+                }
+                .setNegativeButton("Отмена", null).show()
+        }
     }
 
     private fun voiceKey() = "voice_${variant.sourceId}_${variant.ref}"
@@ -291,6 +321,7 @@ class EpisodesActivity : Activity() {
         val episode = episodes[position]
         val watched = EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episode.title))
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
+        if (seasonStarts.isNotEmpty()) actionSeason.chipCaption = "Сезон: " + (seasonOf(episode) ?: seasonStarts.first().first)
         actionFavorite.chipCaption = if (favorite) "Убрать из избранного" else "Добавить в избранное"
         actionWatched.chipCaption = if (watched) "Снять отметку «просмотрено»" else "Пометить просмотренным"
     }
