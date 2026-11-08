@@ -121,6 +121,7 @@ fun ImageView.showPoster(
         setImageResource(stub)
         return
     }
+    var networkStarted = 0L
     val done = object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
         override fun onLoadFailed(e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
                                   target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean): Boolean {
@@ -144,10 +145,12 @@ fun ImageView.showPoster(
             cancelPosterLoad(spinner)
             setTag(R.id.tag_poster_url, url)
             failedPosters.remove(path)
+            android.util.Log.i("LazyTV", "poster $path: $dataSource, ${System.currentTimeMillis() - networkStarted} ms")
             return false
         }
     }
     fun fromNetwork() {
+        networkStarted = System.currentTimeMillis()
         glide.load(url)
             .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
             .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)

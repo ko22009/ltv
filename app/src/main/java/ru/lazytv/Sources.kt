@@ -46,28 +46,51 @@ object Sources {
         all.filter { Settings.bool(context, Settings.service(it.id)) && (if (tv) it.forSeries else it.forFilms) }
 
     /** Searches every enabled source at once; a source that fails or finds nothing simply adds no tiles. */
-    fun search(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant> {
+    fun search(
+        context: Context, title: String, original: String, year: String, tv: Boolean = false,
+        onPartial: ((List<Variant>) -> Unit)? = null,
+    ): List<Variant> {
         val list = enabled(context, tv)
         if (list.isEmpty()) return emptyList()
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         return try {
             val tasks = list.map { source ->
-                java.util.concurrent.Callable { runCatching { source.search(title, original, year, tv) }.getOrDefault(emptyList()) }
+                java.util.concurrent.Callable {
+                    val started = System.currentTimeMillis()
+                    val found = runCatching { source.search(title, original, year, tv) }
+                    android.util.Log.i("LazyTV", "source ${source.id}: ${System.currentTimeMillis() - started} ms, " +
+                        (found.getOrNull()?.size?.toString() ?: ("failed: " + found.exceptionOrNull())))
+                    found.getOrDefault(emptyList())
+                }
             }
-            // one slow site must not hold the card: whatever did not answer in 20 seconds is skipped (the card waits up to 30)
-            val combined = pool.invokeAll(tasks, 20, java.util.concurrent.TimeUnit.SECONDS)
-                .flatMap { future -> runCatching { future.get() }.getOrDefault(emptyList()) }
-            // each source ranks its own answers; the combined list has to be ranked across sources again
-            val ranked = relevant(combined, listOf(title, original), year)
-            // a film of the wanted year comes first, then the ones whose year is not known, then the other parts and remakes:
-            // nothing is hidden (the user may want just the title), but the card opens the right one
-            if (tv) ranked else {
+            fun rank(combined: List<Variant>): List<Variant> {
+                // each source ranks its own answers; the combined list has to be ranked across sources again
+                val ranked = relevant(combined, listOf(title, original), year)
+                // a film of the wanted year comes first, then the ones whose year is not known, then the other parts and remakes:
+                // nothing is hidden (the user may want just the title), but the card opens the right one
+                if (tv) return ranked
                 // the same film uploaded by several channels (same year, length to 5 minutes) is one "copy": the first of them
                 // keeps its place, the repeats go to the end of their year group, still in the same list
                 val seen = HashSet<String>()
                 val repeat = ranked.associateWith { !seen.add(copyKey(it)) }
-                ranked.sortedWith(compareBy({ yearRank(it, year) }, { repeat[it] == true }))
+                return ranked.sortedWith(compareBy({ yearRank(it, year) }, { repeat[it] == true }))
             }
+            // the sources are collected as they answer: onPartial gets the ranked list of what is found so far, so the card
+            // does not wait for the slowest site. One that did not answer in 12 seconds is skipped (the card waits up to 30)
+            val done = java.util.concurrent.ExecutorCompletionService<List<Variant>>(pool)
+            tasks.forEach { done.submit(it) }
+            val combined = ArrayList<Variant>()
+            val deadline = System.currentTimeMillis() + 12_000L
+            repeat(tasks.size) {
+                val left = deadline - System.currentTimeMillis()
+                val future = (if (left > 0) done.poll(left, java.util.concurrent.TimeUnit.MILLISECONDS) else null) ?: return@repeat
+                val part = runCatching { future.get() }.getOrDefault(emptyList())
+                if (part.isNotEmpty()) {
+                    combined += part
+                    onPartial?.invoke(rank(combined.toList()))
+                }
+            }
+            rank(combined)
         } finally {
             pool.shutdownNow()
         }
@@ -84,8 +107,11 @@ object Sources {
      * switch it off. Opening the same card again does not hit every site once more. The cache lives in its own
      * preferences, so it is not a setting.
      */
-    fun searchCached(context: Context, title: String, original: String, year: String, tv: Boolean = false, keep: Boolean = false): List<Variant> {
-        if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year, tv)
+    fun searchCached(
+        context: Context, title: String, original: String, year: String, tv: Boolean = false, keep: Boolean = false,
+        onPartial: ((List<Variant>) -> Unit)? = null,
+    ): List<Variant> {
+        if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year, tv, onPartial)
         val key = cacheKey(context, title, original, year, tv)
         val prefs = context.getSharedPreferences("cache", 0)
         val raw = prefs.getString(key, null)
@@ -97,7 +123,7 @@ object Sources {
                 if (System.currentTimeMillis() - time < life) return list
             }
         }
-        val found = search(context, title, original, year, tv)
+        val found = search(context, title, original, year, tv, onPartial)
         if (found.isNotEmpty()) {
             val json = org.json.JSONObject().put("t", System.currentTimeMillis()).put("k", keep).put("v", org.json.JSONArray().apply {
                 found.forEach { put(variantToJson(it)) }
@@ -248,8 +274,8 @@ object Sources {
         return list
     }
 
-    fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =
-        getBytes(address).toString(charset)
+    fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8, quick: Boolean = false): String =
+        getBytes(address, quick).toString(charset)
 
     /** POST with a JSON body, the same timeouts and UA as [get]; answers of the open APIs are JSON too. */
     fun postJson(address: String, body: String): String {
@@ -268,10 +294,11 @@ object Sources {
     }
 
     /** Binary answer (a .torrent file, for example) with the same timeouts and UA as [get]. */
-    fun getBytes(address: String): ByteArray {
+    fun getBytes(address: String, quick: Boolean = false): ByteArray {
         val c = URL(address).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 25000
+        // quick: a search must not wait for a dead mirror 15 seconds, the next mirror is tried instead
+        c.connectTimeout = if (quick) 3000 else 15000
+        c.readTimeout = if (quick) 6000 else 25000
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")
         return c.inputStream.use {
             ClockCheck.observe(c.date)

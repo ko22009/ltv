@@ -363,6 +363,7 @@ class DetailsActivity : Activity() {
     private fun loadBackdrop(backdropPath: String) {
         currentBackdrop = backdropPath
         showBannerSpinner()
+        val started = System.currentTimeMillis()
         Glide.with(this).load("https://image.tmdb.org/t/p/w1280$backdropPath")
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
@@ -372,6 +373,7 @@ class DetailsActivity : Activity() {
 
                 override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
                     hideBannerSpinner()
+                    android.util.Log.i("LazyTV", "backdrop $backdropPath: $dataSource, ${System.currentTimeMillis() - started} ms")
                     backdrop.animate().alpha(1f).setDuration(250).start()
                     return false
                 }
@@ -429,6 +431,7 @@ class DetailsActivity : Activity() {
         Thread {
             try {
                 val d = cached ?: runCatching { Tmdb.detailsCached(applicationContext, title.id, title.tv) }.getOrNull()
+                android.util.Log.i("LazyTV", "card: details ${System.currentTimeMillis() - cardStarted} ms")
                 originalTitle = d?.originalTitle.orEmpty()
                 if (d == null) {
                     onUi { hideBannerSpinner() }
@@ -437,10 +440,18 @@ class DetailsActivity : Activity() {
                 }
                 // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
                 val kept = Favorites.folderOf(applicationContext, title) != null
-                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv, kept) }.getOrDefault(emptyList())
+                variants = runCatching {
+                    Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv, kept) { partial ->
+                        variants = partial
+                        // a film of the right year is enough to start: the slower sites keep searching for the list
+                        if (!title.tv && partial.any { Sources.yearRank(it, title.year) == 0 }) quickReady.countDown()
+                    }
+                }.getOrDefault(emptyList())
+                android.util.Log.i("LazyTV", "card: sources ready ${System.currentTimeMillis() - cardStarted} ms, variants ${variants.size}")
                 warmUp(name, title)
             } finally {
                 detailsReady.countDown()
+                quickReady.countDown()
             }
         }.start()
     }
@@ -529,8 +540,19 @@ class DetailsActivity : Activity() {
     }
 
     private val detailsReady = java.util.concurrent.CountDownLatch(1)
-    @Volatile
-    private var variants: List<Variant> = emptyList()
+    /** Opens when all sources answered or the first film of the right year is found: "Смотреть" does not wait longer. */
+    private val quickReady = java.util.concurrent.CountDownLatch(1)
+    private val cardStarted = System.currentTimeMillis()
+
+    /** Waits for the sources: until the right film is found, or all answered, or (with something found) six seconds passed. */
+    private fun awaitSources() {
+        val limit = cardStarted + 30_000L
+        while (!quickReady.await(200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+            val now = System.currentTimeMillis()
+            if (now > limit || (variants.isNotEmpty() && now - cardStarted > 6_000L)) return
+        }
+    }
+    @Volatile private var variants: List<Variant> = emptyList()
     @Volatile
     private var originalTitle = ""
     private var currentName = ""
@@ -781,10 +803,10 @@ class DetailsActivity : Activity() {
             openTorrents(name)
             return
         }
-        if (detailsReady.count > 0) {
+        if (quickReady.count > 0) {
             setWatchLoading(true)
             Thread {
-                detailsReady.await(30, java.util.concurrent.TimeUnit.SECONDS)
+                awaitSources()
                 onUi {
                     setWatchLoading(false)
                     openDefaultVariant(name)

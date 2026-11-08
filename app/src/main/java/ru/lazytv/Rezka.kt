@@ -35,7 +35,7 @@ object Hdrezka : VideoSource {
         val found = ArrayList<Variant>()
         for (query in listOf(title, original).filter { it.isNotBlank() }) {
             val answer = runCatching {
-                Sources.getAny(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}")) }
+                Sources.getAny(id) { base -> requireSite(Sources.get("$base/search/?do=search&subaction=search&q=${Sources.encode(query)}", quick = true)) }
             }.getOrNull() ?: continue
             for (variant in parseSearch(answer.value)) if (seen.add(variant.ref)) found += variant
         }
