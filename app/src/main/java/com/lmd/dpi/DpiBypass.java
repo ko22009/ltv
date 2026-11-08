@@ -858,8 +858,8 @@ public final class DpiBypass {
     public static volatile String apiProbePath = "";
     // a poster of a well-known title: stable and large enough (about 90 KB) to see a cut after the first kilobytes
     private static final String POSTER_PROBE_PATH = "/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg";
-    // the smaller catalog answer is about 12 KB, so the bar is below it
-    private static final int PROBE_MIN_BYTES = 10000;
+    // the Russian catalog answer is about 23 KB, a cut after the first 16-20 KB must be seen, so the bar is just below it
+    private static final int PROBE_MIN_BYTES = 20000;
 
     private static String probePath(String host) {
         if (host.equals("image.tmdb.org")) {

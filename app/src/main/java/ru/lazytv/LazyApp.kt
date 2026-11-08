@@ -33,7 +33,7 @@ class LazyApp : Application() {
                 DpiBypass.externalSocksPort = port
             }
         }
-        DpiBypass.apiProbePath = "/3/movie/popular?api_key=${BuildConfig.TMDB_KEY}"
+        DpiBypass.apiProbePath = "/3/movie/popular?api_key=${BuildConfig.TMDB_KEY}&language=ru-RU"
         DpiBypass.strategyFile =java.io.File(filesDir, "dpi_strategy")
         if (DpiBypass.enabled) {
             DpiBypass.start(applicationInfo.nativeLibraryDir)
