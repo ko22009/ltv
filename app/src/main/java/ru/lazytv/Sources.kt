@@ -290,12 +290,30 @@ object Sources {
      */
     fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean, names: List<String> = emptyList()): Pair<List<Variant>, Int> {
         if (tv) return variants to 0
+        val main = mainList(variants, year, names)
         // the expanded list holds only what the first one kept back: the film of its year is not shown twice
-        if (all) return variants.filter { yearRank(it, year, names) != 0 }.ifEmpty { variants } to 0
-        val fitting = variants.filter { yearRank(it, year, names) == 0 }
-        if (fitting.isEmpty()) return variants to 0
-        return fitting to (variants.size - fitting.size)
+        if (all) return variants.filter { it !in main }.ifEmpty { variants } to 0
+        return main to (variants.size - main.size)
     }
+
+    /**
+     * The variants of the film itself: of its year, and (when there are any) with exactly its name, so "Сердце зверя" or
+     * "Зверь войны" do not stand among the copies of "Зверь". Nothing fits: all of them (the user may want just the title).
+     */
+    private fun mainList(variants: List<Variant>, year: String, names: List<String>): List<Variant> {
+        val ofYear = variants.filter { yearRank(it, year, names) == 0 }
+        if (ofYear.isEmpty()) return variants
+        val exact = if (names.isEmpty()) emptyList() else ofYear.filter { hasName(it, names) }
+        return exact.ifEmpty { ofYear }
+    }
+
+    /** The film itself: its year and exactly its name. The card starts without waiting for the slow sites once one is found. */
+    fun isExact(variant: Variant, year: String, names: List<String>): Boolean =
+        yearRank(variant, year, names) == 0 && hasName(variant, names)
+
+    /** The variant a film opens by default: the first of [forYear]'s main list. */
+    fun best(variants: List<Variant>, year: String, tv: Boolean, names: List<String>): Variant? =
+        forYear(variants, year, tv, false, names).first.firstOrNull()
 
     /** Identity of an upload of a film: source, year and length (from the note, to 5 minutes); a variant without a length is its own copy. */
     private fun copyKey(v: Variant): String {
