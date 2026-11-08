@@ -754,8 +754,11 @@ class DetailsActivity : Activity() {
             items.add("Другие годы и части ($hidden)")
             actions.add { showSourceDialog(name, true) }
         }
-        items.add("Торренты (TorrServe)")
-        actions.add { openTorrents(name) }
+        // the torrents belong to the main list only, not to the expanded "other years" one
+        if (!allYears) {
+            items.add("Торренты (TorrServe)")
+            actions.add { openTorrents(name) }
+        }
 
         showChoice(this, "Выбор источника", items, -1) { which -> actions.getOrNull(which)?.invoke() }
     }

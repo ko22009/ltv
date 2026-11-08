@@ -197,7 +197,9 @@ object Sources {
      * for "Другие годы"; when no variant fits the year, everything is shown. A series, or [all], shows everything.
      */
     fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean): Pair<List<Variant>, Int> {
-        if (tv || all) return variants to 0
+        if (tv) return variants to 0
+        // the expanded list holds only what the first one kept back: the film of its year is not shown twice
+        if (all) return variants.filter { yearRank(it, year) != 0 }.ifEmpty { variants } to 0
         val fitting = variants.filter { yearRank(it, year) == 0 }
         if (fitting.isEmpty()) return variants to 0
         return fitting to (variants.size - fitting.size)

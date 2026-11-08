@@ -526,20 +526,23 @@ class PlayerActivity : Activity() {
             items.add("Другие годы и части ($hidden)")
             actions.add { showSourcePicker(allVariants, true) }
         }
-        val isTorrent = url.contains(":8090") || baseMeta.contains("torr", ignoreCase = true)
-        items.add((if (isTorrent) "✓ " else "") + "Торренты (TorrServe)")
-        actions.add {
-            save()
-            startActivity(
-                android.content.Intent(this, TorrentsActivity::class.java)
-                    .putExtra("name", mediaTitle)
-                    .putExtra("original", originalTitle)
-                    .putExtra("year", mediaYear)
-                    .putExtra("tv", isTv)
-                    .putExtra("poster", posterPath)
-                    .putExtra("tmdbId", tmdbId)
-            )
-            finish()
+        // the torrents belong to the main list only, not to the expanded "other years" one
+        if (!allYears) {
+            val isTorrent = url.contains(":8090") || baseMeta.contains("torr", ignoreCase = true)
+            items.add((if (isTorrent) "✓ " else "") + "Торренты (TorrServe)")
+            actions.add {
+                save()
+                startActivity(
+                    android.content.Intent(this, TorrentsActivity::class.java)
+                        .putExtra("name", mediaTitle)
+                        .putExtra("original", originalTitle)
+                        .putExtra("year", mediaYear)
+                        .putExtra("tv", isTv)
+                        .putExtra("poster", posterPath)
+                        .putExtra("tmdbId", tmdbId)
+                )
+                finish()
+            }
         }
 
         // showChoice marks the current item itself: the marks of the labels are dropped, so there is one tick, not two
