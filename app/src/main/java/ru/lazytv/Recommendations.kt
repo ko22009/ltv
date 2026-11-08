@@ -119,8 +119,65 @@ object Recommendations {
     private const val KEY_CHANNEL = "recommendation_channel"
     private const val LIMIT = 10
 
+    private const val BOOKMARKS_CHANNEL = "Закладки"
+    private const val KEY_BM_IDS = "bookmarks_ids"
+    private const val KEY_BM_CHANNEL = "bookmarks_channel"
+    private const val BOOKMARKS_LIMIT = 15
+
+    /**
+     * The "Закладки" row: a second channel with the bookmarked titles, the latest added first. It is not the default
+     * channel, so the launcher may ask the user once to show it. Synchronized: it is called from a thread on every change.
+     */
+    @Synchronized
+    fun refreshBookmarks(context: Context) {
+        if (!Settings.bool(context, Settings.RECOMMENDATIONS)) return
+        val helper = PreviewChannelHelper(context)
+        val old = runCatching { JSONArray(Settings.string(context, KEY_BM_IDS, "[]")) }.getOrDefault(JSONArray())
+        for (i in 0 until old.length()) runCatching { helper.deletePreviewProgram(old.getLong(i)) }
+        Settings.remove(context, KEY_BM_IDS)
+        val titles = Favorites.all(context).filter { it.poster != null }.take(BOOKMARKS_LIMIT)
+        if (titles.isEmpty()) return
+        val saved = Settings.string(context, KEY_BM_CHANNEL, "").toLongOrNull()
+        val channelId = saved?.takeIf { runCatching { helper.getPreviewChannel(it) }.getOrNull() != null } ?: run {
+            val logo = BitmapFactory.decodeResource(context.resources, R.drawable.banner)
+            val id = runCatching {
+                helper.publishChannel(
+                    PreviewChannel.Builder()
+                        .setDisplayName(BOOKMARKS_CHANNEL)
+                        .setDescription("Ваши закладки в LazyTV")
+                        .setLogo(logo)
+                        .setAppLinkIntentUri(Uri.parse(Intent(context, MainActivity::class.java).toUri(Intent.URI_INTENT_SCHEME)))
+                        .build()
+                )
+            }.onFailure { android.util.Log.w("Recommendations", "bookmarks channel was not published", it) }.getOrNull() ?: return
+            if (id <= 0) return
+            Settings.setString(context, KEY_BM_CHANNEL, id.toString())
+            id
+        }
+        val ids = JSONArray()
+        titles.forEachIndexed { index, title ->
+            val program = PreviewProgram.Builder()
+                .setChannelId(channelId)
+                .setType(if (title.tv) TvContractCompat.PreviewPrograms.TYPE_TV_SERIES else TvContractCompat.PreviewPrograms.TYPE_MOVIE)
+                .setTitle(title.name)
+                .setDescription(listOf(title.year, if (title.rating.isNotEmpty()) "★ ${title.rating}" else "").filter { it.isNotEmpty() }.joinToString(" · "))
+                .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3)
+                .setPosterArtUri(Uri.parse("https://image.tmdb.org/t/p/w780${title.poster}"))
+                .setIntentUri(Uri.parse(Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(MainActivity.OPEN_TITLE, true).putExtras(title.toExtras()).toUri(Intent.URI_INTENT_SCHEME)))
+                .setWeight(BOOKMARKS_LIMIT - index)
+                .build()
+            runCatching { helper.publishPreviewProgram(program) }
+                .onFailure { android.util.Log.w("Recommendations", "bookmark was not published: ${title.name}", it) }
+                .getOrNull()?.takeIf { it > 0 }?.let { ids.put(it) }
+        }
+        Settings.setString(context, KEY_BM_IDS, ids.toString())
+    }
+
     fun refresh(context: Context) {
         if (!Settings.bool(context, Settings.RECOMMENDATIONS)) return
+        runCatching { refreshBookmarks(context) }
         val helper = PreviewChannelHelper(context)
         val channelId = channel(context, helper) ?: return
         val titles = Tmdb.loadCollection(context, Tmdb.Collection("Популярное", false, "popular")).take(LIMIT)
@@ -165,6 +222,11 @@ object Recommendations {
         val old = runCatching { JSONArray(Settings.string(context, KEY_IDS, "[]")) }.getOrDefault(JSONArray())
         for (i in 0 until old.length()) runCatching { helper.deletePreviewProgram(old.getLong(i)) }
         Settings.remove(context, KEY_IDS)
+        Settings.string(context, KEY_BM_CHANNEL, "").toLongOrNull()?.let {
+            runCatching { helper.deletePreviewChannel(it) }
+            Settings.remove(context, KEY_BM_CHANNEL)
+        }
+        Settings.remove(context, KEY_BM_IDS)
         Settings.string(context, KEY_CHANNEL, "").toLongOrNull()?.let {
             runCatching { helper.deletePreviewChannel(it) }
             Settings.remove(context, KEY_CHANNEL)

@@ -61,6 +61,9 @@ object Favorites {
         val list = records(context).filter { !same(it.second, title) }.toMutableList()
         if (folder != null) list.add(0, folder to title)
         save(context, list)
+        // the home-screen row follows the bookmarks; provider calls must stay off the main thread
+        val app = context.applicationContext
+        Thread { runCatching { Recommendations.refreshBookmarks(app) } }.start()
     }
 }
 
