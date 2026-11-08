@@ -164,7 +164,8 @@ class TorrentsActivity : Activity() {
             image.scaleType = ImageView.ScaleType.CENTER_CROP
             image.setBackgroundColor(0xFF1C2029.toInt())
             val posterSpinner = Spinner(this, px(40))
-            image.showPoster(poster, posterSpinner, "w342")
+            // the same size as the cards use (w500): a poster already in the cache is not downloaded again
+            image.showPoster(poster, posterSpinner)
             val posterSlot = FrameLayout(this).apply {
                 addView(image, FrameLayout.LayoutParams(-1, -1))
                 addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
