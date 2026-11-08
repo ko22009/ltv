@@ -60,17 +60,19 @@ data class CatalogFilter(
         if (genres.isNotEmpty()) append("&with_genres=").append(genres.joinToString(","))
         if (countries.isNotEmpty()) append("&with_origin_country=").append(countries.joinToString("|"))
         val field = if (tv) "first_air_date" else "primary_release_date"
-        if (yearFrom != 0) append("&$field.gte=$yearFrom-01-01")
-        // "released" is an upper bound on the same field as the last year: one value, the earlier of the two
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
-        val released = !tv && release == "out"
-        val upper = listOfNotNull(if (yearTo != 0) "$yearTo-12-31" else null, if (released) today else null).minOrNull()
+        val format = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        fun day(offset: Int) = format.format(java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, offset) }.time)
+        val today = day(0)
+        val soon = !tv && release == "soon"
+        // the year bounds and the "released / not released yet" bounds share one field: one value each, the tighter of the two
+        val lower = listOfNotNull(if (yearFrom != 0) "$yearFrom-01-01" else null,
+            // not out anywhere yet: a film premiered abroad is already on the internet, even if Russia gets it later
+            if (soon) day(1) else null).maxOrNull()
+        if (lower != null) append("&$field.gte=$lower")
+        val upper = listOfNotNull(if (yearTo != 0) "$yearTo-12-31" else null, if (!tv && release == "out") today else null).minOrNull()
         if (upper != null) append("&$field.lte=$upper")
         // the cinemas of Russia: wide (3) and limited (2) theatrical releases, as in TMDB's own "now playing" list
-        if (!tv && (release == "now" || release == "soon")) {
-            val cal = java.util.Calendar.getInstance()
-            fun day(offset: Int) = (cal.clone() as java.util.Calendar).apply { add(java.util.Calendar.DAY_OF_YEAR, offset) }
-                .let { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(it.time) }
+        if (!tv && (release == "now" || soon)) {
             append("&region=RU&with_release_type=2%7C3")
             if (release == "now") append("&release_date.gte=").append(day(-45)).append("&release_date.lte=").append(today)
             else append("&release_date.gte=").append(day(1))
