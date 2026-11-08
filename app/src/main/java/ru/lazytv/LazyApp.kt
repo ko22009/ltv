@@ -33,7 +33,8 @@ class LazyApp : Application() {
                 DpiBypass.externalSocksPort = port
             }
         }
-        DpiBypass.strategyFile = java.io.File(filesDir, "dpi_strategy")
+        DpiBypass.apiProbePath = "/3/movie/popular?api_key=${BuildConfig.TMDB_KEY}"
+        DpiBypass.strategyFile =java.io.File(filesDir, "dpi_strategy")
         if (DpiBypass.enabled) {
             DpiBypass.start(applicationInfo.nativeLibraryDir)
             // five seconds after the start, one site at a time: the first card then does not wait for the probe of its sites

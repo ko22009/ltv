@@ -854,6 +854,23 @@ public final class DpiBypass {
 
     private static final int V_OK = 0, V_BLOCKED = 1, V_OTHER = 2;
 
+    /** Path of the catalog request, set by the app (it holds the key); empty keeps the plain "/" probe for that host. */
+    public static volatile String apiProbePath = "";
+    // a poster of a well-known title: stable and large enough (about 90 KB) to see a cut after the first kilobytes
+    private static final String POSTER_PROBE_PATH = "/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg";
+    // the smaller catalog answer is about 12 KB, so the bar is below it
+    private static final int PROBE_MIN_BYTES = 10000;
+
+    private static String probePath(String host) {
+        if (host.equals("image.tmdb.org")) {
+            return POSTER_PROBE_PATH;
+        }
+        if (host.equals("api.themoviedb.org") && apiProbePath.startsWith("/")) {
+            return apiProbePath;
+        }
+        return "/";
+    }
+
     /**
      * OK: server answered the TLS hello and actually started sending data. BLOCKED: silence or reset, either
      * during the handshake or right after it — some networks let TLS through but throttle the data transfer
@@ -886,9 +903,21 @@ public final class DpiBypass {
             ssl.startHandshake();
             OutputStream req = ssl.getOutputStream();
             // a browser-like request: some sites close a bare one at once, which would look like a block
-            req.write(("GET / HTTP/1.1\r\nHost: " + host + "\r\nUser-Agent: Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));
+            String probe = probePath(host);
+            req.write(("GET " + probe + " HTTP/1.1\r\nHost: " + host + "\r\nUser-Agent: Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));
             req.flush();
-            return ssl.getInputStream().read() < 0 ? V_BLOCKED : V_OK;
+            InputStream in = ssl.getInputStream();
+            if (probe.equals("/")) {
+                return in.read() < 0 ? V_BLOCKED : V_OK;
+            }
+            // a real resource of the app: some networks let the start through and cut or throttle the rest,
+            // so the answer must come in full (a stall ends in a timeout and counts as blocked)
+            byte[] buf = new byte[4096];
+            int total = 0;
+            for (int n; (n = in.read(buf)) > 0; ) {
+                total += n;
+            }
+            return total >= PROBE_MIN_BYTES ? V_OK : V_BLOCKED;
         } catch (SSLException e) {
             log(host + " ssl: " + e);
             for (Throwable t = e; t != null; t = t.getCause()) {
