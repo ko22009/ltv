@@ -533,13 +533,9 @@ class PlayerActivity : Activity() {
             finish()
         }
 
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Смена источника")
-            .setItems(items.toTypedArray()) { _, which ->
-                actions.getOrNull(which)?.invoke()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+        showChoice(this, "Смена источника", items, items.indexOfFirst { it.startsWith("✓") }) { which ->
+            actions.getOrNull(which)?.invoke()
+        }
     }
 
     private fun switchSource(v: Variant) {

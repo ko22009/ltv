@@ -113,8 +113,8 @@ object Sources {
             org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
         }.getOrDefault(0L)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants8_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants8_") }.associateWith { timeOf(it) }
+        keys.filter { !it.startsWith("variants9_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants9_") }.associateWith { timeOf(it) }
         current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
         val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
         if (alive.size > 80) {
@@ -126,7 +126,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants8_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants9_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
@@ -422,11 +422,19 @@ object Rutube : VideoSource {
                 if (id.isEmpty() || o.optBoolean("is_paid") || !seen.add(id)) continue
                 // a full film lasts about two hours; trailers and clips are not variants of the title
                 val duration = o.optInt("duration")
-                if (duration < 2400) continue
+                // 70 minutes: shorter uploads are trailers, clips and reviews, not the film
+                if (duration < 4200) continue
                 val category = o.optJSONObject("category")?.optString("name").orEmpty()
                 if (category.isNotEmpty() && category != "Фильмы" && category != "Сериалы") continue
                 val name = o.optString("title")
                 if (name.isEmpty()) continue
+                if (Regex("обзор|трейлер|разбор|рецензи|реакци|нарезк|рейтинг|топ ", RegexOption.IGNORE_CASE).containsMatchIn(name)) continue
+                // uploads are told apart only by the year in their name: without one it may be any part of the series
+                val wantedYear = year.take(4).toIntOrNull()
+                if (wantedYear != null) {
+                    val years = Regex("\\b(19|20)\\d{2}\\b").findAll(name).map { it.value.toInt() }.toList()
+                    if (years.none { kotlin.math.abs(it - wantedYear) <= 1 }) continue
+                }
                 val minutes = duration / 60
                 val author = o.optJSONObject("author")?.optString("name").orEmpty()
                 val note = listOf("Фильм", "$minutes мин", author).filter { it.isNotEmpty() }.joinToString(" • ")
