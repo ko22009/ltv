@@ -651,7 +651,7 @@ class PlayerActivity : Activity() {
         episodeViews.forEachIndexed { index, view ->
             val active = index == queueIndex
             view.setTextColor(if (active) Color.WHITE else 0xFFCBD5E1.toInt())
-            view.background = focusShape(scale, if (active) 0xFF4338CA.toInt() else 0x55000000, radius = 6f)
+            view.background = focusShape(scale, if (active) ACTIVE_FILL else 0x55000000, radius = 6f)
         }
     }
 

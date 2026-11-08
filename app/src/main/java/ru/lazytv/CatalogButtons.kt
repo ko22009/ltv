@@ -38,6 +38,9 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
  * The button of the app: a flat chip with the caption and, if given, a small icon in front of it; the focused one turns green
  * like the other tiles. The caption is the child with the tag "caption". Filters, sort and the page header buttons are this one.
  */
+/** Fill of the active item among equals (the season on the series page, the playing episode in the player, the chosen torrent). */
+val ACTIVE_FILL = 0xFF4338CA.toInt()
+
 fun chipButton(context: Context, scale: Float, caption: String, icon: String? = null): LinearLayout {
     fun px(v: Int) = (v * scale).toInt()
     return LinearLayout(context).apply {

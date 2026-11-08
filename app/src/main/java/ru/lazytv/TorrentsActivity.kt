@@ -331,7 +331,7 @@ class TorrentsActivity : Activity() {
         view.background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply {
-                setColor(if (active) 0xFF4338CA.toInt() else 0x66000000); cornerRadius = px(3).toFloat()
+                setColor(if (active) ACTIVE_FILL else 0x66000000); cornerRadius = px(3).toFloat()
             })
         }
         view.setOnClickListener { action() }

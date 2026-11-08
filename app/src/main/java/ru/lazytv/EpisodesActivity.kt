@@ -314,7 +314,7 @@ class EpisodesActivity : Activity() {
         visible = episodes.indices.filter { currentSeason == null || seasonOf(episodes[it]) == currentSeason }
         for (i in 0 until seasonRow.childCount) {
             val chip = seasonRow.getChildAt(i)
-            chip.background = focusShape(scale, if (chip.tag == currentSeason) 0xFF4338CA.toInt() else 0xFF1C2029.toInt(), radius = 6f)
+            chip.background = focusShape(scale, if (chip.tag == currentSeason) ACTIVE_FILL else 0xFF1C2029.toInt(), radius = 6f)
         }
         adapter = object : ArrayAdapter<Int>(this, 0, visible) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(getItem(position)!!, episodes[getItem(position)!!])
