@@ -294,6 +294,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
 
         section(actions, "Источники видео")
         Sources.all.forEach { source -> check(actions, source.name, if (RemoteConfig.isDown(source.id)) "Сайт сейчас не отвечает" else "Сайт", Settings.service(source.id)) }
+        button(actions, "Проверить источники", "Время ответа и путь к каждому сайту: напрямую, обход или прокси") { checkSources() }
         check(actions, "Торренты", "Раздачи для TorrServe", "source_torrents")
         check(actions, "Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
 
@@ -558,6 +559,36 @@ class SettingsScreen : GuidedStepSupportFragment() {
                 .onSuccess { toast("Восстановлено: $it"); activity?.recreate() }
                 .onFailure { toast("Не удалось восстановить: ${Errors.explain(it)}") }
         }
+    }
+
+    /** One line per switched-on site: how fast it answered, through which way, or why it did not. Old "silent" marks are cleared first. */
+    private fun checkSources() {
+        val ctx = requireContext()
+        val act = requireActivity()
+        toast("Проверяем источники…")
+        android.util.Log.i("LazyTV", "check sources: start")
+        Thread {
+            val ids = Sources.all.filter { Settings.bool(ctx, Settings.service(it.id)) }.map { it.id }
+            val lines = Sources.parallel(ids) { id ->
+                RemoteConfig.forget(id)
+                RemoteConfig.bases(id).forEach { if (it.startsWith("https://")) com.lmd.dpi.DpiBypass.forget(it.substringAfter("://").substringBefore('/')) }
+                val started = System.currentTimeMillis()
+                val result = runCatching { RemoteConfig.attempt(id) { base -> Sources.get(base, quick = true) } }
+                val seconds = (System.currentTimeMillis() - started) / 1000.0
+                val name = Sources.byId(id)?.name ?: id
+                result.fold({ fetched ->
+                    val host = fetched.base.substringAfter("://").substringBefore('/')
+                    val way = if (fetched.base.startsWith("https://")) com.lmd.dpi.DpiBypass.route(host) else "напрямую"
+                    String.format(java.util.Locale("ru"), "%s: %.1f с • %s • %s", name, seconds, way, host)
+                }, { error -> name + ": не отвечает (" + Errors.explain(error) + ")" })
+            }.map { (id, line) -> line ?: ((Sources.byId(id)?.name ?: id) + ": проверка не удалась") }
+            android.util.Log.i("LazyTV", "check sources: " + lines.joinToString(" | "))
+            act.runOnUiThread {
+                android.util.Log.i("LazyTV", "check sources: ui, added=" + isAdded + " finishing=" + act.isFinishing)
+                if (isAdded) runCatching { showChoice(act, "Состояние источников", lines, -1) { } }
+                    .onFailure { android.util.Log.w("LazyTV", "check sources dialog failed", it) }
+            }
+        }.start()
     }
 
     private fun checkJackett() {

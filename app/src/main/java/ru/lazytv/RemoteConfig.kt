@@ -178,6 +178,14 @@ object RemoteConfig {
 
     private val downAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** Forgets what is known about the silence of [id] (its addresses and the site mark): the next request asks again. */
+    fun forget(id: String) {
+        bases(id).forEach { failedAt.remove(it); failures.remove(it) }
+        downAt.remove(id)
+        failures.remove("source:" + id)
+        saveHealth()
+    }
+
     /** True when no address of [id] answered lately: searches skip such a site and try it again after a growing pause. */
     fun isDown(id: String): Boolean =
         System.currentTimeMillis() - (downAt[id] ?: 0L) < pauseMs(failures["source:$id"] ?: 1)

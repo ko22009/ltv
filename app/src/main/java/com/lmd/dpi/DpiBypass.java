@@ -139,6 +139,66 @@ public final class DpiBypass {
         CACHE.clear();
     }
 
+    /** The way the app reaches [host] now, in words for the settings screen (decides it first if it was not decided yet). */
+    public static String route(String host) {
+        try {
+            Decision d = decide(host.toLowerCase());
+            if (d.dead) {
+                return "не открывается ни одним способом";
+            }
+            if (d.proxy == null) {
+                return "напрямую";
+            }
+            int port = ((InetSocketAddress) d.proxy.address()).getPort();
+            if (port == CONNECT_PORT) {
+                return "через ByeDPI";
+            }
+            if (port >= EXTRA_CONNECT_BASE && port < EXTRA_CONNECT_BASE + STRATEGIES.length) {
+                return "через ByeDPI (свой способ для сайта)";
+            }
+            return "через прокси LazyMedia";
+        } catch (Throwable e) {
+            return "способ не определён";
+        }
+    }
+
+    /** Forgets the decision and the dead mark of [host]: the next request decides again (the "check sources" button). */
+    public static void forget(String host) {
+        String key = host.toLowerCase();
+        CACHE.remove(key);
+        if (DEAD.remove(key) != null) {
+            saveDead();
+        }
+    }
+
+    /**
+     * Decides the way to the hosts one by one in the background, after a pause (the network is up by then): the first card
+     * does not wait for the probe of its site. A site that does not open in this warm-up is not marked dead: that mark is
+     * for real requests, a slow start of the network must not make it.
+     */
+    public static void warmLater(final String[] hosts, final long delayMs) {
+        POOL.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(delayMs);
+                    for (String host : hosts) {
+                        if (host == null || host.length() == 0 || isLocal(host)) {
+                            continue;
+                        }
+                        String key = host.toLowerCase();
+                        Decision d = decide(key);
+                        if (d.dead) {
+                            forget(key);
+                        }
+                        Thread.sleep(300);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        });
+    }
+
     /** Called once from Application.onCreate or when enabled in settings; never throws. */
     public static synchronized void start(String nativeLibraryDir) {
         if (started) {
@@ -819,7 +879,8 @@ public final class DpiBypass {
             ssl.setSoTimeout(timeoutMs);
             ssl.startHandshake();
             OutputStream req = ssl.getOutputStream();
-            req.write(("GET / HTTP/1.1\r\nHost: " + host + "\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));
+            // a browser-like request: some sites close a bare one at once, which would look like a block
+            req.write(("GET / HTTP/1.1\r\nHost: " + host + "\r\nUser-Agent: Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36\r\nAccept: */*\r\nConnection: close\r\n\r\n").getBytes("US-ASCII"));
             req.flush();
             return ssl.getInputStream().read() < 0 ? V_BLOCKED : V_OK;
         } catch (SSLException e) {

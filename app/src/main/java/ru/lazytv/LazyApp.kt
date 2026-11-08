@@ -34,7 +34,13 @@ class LazyApp : Application() {
             }
         }
         DpiBypass.strategyFile = java.io.File(filesDir, "dpi_strategy")
-        if (DpiBypass.enabled) DpiBypass.start(applicationInfo.nativeLibraryDir)
+        if (DpiBypass.enabled) {
+            DpiBypass.start(applicationInfo.nativeLibraryDir)
+            // five seconds after the start, one site at a time: the first card then does not wait for the probe of its sites
+            val sites = (Sources.all.map { it.id } + "rutor").map { RemoteConfig.base(it) }.filter { it.startsWith("https://") }
+                .map { it.substringAfter("://").substringBefore('/') }
+            DpiBypass.warmLater((listOf("image.tmdb.org", "api.themoviedb.org") + sites).distinct().toTypedArray(), 5000L)
+        }
         Thread { ClockCheck.checkOnce() }.start()
         Thread { runCatching { Recommendations.refresh(this) } }.start()
         // the addresses file is renewed once a day in the background; without it the built-in ones stay
