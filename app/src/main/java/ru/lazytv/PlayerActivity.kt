@@ -646,7 +646,7 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
-    /** Repaints the episode strip: red for the current episode, indigo while focused. */
+    /** Repaints the episode strip: the theme indigo for the current episode and for the focused one. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
             val active = index == queueIndex
@@ -656,7 +656,7 @@ class PlayerActivity : Activity() {
                     setColor(0xFF6366F1.toInt()); cornerRadius = dp(3).toFloat()
                 })
                 addState(intArrayOf(), GradientDrawable().apply {
-                    setColor(if (active) 0xFFE57373.toInt() else 0x55000000)
+                    setColor(if (active) 0xFF6366F1.toInt() else 0x55000000)
                     cornerRadius = dp(3).toFloat()
                 })
             }
