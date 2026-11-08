@@ -400,13 +400,13 @@ class PlayerActivity : Activity() {
         seekRow.gravity = Gravity.CENTER_VERTICAL
         position = label("0:00", 14f, 0xFFCBD5E1.toInt())
         duration = label("0:00", 14f, 0xFFCBD5E1.toInt())
-        seek = SeekBar(this)
+        seek = SeekBar(android.view.ContextThemeWrapper(this, R.style.PlayerSeekOverlay))
         seek.isFocusable = true
         seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF6366F1.toInt())
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFFA5B4FC.toInt())
         seek.setOnFocusChangeListener { _, hasFocus ->
             seek.progressTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) 0xFF818CF8.toInt() else 0xFF6366F1.toInt())
-            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) Color.WHITE else 0xFFA5B4FC.toInt())
+            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) FOCUS_FILL else 0xFFA5B4FC.toInt())
         }
         seek.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {

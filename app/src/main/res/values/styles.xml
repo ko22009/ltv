@@ -7,6 +7,10 @@
     <style name="Theme.LazyTV.Guided" parent="@style/Theme.Leanback.GuidedStep">
         <item name="android:windowBackground">#101216</item>
     </style>
+    <!-- the progress bar of the player: the halo around the focused thumb takes the colour of the focus instead of grey -->
+    <style name="PlayerSeekOverlay">
+        <item name="android:colorControlHighlight">#664338CA</item>
+    </style>
     <!-- the filters lie over the list as a panel: the window is transparent, the catalogue stays behind it, dimmed -->
     <style name="Theme.LazyTV.Filters" parent="@style/Theme.LazyTV">
         <item name="android:windowIsTranslucent">true</item>
