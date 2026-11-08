@@ -246,6 +246,8 @@ class MainFragment : Fragment() {
         val tx = childFragmentManager.beginTransaction()
         childFragmentManager.fragments.forEach { tx.remove(it) }
         tx.commitAllowingStateLoss()
+        // done now: otherwise openPage still finds the removed page by its tag, takes it for shown and the screen stays empty
+        childFragmentManager.executePendingTransactions()
         buildNavRail()
         val target = if (navItems.any { it.name == currentPage }) currentPage else homePage()
         openPage(target, requestContentFocus = false)
@@ -488,7 +490,7 @@ class MainFragment : Fragment() {
 
     private fun menuSignature(ctx: Context): String =
         Tmdb.visibleCategories(ctx).joinToString(",") { it.id } + "|" +
-            Settings.string(ctx, Settings.LANGUAGE, "ru-RU") + "|" + ClockCheck.skewed
+            Settings.string(ctx, Settings.LANGUAGE, "ru-RU")
 
     private fun favoritesState(ctx: Context): String =
         Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx)
