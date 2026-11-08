@@ -4,8 +4,15 @@ import android.app.Activity
 
 /** A short caption for the player's episode strip: "1 серия SD/HD AniDub" becomes "1 серия". */
 fun shortEpisode(title: String): String {
-    val first = title.substringBefore(" • ").trim()
-    return first.replace(Regex("\\s*SD/HD.*$", RegexOption.IGNORE_CASE), "").trim().ifEmpty { first }
+    fun clean(s: String) = s.replace(Regex("\\s*SD/HD.*$", RegexOption.IGNORE_CASE), "").trim()
+    val parts = title.split(" • ")
+    val first = parts[0].trim()
+    // "1 сезон • 3 серия": the season alone would make every button of a long series look the same
+    if (first.contains("сезон", ignoreCase = true) && parts.size > 1) {
+        val episode = clean(parts[1])
+        if (episode.isNotEmpty()) return "$first, $episode"
+    }
+    return clean(first).ifEmpty { first }
 }
 
 /** The stream of an episode for a quality limit; [exact] (the user's pick) wins when that quality exists. */

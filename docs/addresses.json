@@ -1,0 +1,44 @@
+{
+  "addresses": {
+    "anilibria": {
+      "base": "https://anilibria.top"
+    },
+    "seasonvar": {
+      "base": "https://seasonvar.ru"
+    },
+    "hdrezka": {
+      "base": "http://hdrezka-fly.net",
+      "alt": [
+        "https://hdrezkavktest.org",
+        "https://rezka.ag",
+        "https://hdrezka-home.tv",
+        "https://hdrezka.ag",
+        "https://rezka.fi",
+        "https://rezka.si"
+      ]
+    },
+    "rutube": {
+      "base": "https://rutube.ru"
+    },
+    "rutor": {
+      "base": "rutor.info",
+      "alt": [
+        "rutor.is",
+        "rutor.lib"
+      ]
+    },
+    "octopus": {
+      "base": "https://045.ultradox.click",
+      "alt": [
+        "https://ultadox.space"
+      ]
+    },
+    "jacred": {
+      "base": "https://jr.maxvol.pro",
+      "alt": [
+        "https://jacred.freebie.tom.ru",
+        "https://jac.stull.xyz"
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@
   "addresses": {
     "anilibria":   { "base": "https://anilibria.top", "alt": ["https://anilibria.example"] },
     "seasonvar":   { "base": "https://seasonvar.ru" },
-    "hdrezka":     { "base": "https://rezka.ag", "alt": ["https://hdrezka-home.tv", "https://hdrezka.ag"] },
+    "hdrezka":     { "base": "http://hdrezka-fly.net", "alt": ["https://hdrezkavktest.org", "https://rezka.ag", "https://hdrezka-home.tv"] },
     "rutube":      { "base": "https://rutube.ru" },
     "rutor":       { "base": "rutor.info", "alt": ["rutor.is", "rutor.lib"] },
     "octopus":     { "base": "https://045.ultradox.click", "alt": ["https://ultadox.space"] },
@@ -77,3 +77,10 @@
 - Конфиг меняет только **адреса**, не разметку и не протокол. Если сайт сменил формат ответа, нужна правка кода.
 - Адрес конфига хранится как настройка и попадает в файл бекапа: после восстановления на другом устройстве
   конфиг продолжит обновляться.
+
+## Готовый файл
+
+`docs/addresses.json` содержит текущие адреса (HDRezka с зеркалами `hdrezka-fly.net`, `hdrezkavktest.org` и другими).
+Чтобы менять адреса без сборки: выложить файл на любой HTTPS-адрес (gist, GitHub raw), вписать этот адрес в настройках
+(«Адрес конфига»), нажать «Обновить адреса из конфига». Дальше при переезде сайта правится одна строка файла.
+Файл не отправлялся никуда: выкладывает владелец.
