@@ -424,8 +424,8 @@ class MainFragment : Fragment() {
             val isCur = name == (railFocus?.name ?: currentPage)
             val focused = isFocused
             val bg = when {
-                focused -> 0xFF6366F1.toInt()
-                isCur -> 0xFF6366F1.toInt()
+                focused -> FOCUS_FILL
+                isCur -> FOCUS_FILL
                 else -> Color.TRANSPARENT
             }
             val iconColor = when {
@@ -937,7 +937,7 @@ class SettingsSectionPresenter : Presenter() {
         val texts = tile.tag as Pair<TextView, TextView>
         // the grey description is unreadable on the focus colour, so it turns white with the focus
         fun paint(focused: Boolean) {
-            tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000)
+            tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000)
             texts.second.setTextColor(if (focused) Color.WHITE else 0xFF94A3B8.toInt())
         }
         paint(tile.isFocused)
@@ -978,8 +978,8 @@ class FavoriteEpisodePresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val favorite = item as FavoriteEpisode
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
+        tile.setBackgroundColor(if (tile.isFocused) FOCUS_FILL else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val texts = tile.tag as Triple<TextView, TextView, TextView>
         texts.first.text = favorite.seriesTitle
@@ -1013,8 +1013,8 @@ class TorrentCardPresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val torrent = item as Torrent
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
+        tile.setBackgroundColor(if (tile.isFocused) FOCUS_FILL else 0x33000000)
+        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val pair = tile.tag as Pair<TextView, TextView>
         pair.first.text = torrent.title

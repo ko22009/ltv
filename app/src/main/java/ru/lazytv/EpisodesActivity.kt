@@ -315,7 +315,7 @@ class EpisodesActivity : Activity() {
         visible = episodes.indices.filter { currentSeason == null || seasonOf(episodes[it]) == currentSeason }
         for (i in 0 until seasonRow.childCount) {
             val chip = seasonRow.getChildAt(i)
-            chip.background = focusShape(scale, if (chip.tag == currentSeason) ACTIVE_FILL else 0xFF1C2029.toInt(), radius = 6f)
+            chip.background = if (chip.tag == currentSeason) activeShape(scale, 0xFF1C2029.toInt()) else focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
         }
         adapter = object : ArrayAdapter<Int>(this, 0, visible) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(getItem(position)!!, episodes[getItem(position)!!])
@@ -358,7 +358,7 @@ class EpisodesActivity : Activity() {
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(14), px(20), px(14))
         card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply {
                 // a watched episode is visibly dimmer than an unseen one
                 setColor(if (watched) 0x16000000 else 0x33000000)

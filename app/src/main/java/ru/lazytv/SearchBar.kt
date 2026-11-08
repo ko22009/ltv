@@ -28,7 +28,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 /** Flat or round background that turns indigo while the view has focus. */
-fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = 0xFF6366F1.toInt()) = StateListDrawable().apply {
+fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = FOCUS_FILL) = StateListDrawable().apply {
     fun shape(color: Int) = GradientDrawable().apply {
         setColor(color)
         if (circle) this.shape = GradientDrawable.OVAL else cornerRadius = radius * scale

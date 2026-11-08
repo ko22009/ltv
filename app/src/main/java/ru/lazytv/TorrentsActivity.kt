@@ -329,9 +329,11 @@ class TorrentsActivity : Activity() {
         view.isFocusable = true
         view.isClickable = true
         view.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply {
-                setColor(if (active) ACTIVE_FILL else 0x66000000); cornerRadius = px(3).toFloat()
+                setColor(0x66000000); cornerRadius = px(3).toFloat()
+                // the chosen source is outlined like the active season ("ghost"), the focus fills it
+                if (active) setStroke(px(2), FOCUS_FILL)
             })
         }
         view.setOnClickListener { action() }
@@ -378,7 +380,7 @@ class TorrentsActivity : Activity() {
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(10), px(20), px(10))
         card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); cornerRadius = px(3).toFloat() })
+            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x33000000); cornerRadius = px(3).toFloat() })
         }
         val texts = LinearLayout(this)

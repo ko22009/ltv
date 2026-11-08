@@ -367,7 +367,7 @@ class PlayerActivity : Activity() {
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(0xFF6366F1.toInt()); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); shape = GradientDrawable.OVAL })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x55000000); shape = GradientDrawable.OVAL })
         }
         setOnClickListener { resetHideTimer(); action() }
@@ -654,7 +654,7 @@ class PlayerActivity : Activity() {
         episodeViews.forEachIndexed { index, view ->
             val active = index == queueIndex
             view.setTextColor(if (active) Color.WHITE else 0xFFCBD5E1.toInt())
-            view.background = focusShape(scale, if (active) ACTIVE_FILL else 0x55000000, radius = 6f)
+            view.background = if (active) activeShape(scale, 0x55000000) else focusShape(scale, 0x55000000, radius = 6f)
         }
     }
 

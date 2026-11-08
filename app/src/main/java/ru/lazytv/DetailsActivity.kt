@@ -61,7 +61,7 @@ class DetailsActivity : Activity() {
         isClickable = true
         background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(0xFF6366F1.toInt())
+                setColor(FOCUS_FILL)
                 cornerRadius = dp(2).toFloat()
             })
         }
@@ -121,7 +121,7 @@ class DetailsActivity : Activity() {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), softDisc(0xFF6366F1.toInt()))
+                addState(intArrayOf(android.R.attr.state_focused), softDisc(FOCUS_FILL))
                 addState(intArrayOf(), softDisc(0x99000000.toInt()))
             }
             isFocusable = true
@@ -666,7 +666,7 @@ class DetailsActivity : Activity() {
                 isClickable = true
                 background = StateListDrawable().apply {
                     addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(0xFF6366F1.toInt()); cornerRadius = dp(6).toFloat()
+                        setColor(FOCUS_FILL); cornerRadius = dp(6).toFloat()
                     })
                     addState(intArrayOf(), GradientDrawable().apply {
                         setColor(0x33000000); cornerRadius = dp(6).toFloat()
