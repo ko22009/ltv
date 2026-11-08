@@ -480,7 +480,8 @@ class EpisodesActivity : Activity() {
         val tv = intent.getBooleanExtra("tv", true)
         val poster = intent.getStringExtra("poster")
         playEpisode(this, variant, episodes, index, choose, mediaTitle, originalTitle, year, tv, poster, intent.getLongExtra("tmdbId", 0L))
-        adapter?.notifyDataSetChanged()
+        // no list refresh here: while the episode link is still being asked for, rebuilding every row made the page blink
+        // and moved the focus to the season button; the marks are repainted in onResume when the player is closed
     }
 }
 
