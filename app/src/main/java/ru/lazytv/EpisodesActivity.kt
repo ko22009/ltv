@@ -366,10 +366,6 @@ class EpisodesActivity : Activity() {
         card.addView(label(shown, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
             LinearLayout.LayoutParams(0, -2, 1f))
         if (watched) card.addView(label("✓", 20f, 0xFFA5B4FC.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
-        card.addView(label(episode.streams.joinToString("  ") { it.first }, 14f,
-            if (watched) 0xFF475569.toInt() else 0xFF94A3B8.toInt()).apply {
-            setPadding(px(8), 0, px(12), 0)
-        })
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }
