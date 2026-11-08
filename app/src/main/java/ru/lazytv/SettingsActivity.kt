@@ -112,7 +112,11 @@ class SettingsActivity : FragmentActivity() {
                 })
                 addView(TextView(this@SettingsActivity).apply {
                     text = body
-                    setTextColor(0xFFCBD5E1.toInt())
+                    // white while the card is focused: the grey is hard to read on the focus colour
+                    isDuplicateParentStateEnabled = true
+                    setTextColor(android.content.res.ColorStateList(
+                        arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+                        intArrayOf(Color.WHITE, 0xFFCBD5E1.toInt())))
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
                     setLineSpacing(0f, 1.2f)
                     setPadding(0, px(6), 0, 0)

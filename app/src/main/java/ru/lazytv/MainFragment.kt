@@ -931,10 +931,15 @@ class SettingsSectionPresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val section = item as SettingsSection
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) 0xFF6366F1.toInt() else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val texts = tile.tag as Pair<TextView, TextView>
+        // the grey description is unreadable on the focus colour, so it turns white with the focus
+        fun paint(focused: Boolean) {
+            tile.setBackgroundColor(if (focused) 0xFF6366F1.toInt() else 0x33000000)
+            texts.second.setTextColor(if (focused) Color.WHITE else 0xFF94A3B8.toInt())
+        }
+        paint(tile.isFocused)
+        tile.setOnFocusChangeListener { _, focused -> paint(focused) }
         texts.first.text = section.title
         texts.second.text = section.description
     }
