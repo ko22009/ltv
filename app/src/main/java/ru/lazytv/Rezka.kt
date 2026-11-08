@@ -4,6 +4,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** The site answers with a bot check instead of its pages: it counts as not reachable (the mirror is left for a while). */
+class SiteBlocked(message: String) : java.io.IOException(message)
+
 /**
  * HDRezka: search by name, then the site's own AJAX (the same calls its web player makes) for voice-overs, the
  * season/episode list and the direct MP4 links per quality. The address list has several mirrors (see [RemoteConfig]):
@@ -20,7 +23,7 @@ object Hdrezka : VideoSource {
 
     /** A page with the bot check instead of the site (or an empty answer): reported, never worked around. */
     private fun requireSite(html: String): String {
-        if (html.contains("anubis_challenge") || html.contains("Проверяем, что вы не бот")) throw IllegalStateException(CHECK_MESSAGE)
+        if (html.contains("anubis_challenge") || html.contains("Проверяем, что вы не бот")) throw SiteBlocked(CHECK_MESSAGE)
         return html
     }
 

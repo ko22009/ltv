@@ -50,7 +50,7 @@ object Sources {
         context: Context, title: String, original: String, year: String, tv: Boolean = false,
         onPartial: ((List<Variant>) -> Unit)? = null,
     ): List<Variant> {
-        val list = enabled(context, tv)
+        val list = enabled(context, tv).filter { !RemoteConfig.isDown(it.id) }
         if (list.isEmpty()) return emptyList()
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         return try {

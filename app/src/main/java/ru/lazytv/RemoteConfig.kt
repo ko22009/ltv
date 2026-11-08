@@ -104,23 +104,39 @@ object RemoteConfig {
      */
     fun <T> attempt(id: String, block: (String) -> T): Fetched<T> {
         var last: Throwable? = null
-        // an address that failed a moment ago is not asked again while others are left; if all failed lately, all are tried
+        // an address that failed a moment ago is not asked again while others are left; if all failed lately, all are tried;
+        // the one that answered last time goes first (it is remembered between starts)
         val now = System.currentTimeMillis()
-        val all = bases(id)
+        val good = app?.getSharedPreferences("mirrors", 0)?.getString(id, null)
+        val all = bases(id).sortedBy { if (it == good) 0 else 1 }
         val fresh = all.filter { now - (failedAt[it] ?: 0L) > DEAD_MS }
+        var unreachable = 0
         for (address in fresh.ifEmpty { all }) {
             try {
                 val result = Fetched(block(address), address)
                 failedAt.remove(address)
+                downAt.remove(id)
+                if (address != good) app?.getSharedPreferences("mirrors", 0)?.edit()?.putString(id, address)?.apply()
                 return result
             } catch (t: Throwable) {
-                failedAt[address] = System.currentTimeMillis()
+                // only a site that does not answer is marked: a page that is missing or does not parse says nothing about the mirror
+                if (t is java.io.IOException && t !is java.io.FileNotFoundException) {
+                    failedAt[address] = System.currentTimeMillis()
+                    unreachable++
+                }
                 android.util.Log.i("LazyTV", "address $address failed: $t")
                 last = t
             }
         }
+        // every address was tried and none answered: the site is left alone for a while instead of being asked on every search
+        if (unreachable > 0 && unreachable == fresh.ifEmpty { all }.size) downAt[id] = System.currentTimeMillis()
         throw last ?: IllegalStateException("Нет адреса для источника «$id»")
     }
+
+    private val downAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** True when no address of [id] answered in the last [DEAD_MS]: searches skip such a site and retry after the pause. */
+    fun isDown(id: String): Boolean = System.currentTimeMillis() - (downAt[id] ?: 0L) < DEAD_MS
 
     fun configured(context: Context): String = Settings.string(context, Settings.REMOTE_URL, "").trim()
 
