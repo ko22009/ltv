@@ -48,6 +48,9 @@ fun openPlayer(
                 .putExtra("mediaTitle", mediaTitle).putExtra("originalTitle", originalTitle)
                 .putExtra("year", year).putExtra("tv", tv).putExtra("poster", poster).putExtra("tmdbId", tmdbId)
         )
+        // no cross-fade: the episode page showed through the opening player and its colours blinked
+        @Suppress("DEPRECATION")
+        activity.overridePendingTransition(0, 0)
     }
 }
 
@@ -653,6 +656,13 @@ class PlayerActivity : Activity() {
             view.setTextColor(if (active) Color.WHITE else 0xFFCBD5E1.toInt())
             view.background = focusShape(scale, if (active) ACTIVE_FILL else 0x55000000, radius = 6f)
         }
+    }
+
+    override fun finish() {
+        super.finish()
+        // the page behind comes back at once, without the cross-fade
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
     }
 
     private fun togglePlay() {
