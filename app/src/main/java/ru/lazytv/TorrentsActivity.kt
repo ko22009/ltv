@@ -56,6 +56,8 @@ class TorrentsActivity : Activity() {
     private var all: List<Torrent> = emptyList()
     private var shown: List<Torrent> = emptyList()
     private var source: String? = null
+    /** The voice-over the list is narrowed to; empty means any. Not remembered: every title has its own ones. */
+    private var voice = ""
     private var dialog: AlertDialog? = null
     private var preloading = false
     // the "TorrServe is not installed" card is shown once per screen, the address line keeps the message
@@ -220,6 +222,7 @@ class TorrentsActivity : Activity() {
         searching = true
         all = emptyList()
         shown = emptyList()
+        voice = ""
         list.adapter = null
         chips.removeAllViews()
         options.removeAllViews()
@@ -280,7 +283,10 @@ class TorrentsActivity : Activity() {
         val sort = TorrentSort.of(Settings.string(this, Settings.TORRENT_SORT, TorrentSort.SEEDS.key))
         val exact = Settings.bool(this, Settings.TORRENT_EXACT, false)
         val minSeeds = Settings.string(this, Settings.TORRENT_MIN_SEEDS, "0").toIntOrNull() ?: 0
-        val visible = TorrentOrder.arrange(all, sort, exact, name, minSeeds)
+        // the voice-overs offered are those of the releases that pass the other filters; a choice that is gone is dropped
+        val voices = TorrentVoice.available(TorrentOrder.arrange(all, sort, exact, name, minSeeds))
+        if (voice !in voices) voice = ""
+        val visible = TorrentOrder.arrange(all, sort, exact, name, minSeeds, voice)
         val groups = visible.groupBy { it.source }
         val saved = FavoriteTorrents.all(this)
         source = chosen?.takeIf { it in groups || (it == FAVORITES && saved.isNotEmpty()) }
@@ -302,6 +308,12 @@ class TorrentsActivity : Activity() {
             val next = Settings.MIN_SEEDS[(Settings.MIN_SEEDS.indexOf(minSeeds) + 1) % Settings.MIN_SEEDS.size]
             Settings.setString(this, Settings.TORRENT_MIN_SEEDS, next.toString())
             select(source, 2)
+        }
+        // only when the titles name at least one voice-over: the button goes through them one by one, then back to "any"
+        if (voices.isNotEmpty()) chip(options, if (voice.isEmpty()) "Озвучка: любая" else "Озвучка: $voice", voice.isNotEmpty()) {
+            val choices = listOf("") + voices
+            voice = choices[(choices.indexOf(voice) + 1) % choices.size]
+            select(source, 3)
         }
         if (focusOption >= 0) options.getChildAt(focusOption)?.requestFocus()
         shown = when (source) {

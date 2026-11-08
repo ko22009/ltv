@@ -62,8 +62,10 @@ object TorrentOrder {
     }
 
     /** Releases with no seeders always go to the very bottom, whatever the order. */
-    fun arrange(list: List<Torrent>, sort: TorrentSort, exact: Boolean, query: String, minSeeds: Int = 0): List<Torrent> {
-        val filtered = list.filter { it.seeds >= minSeeds && (!exact || matchesExactly(it, query)) }
+    fun arrange(list: List<Torrent>, sort: TorrentSort, exact: Boolean, query: String, minSeeds: Int = 0, voice: String = ""): List<Torrent> {
+        val filtered = list.filter {
+            it.seeds >= minSeeds && (!exact || matchesExactly(it, query)) && (voice.isEmpty() || voice in TorrentVoice.of(it))
+        }
         val ordered = when (sort) {
             TorrentSort.SEEDS -> filtered.sortedByDescending { it.seeds }
             TorrentSort.SIZE_DESC -> filtered.sortedByDescending { sizeBytes(it.size) }
@@ -72,6 +74,43 @@ object TorrentOrder {
         val (alive, dead) = ordered.partition { it.seeds > 0 }
         return alive + dead
     }
+}
+
+/**
+ * Voice-over (translation) of a release, read from its title: the studio ("LostFilm", "Кубик в кубе") or the kind
+ * ("Дубляж", "Многоголосый"). The trackers have no field for it, so this is a list of known names; a release with none
+ * of them simply has no voice-over label and shows under "any".
+ */
+object TorrentVoice {
+    private val patterns = listOf(
+        "LostFilm" to "lostfilm|лостфильм",
+        "NewStudio" to "newstudio|ньюстудио",
+        "Кубик в кубе" to "кубик\\s+в\\s+кубе",
+        "Jaskier" to "jaskier|яскер",
+        "AlexFilm" to "alexfilm|алексфильм",
+        "Baibako" to "baibako|байбако",
+        "Кураж-Бамбей" to "кураж.?бамбей",
+        "ColdFilm" to "coldfilm|колдфильм",
+        "HDRezka" to "hdrezka|резка",
+        "Amedia" to "amedia|амедиа",
+        "SDI Media" to "sdi\\s*media",
+        "Пифагор" to "пифагор",
+        "Novafilm" to "novafilm|новафильм",
+        "Paramount Comedy" to "paramount\\s+comedy",
+        "Дубляж" to "дубляж|дублирован|\\bdub\\b",
+        "Многоголосый" to "многоголос|\\bmvo\\b",
+        "Двухголосый" to "двухголос|\\bdvo\\b",
+        "Одноголосый" to "одноголос|\\bavo\\b|\\bvo\\b",
+        "Оригинал" to "оригинал|\\boriginal\\b",
+        "Субтитры" to "субтитры|\\bsub\\b|\\brus\\s*sub\\b",
+    ).map { (name, pattern) -> name to Regex(pattern, RegexOption.IGNORE_CASE) }
+
+    /** The voice-overs named in the title, in the order of the list above. */
+    fun of(torrent: Torrent): List<String> = patterns.filter { it.second.containsMatchIn(torrent.title) }.map { it.first }
+
+    /** Voice-overs found in the list, the most frequent first. */
+    fun available(list: List<Torrent>): List<String> =
+        list.flatMap { of(it) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
 }
 
 /** One file of a torrent as TorrServe lists it. */
