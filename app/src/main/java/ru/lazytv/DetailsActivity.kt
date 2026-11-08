@@ -748,13 +748,7 @@ class DetailsActivity : Activity() {
         items.add("Торренты (TorrServe)")
         actions.add { openTorrents(name) }
 
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Выбор источника")
-            .setItems(items.toTypedArray()) { _, which ->
-                actions.getOrNull(which)?.invoke()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+        showChoice(this, "Выбор источника", items, -1) { which -> actions.getOrNull(which)?.invoke() }
     }
 
     /** Waits for the background site search if the user clicks "Смотреть" immediately on opening the card. */

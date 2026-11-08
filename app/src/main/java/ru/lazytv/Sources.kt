@@ -60,7 +60,7 @@ object Sources {
             // each source ranks its own answers; the combined list has to be ranked across sources again
             val ranked = relevant(combined, listOf(title, original), year)
             // a film is told apart from its namesakes by the year: a known year that is more than one off is another film
-            if (tv) ranked else ranked.filter { sameFilmYear(it.note, year) }
+            if (tv) ranked else ranked.filter { sameFilmYear(it, year) }
         } finally {
             pool.shutdownNow()
         }
@@ -113,8 +113,8 @@ object Sources {
             org.json.JSONObject(prefs.getString(key, "{}") ?: "{}").optLong("t")
         }.getOrDefault(0L)
         val edit = prefs.edit()
-        keys.filter { !it.startsWith("variants7_") }.forEach { edit.remove(it) }
-        val current = keys.filter { it.startsWith("variants7_") }.associateWith { timeOf(it) }
+        keys.filter { !it.startsWith("variants8_") }.forEach { edit.remove(it) }
+        val current = keys.filter { it.startsWith("variants8_") }.associateWith { timeOf(it) }
         current.filter { now - it.value > 24 * 60 * 60 * 1000L }.keys.forEach { edit.remove(it) }
         val alive = current.filter { now - it.value <= 24 * 60 * 60 * 1000L }
         if (alive.size > 80) {
@@ -126,7 +126,7 @@ object Sources {
     private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
         val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
-        return "variants7_" + digest.joinToString("") { "%02x".format(it) }
+        return "variants8_" + digest.joinToString("") { "%02x".format(it) }
     }
 
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
@@ -169,11 +169,18 @@ object Sources {
             .map { it.first }
     }
 
-    /** True when the variant's note starts with a year close to [year] (±1), or either year is unknown. */
-    fun sameFilmYear(note: String, year: String): Boolean {
+    /**
+     * True when the variant's year is close to [year] (±1), or either year is unknown. The year is the one the note
+     * starts with; a site that puts it in the title instead ("Обитель зла (2002)", "…(2026,4K)") is read from there:
+     * any year of the title near the wanted one is enough.
+     */
+    fun sameFilmYear(variant: Variant, year: String): Boolean {
         val wanted = year.take(4).toIntOrNull() ?: return true
-        val found = Regex("^(\\d{4})").find(note)?.groupValues?.get(1)?.toIntOrNull() ?: return true
-        return kotlin.math.abs(found - wanted) <= 1
+        val fromNote = Regex("^(\\d{4})").find(variant.note)?.groupValues?.get(1)?.toIntOrNull()
+        val years = if (fromNote != null) listOf(fromNote)
+        else Regex("\\b(19|20)\\d{2}\\b").findAll(variant.title + " " + variant.alt).map { it.value.toInt() }.toList()
+        if (years.isEmpty()) return true
+        return years.any { kotlin.math.abs(it - wanted) <= 1 }
     }
 
     fun get(address: String, charset: java.nio.charset.Charset = Charsets.UTF_8): String =

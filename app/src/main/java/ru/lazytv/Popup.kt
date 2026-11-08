@@ -43,10 +43,12 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
             setTextColor(if (index == current) 0xFFA5B4FC.toInt() else Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
             typeface = if (index == current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            maxLines = 1
+            // long lines (a source with its note) wrap to two lines instead of being cut
+            maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(px(18), 0, px(18), 0)
+            minHeight = px(CHIP_HEIGHT)
+            setPadding(px(18), px(8), px(18), px(8))
             isFocusable = true
             isFocusableInTouchMode = true
             isClickable = true
@@ -56,14 +58,14 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
                 onPick(index)
             }
         }
-        rows.addView(row, LinearLayout.LayoutParams(-1, px(CHIP_HEIGHT)).apply { bottomMargin = px(6) })
+        rows.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(6) })
         if (index == current || (first == null && current !in items.indices)) first = row
     }
     panel.addView(ScrollView(activity).apply { addView(rows) }, LinearLayout.LayoutParams(-1, -2))
     dialog.setContentView(panel)
     dialog.window?.apply {
         setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        setLayout(px(460), -2)
+        setLayout(px(640), -2)
         setDimAmount(0.6f)
     }
     dialog.setOnShowListener { first?.requestFocus() }
