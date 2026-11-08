@@ -54,7 +54,7 @@ object Sources {
             val tasks = list.map { source ->
                 java.util.concurrent.Callable { runCatching { source.search(title, original, year, tv) }.getOrDefault(emptyList()) }
             }
-            // one slow site must not hold the card: whatever did not answer in 20 seconds is skipped
+            // one slow site must not hold the card: whatever did not answer in 20 seconds is skipped (the card waits up to 30)
             val combined = pool.invokeAll(tasks, 20, java.util.concurrent.TimeUnit.SECONDS)
                 .flatMap { future -> runCatching { future.get() }.getOrDefault(emptyList()) }
             // each source ranks its own answers; the combined list has to be ranked across sources again

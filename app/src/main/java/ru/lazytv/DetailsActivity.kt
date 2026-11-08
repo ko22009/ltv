@@ -719,7 +719,7 @@ class DetailsActivity : Activity() {
         if (detailsReady.count > 0) {
             setWatchLoading(true)
             Thread {
-                detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
+                detailsReady.await(30, java.util.concurrent.TimeUnit.SECONDS)
                 onUi {
                     setWatchLoading(false)
                     showSourceDialog(name)
@@ -778,7 +778,7 @@ class DetailsActivity : Activity() {
         if (detailsReady.count > 0) {
             setWatchLoading(true)
             Thread {
-                detailsReady.await(15, java.util.concurrent.TimeUnit.SECONDS)
+                detailsReady.await(30, java.util.concurrent.TimeUnit.SECONDS)
                 onUi {
                     setWatchLoading(false)
                     openDefaultVariant(name)
