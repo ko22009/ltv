@@ -48,6 +48,11 @@ class EpisodesActivity : Activity() {
     private lateinit var actionCancel: View
     private lateinit var actionAll: View
 
+    /** [normal] colour, white while the row is selected (the focus plate behind it is bright). */
+    private fun whiteWhenSelected(normal: Int) = android.content.res.ColorStateList(
+        arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(Color.WHITE, normal),
+    )
+
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
         text = value
         setTextColor(color)
@@ -359,13 +364,14 @@ class EpisodesActivity : Activity() {
                 cornerRadius = px(3).toFloat()
             })
         }
-        if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, if (watched) 0xFFA5B4FC.toInt() else 0xFF94A3B8.toInt())
-            .apply { setPadding(0, 0, px(14), 0) })
+        if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, 0)
+            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) 0xFFA5B4FC.toInt() else 0xFF94A3B8.toInt())) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
-        card.addView(label(shown, 19f, if (watched) 0xFF64748B.toInt() else Color.WHITE, true),
+        // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there
+        card.addView(label(shown, 19f, 0, true).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
             LinearLayout.LayoutParams(0, -2, 1f))
-        if (watched) card.addView(label("✓", 20f, 0xFFA5B4FC.toInt()).apply { setPadding(px(4), 0, px(6), 0) })
+        if (watched) card.addView(label("✓", 20f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(0xFFA5B4FC.toInt())) })
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }

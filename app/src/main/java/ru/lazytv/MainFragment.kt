@@ -398,10 +398,11 @@ class MainFragment : Fragment() {
             updateState()
 
             setOnFocusChangeListener { _, _ ->
-                updateState()
+                // all the plates are repainted at once: the selection follows the focus without waiting for the page to switch
+                navItems.forEach { it.updateState() }
                 if (isFocused) {
                     uiHandler.removeCallbacks(switchPageDebounce)
-                    uiHandler.postDelayed(switchPageDebounce, 200L)
+                    uiHandler.postDelayed(switchPageDebounce, 100L)
                 }
             }
             setOnClickListener {
@@ -415,7 +416,10 @@ class MainFragment : Fragment() {
         }
 
         fun updateState() {
-            val isCur = (name == currentPage)
+            // while the focus is in the rail, the item under it is the chosen one (the page follows a moment later):
+            // two plates at once, the old page and the new focus, made the menu look like it lagged
+            val railFocus = navItems.firstOrNull { it.isFocused }
+            val isCur = name == (railFocus?.name ?: currentPage)
             val focused = isFocused
             val bg = when {
                 focused -> 0xFF6366F1.toInt()
