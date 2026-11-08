@@ -30,6 +30,7 @@ object RemoteConfig {
     private val builtIn = linkedMapOf(
         "anilibria" to listOf("https://anilibria.top"),
         "seasonvar" to listOf("https://seasonvar.ru"),
+        "hdrezka" to listOf("https://rezka.ag", "https://hdrezka-home.tv", "https://hdrezka.ag", "https://rezka.fi", "https://rezka.si"),
         "rutube" to listOf("https://rutube.ru"),
         "rutor" to listOf("rutor.info", "rutor.is", "rutor.lib"),
         "octopus" to listOf("https://045.ultradox.click", "https://ultadox.space"),

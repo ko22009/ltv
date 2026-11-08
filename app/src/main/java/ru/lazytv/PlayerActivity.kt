@@ -469,14 +469,14 @@ class PlayerActivity : Activity() {
             Toast.makeText(this, "Название фильма неизвестно", Toast.LENGTH_SHORT).show()
             return
         }
-        val cached = Sources.cachedOnly(this, title, originalTitle, mediaYear)
+        val cached = Sources.cachedOnly(this, title, originalTitle, mediaYear, isTv)
         if (cached != null) {
             showSourcePicker(cached)
             return
         }
         Toast.makeText(this, "Поиск источников…", Toast.LENGTH_SHORT).show()
         Thread {
-            val list = Sources.searchCached(applicationContext, title, originalTitle, mediaYear)
+            val list = Sources.searchCached(applicationContext, title, originalTitle, mediaYear, isTv)
             handler.post {
                 if (!isFinishing && !releasing) {
                     showSourcePicker(list)

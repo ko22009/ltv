@@ -28,19 +28,22 @@ interface VideoSource {
     fun episodes(variant: Variant): List<Episode>
     /** Voice-overs the site offers for the variant as (key, name); empty when there is no choice. */
     fun voices(variant: Variant): List<Pair<String, String>> = emptyList()
+    /** False for a source that has no usable episode list (a series there is one long video). */
+    val forSeries: Boolean get() = true
 }
 
 object Sources {
-    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Rutube)
+    val all: List<VideoSource> = listOf(Anilibria, Seasonvar, Hdrezka, Rutube)
 
     fun byId(id: String): VideoSource? = all.firstOrNull { it.id == id }
 
     /** Sources the user left switched on in the settings (a change applies at once). */
-    fun enabled(context: Context) = all.filter { Settings.bool(context, Settings.service(it.id)) }
+    fun enabled(context: Context, tv: Boolean = false) =
+        all.filter { Settings.bool(context, Settings.service(it.id)) && (!tv || it.forSeries) }
 
     /** Searches every enabled source at once; a source that fails or finds nothing simply adds no tiles. */
-    fun search(context: Context, title: String, original: String, year: String): List<Variant> {
-        val list = enabled(context)
+    fun search(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant> {
+        val list = enabled(context, tv)
         if (list.isEmpty()) return emptyList()
         val pool = java.util.concurrent.Executors.newCachedThreadPool()
         return try {
@@ -61,9 +64,9 @@ object Sources {
      * [search] with a six-hour cache of found variants (the setting can switch it off): opening the same card
      * again does not hit every site once more. The cache lives in its own preferences, so it is not a setting.
      */
-    fun searchCached(context: Context, title: String, original: String, year: String): List<Variant> {
-        if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year)
-        val key = cacheKey(context, title, original, year)
+    fun searchCached(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant> {
+        if (!Settings.bool(context, Settings.CACHE_SOURCES)) return search(context, title, original, year, tv)
+        val key = cacheKey(context, title, original, year, tv)
         val prefs = context.getSharedPreferences("cache", 0)
         val raw = prefs.getString(key, null)
         if (raw != null) {
@@ -71,7 +74,7 @@ object Sources {
                 if (System.currentTimeMillis() - time < 6 * 60 * 60 * 1000L) return list
             }
         }
-        val found = search(context, title, original, year)
+        val found = search(context, title, original, year, tv)
         if (found.isNotEmpty()) {
             val json = org.json.JSONObject().put("t", System.currentTimeMillis()).put("v", org.json.JSONArray().apply {
                 found.forEach { put(variantToJson(it)) }
@@ -83,8 +86,8 @@ object Sources {
     }
 
     /** Returns cached variants without network search, or null when the cache is empty or expired. */
-    fun cachedOnly(context: Context, title: String, original: String, year: String): List<Variant>? {
-        val key = cacheKey(context, title, original, year)
+    fun cachedOnly(context: Context, title: String, original: String, year: String, tv: Boolean = false): List<Variant>? {
+        val key = cacheKey(context, title, original, year, tv)
         val prefs = context.getSharedPreferences("cache", 0)
         val raw = prefs.getString(key, null) ?: return null
         return runCatching { variantFromJson(org.json.JSONObject(raw)) }.getOrNull()?.let { (time, list) ->
@@ -114,8 +117,8 @@ object Sources {
         edit.apply()
     }
 
-    private fun cacheKey(context: Context, title: String, original: String, year: String): String {
-        val raw = enabled(context).joinToString(",") { it.id } + "|" + title + "|" + original + "|" + year
+    private fun cacheKey(context: Context, title: String, original: String, year: String, tv: Boolean): String {
+        val raw = enabled(context, tv).joinToString(",") { it.id } + "|" + tv + "|" + title + "|" + original + "|" + year
         val digest = java.security.MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
         return "variants6_" + digest.joinToString("") { "%02x".format(it) }
     }
@@ -374,6 +377,8 @@ object Seasonvar : VideoSource {
 object Rutube : VideoSource {
     override val id = "rutube"
     override val name = "RUTUBE"
+    // its "series" are loose uploads of single videos: no seasons, no episode list
+    override val forSeries get() = false
 
     override fun search(title: String, original: String, year: String): List<Variant> {
         val seen = HashSet<String>()

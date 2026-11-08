@@ -427,7 +427,7 @@ class DetailsActivity : Activity() {
                     onUi { applyDetails(d, name, baseRows, original, table, scroll) }
                 }
                 // the variants are not shown on the card any more: the "Смотреть" button opens the first of them
-                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year) }.getOrDefault(emptyList())
+                variants = runCatching { Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv) }.getOrDefault(emptyList())
             } finally {
                 detailsReady.countDown()
             }

@@ -22,6 +22,7 @@
   "addresses": {
     "anilibria":   { "base": "https://anilibria.top", "alt": ["https://anilibria.example"] },
     "seasonvar":   { "base": "https://seasonvar.ru" },
+    "hdrezka":     { "base": "https://rezka.ag", "alt": ["https://hdrezka-home.tv", "https://hdrezka.ag"] },
     "rutube":      { "base": "https://rutube.ru" },
     "rutor":       { "base": "rutor.info", "alt": ["rutor.is", "rutor.lib"] },
     "octopus":     { "base": "https://045.ultradox.click", "alt": ["https://ultadox.space"] },
@@ -66,7 +67,7 @@
 | Сейчас | откуда взяты адреса и когда обновлялись |
 | Обновить адреса из конфига | скачать и применить сразу |
 | Сбросить свои адреса | убрать адреса, введённые вручную |
-| ANILIBRIA / SEASONVAR / RUTUBE: свой адрес | ручной адрес конкретного сайта (главнее конфига) |
+| ANILIBRIA / SEASONVAR / HDREZKA / RUTUBE: свой адрес | ручной адрес конкретного сайта (главнее конфига) |
 
 Свои адреса для трекеров (rutor, Octopus и остальные) задаются там же, где и раньше: «Серверы JacRed» —
 список серверов через запятую; остальные трекеры берут адреса из конфига.

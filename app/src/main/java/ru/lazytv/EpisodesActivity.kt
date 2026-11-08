@@ -24,7 +24,7 @@ class EpisodesActivity : Activity() {
 
     private lateinit var variant: Variant
     private var episodes: List<Episode> = emptyList()
-    private var adapter: ArrayAdapter<Episode>? = null
+    private var adapter: ArrayAdapter<Int>? = null
     private lateinit var list: ListView
     private lateinit var actions: LinearLayout
     private lateinit var actionFavorite: View
@@ -32,9 +32,14 @@ class EpisodesActivity : Activity() {
     private lateinit var geoButton: View
     private var selectedIndex = 0
     private lateinit var actionVoice: View
-    private lateinit var actionSeason: View
-    /** Seasons of the list as (caption, index of its first episode); empty when the list has fewer than two. */
-    private var seasonStarts: List<Pair<String, Int>> = emptyList()
+    /** The row of season buttons above the list; hidden when the series has fewer than two seasons. */
+    private lateinit var backButton: View
+    private lateinit var seasonRow: LinearLayout
+    private lateinit var seasonScroll: android.widget.HorizontalScrollView
+    private var seasons: List<String> = emptyList()
+    private var currentSeason: String? = null
+    /** Indices (in [episodes]) of the episodes shown now: one season, or all of them when there is no season choice. */
+    private var visible: List<Int> = emptyList()
     private var loadEpisodes: (() -> Unit)? = null
     private var voiceSwitched = false
 
@@ -64,6 +69,7 @@ class EpisodesActivity : Activity() {
         page.orientation = LinearLayout.VERTICAL
         page.setPadding(px(64), px(40), px(64), px(20))
         val back = backButton(this, scale) { finish() }
+        backButton = back
         val titles = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(label(variant.title, 32f, Color.WHITE).apply {
@@ -111,11 +117,16 @@ class EpisodesActivity : Activity() {
         actionWatched = actionButton().apply { setOnClickListener { toggleWatched() } }
         // shown only when the site offers several voice-overs (see load() below)
         actionVoice = actionButton().apply { visibility = View.GONE }
-        actionSeason = actionButton().apply { visibility = View.GONE }
-        actions.addView(actionSeason, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionFavorite, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
         actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2 })
+        seasonRow = LinearLayout(this)
+        seasonScroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            visibility = View.GONE
+            addView(seasonRow)
+        }
+        page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
         page.addView(actions, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
         list = ListView(this)
         list.divider = null
@@ -124,6 +135,7 @@ class EpisodesActivity : Activity() {
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else when (code) {
                 android.view.KeyEvent.KEYCODE_DPAD_DOWN -> when {
+                    seasonScroll.visibility == View.VISIBLE -> activeSeasonChip().requestFocus()
                     actions.visibility == View.VISIBLE -> actionFavorite.requestFocus()
                     errorRow.visibility == View.VISIBLE -> geoButton.requestFocus()
                     episodes.isNotEmpty() -> list.requestFocus()
@@ -145,7 +157,8 @@ class EpisodesActivity : Activity() {
             for (i in 0 until container.childCount) container.getChildAt(i).setOnKeyListener { view, code, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) false
                 else if (code == android.view.KeyEvent.KEYCODE_DPAD_UP) {
-                    back.requestFocus()
+                    if (container === actions && seasonScroll.visibility == View.VISIBLE) activeSeasonChip().requestFocus()
+                    else back.requestFocus()
                     true
                 } else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                     val visible = (0 until container.childCount).map { container.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
@@ -191,15 +204,11 @@ class EpisodesActivity : Activity() {
                         geoButton.requestFocus()
                         return@onSuccess
                     }
-                    adapter = object : ArrayAdapter<Episode>(this, 0, episodes) {
-                        override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(position, getItem(position)!!)
-                    }
-                    list.adapter = adapter
-                    list.setOnItemClickListener { _, _, position, _ -> play(episodes, position) }
-                    list.setOnItemLongClickListener { _, _, position, _ -> play(episodes, position, true); true }
+                    list.setOnItemClickListener { _, _, position, _ -> visible.getOrNull(position)?.let { play(episodes, it) } }
+                    list.setOnItemLongClickListener { _, _, position, _ -> visible.getOrNull(position)?.let { play(episodes, it, true) }; true }
                     list.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
                         override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                            selectedIndex = position
+                            visible.getOrNull(position)?.let { selectedIndex = it }
                             updateActions()
                         }
                         override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
@@ -209,9 +218,9 @@ class EpisodesActivity : Activity() {
                     selectedIndex = if (focus in episodes.indices) focus else episodes.indexOfFirst {
                         !EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, it.title))
                     }.coerceAtLeast(0)
-                    list.setSelection(selectedIndex)
                     actions.visibility = View.VISIBLE
                     setupSeasons()
+                    showSeason(seasonOf(episodes[selectedIndex]), selectedIndex)
                     updateActions()
                     list.requestFocus()
                 }.onFailure { err ->
@@ -241,24 +250,60 @@ class EpisodesActivity : Activity() {
     private fun seasonOf(episode: Episode): String? =
         episode.title.substringBefore(" • ", "").takeIf { it.contains("сезон", ignoreCase = true) }
 
-    /** The "Сезон" button jumps to the first episode of a season; the list itself stays whole, the marks and favorites keep their places. */
+    /** Season chips: one per season, the active one is lit; picking a chip shows only the episodes of that season. */
     private fun setupSeasons() {
-        val starts = LinkedHashMap<String, Int>()
-        episodes.forEachIndexed { index, episode -> seasonOf(episode)?.let { starts.putIfAbsent(it, index) } }
-        seasonStarts = if (starts.size >= 2) starts.map { it.key to it.value } else emptyList()
-        if (seasonStarts.isEmpty()) {
-            actionSeason.visibility = View.GONE
-            return
-        }
-        actionSeason.visibility = View.VISIBLE
-        actionSeason.setOnClickListener {
-            android.app.AlertDialog.Builder(this).setTitle("Сезон")
-                .setItems(seasonStarts.map { it.first }.toTypedArray()) { _, which ->
-                    list.setSelection(seasonStarts[which].second)
-                    list.requestFocus()
+        val names = LinkedHashSet<String>()
+        episodes.forEach { seasonOf(it)?.let(names::add) }
+        seasons = if (names.size >= 2) names.toList() else emptyList()
+        seasonRow.removeAllViews()
+        seasonScroll.visibility = if (seasons.isEmpty()) View.GONE else View.VISIBLE
+        seasons.forEach { name ->
+            val chip = actionButton().apply {
+                chipCaption = name
+                tag = name
+                setOnClickListener { showSeason(name, -1); list.requestFocus() }
+                setOnKeyListener { view, code, event ->
+                    if (event.action != android.view.KeyEvent.ACTION_DOWN) false
+                    else when (code) {
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                            val next = seasonRow.getChildAt(seasonRow.indexOfChild(view) + step)
+                            next?.requestFocus()
+                            true
+                        }
+                        android.view.KeyEvent.KEYCODE_DPAD_UP -> { back().requestFocus(); true }
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> { if (actions.visibility == View.VISIBLE) actionFavorite.requestFocus() else list.requestFocus(); true }
+                        else -> false
+                    }
                 }
-                .setNegativeButton("Отмена", null).show()
+            }
+            seasonRow.addView(chip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(10) })
         }
+    }
+
+    private fun back(): View = backButton
+    private fun activeSeasonChip(): View =
+        (0 until seasonRow.childCount).map { seasonRow.getChildAt(it) }.firstOrNull { it.tag == currentSeason }
+            ?: seasonRow.getChildAt(0)
+
+    /** Shows the episodes of [season] (all of them when the series has no seasons); [select] is the episode to focus, -1 for the first unwatched one. */
+    private fun showSeason(season: String?, select: Int) {
+        currentSeason = if (seasons.isEmpty()) null else season ?: seasons.first()
+        visible = episodes.indices.filter { currentSeason == null || seasonOf(episodes[it]) == currentSeason }
+        for (i in 0 until seasonRow.childCount) {
+            val chip = seasonRow.getChildAt(i)
+            chip.background = focusShape(scale, if (chip.tag == currentSeason) 0xFF4338CA.toInt() else 0xFF1C2029.toInt(), radius = 6f)
+        }
+        adapter = object : ArrayAdapter<Int>(this, 0, visible) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup) = row(getItem(position)!!, episodes[getItem(position)!!])
+        }
+        list.adapter = adapter
+        val global = if (select in visible) select else visible.firstOrNull {
+            !EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episodes[it].title))
+        } ?: visible.firstOrNull() ?: 0
+        selectedIndex = global
+        list.setSelection(visible.indexOf(global).coerceAtLeast(0))
+        updateActions()
     }
 
     private fun voiceKey() = "voice_${variant.sourceId}_${variant.ref}"
@@ -269,21 +314,21 @@ class EpisodesActivity : Activity() {
         actionVoice.chipCaption = caption()
         actionVoice.visibility = View.VISIBLE
         actionVoice.setOnClickListener {
-            android.app.AlertDialog.Builder(this).setTitle("Озвучка")
-                .setItems(voices.map { it.second }.toTypedArray()) { _, which ->
-                    val key = voices[which].first
-                    if (key == variant.voice) return@setItems
-                    variant = variant.copy(voice = key)
-                    Settings.setString(this, voiceKey(), key)
-                    voiceSwitched = true
-                    actionVoice.chipCaption = caption()
-                    loadEpisodes?.invoke()
-                }
-                .setNegativeButton("Отмена", null).show()
+            val chosen = voices.indexOfFirst { it.first == variant.voice }.let { if (it < 0) 0 else it }
+            showChoice(this, "Озвучка", voices.map { it.second }, chosen) { which ->
+                val key = voices[which].first
+                if (key == variant.voice) return@showChoice
+                variant = variant.copy(voice = key)
+                Settings.setString(this, voiceKey(), key)
+                voiceSwitched = true
+                actionVoice.chipCaption = caption()
+                loadEpisodes?.invoke()
+            }
         }
     }
 
     private fun row(position: Int, episode: Episode): View {
+        // [position] is the index in the whole episode list (favourites remember it), not the place in the shown season
         val key = EpisodeState.key(variant.sourceId, variant.ref, episode.title)
         val watched = EpisodeState.isWatched(this, key)
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
@@ -321,7 +366,6 @@ class EpisodesActivity : Activity() {
         val episode = episodes[position]
         val watched = EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, episode.title))
         val favorite = EpisodeState.isFavorite(this, variant.sourceId, variant.ref, position, episode.title)
-        if (seasonStarts.isNotEmpty()) actionSeason.chipCaption = "Сезон: " + (seasonOf(episode) ?: seasonStarts.first().first)
         actionFavorite.chipCaption = if (favorite) "Убрать из избранного" else "Добавить в избранное"
         actionWatched.chipCaption = if (watched) "Снять отметку «просмотрено»" else "Пометить просмотренным"
     }

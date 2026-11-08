@@ -31,11 +31,9 @@ fun playEpisode(
     val episode = episodes[index]
     val wanted = Settings.string(activity, Settings.QUALITY, "best")
     if ((choose || wanted == "ask") && episode.streams.size > 1) {
-        android.app.AlertDialog.Builder(activity).setTitle("Качество • ${episode.title}")
-            .setItems(episode.streams.map { it.first }.toTypedArray()) { _, which ->
-                startPlayer(activity, variant, episodes, index, episode.streams[which].first, mediaTitle, originalTitle, year, tv, poster, tmdbId)
-            }
-            .show()
+        showChoice(activity, "Качество • ${episode.title}", episode.streams.map { it.first }, -1) { which ->
+            startPlayer(activity, variant, episodes, index, episode.streams[which].first, mediaTitle, originalTitle, year, tv, poster, tmdbId)
+        }
         return
     }
     startPlayer(activity, variant, episodes, index, null, mediaTitle, originalTitle, year, tv, poster, tmdbId)
