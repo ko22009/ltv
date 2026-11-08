@@ -57,7 +57,8 @@ public final class DpiBypass {
             {"--fake", "-1", "--ttl", "8"},
             {"--disorder", "1", "--tlsrec", "3+s"},
     };
-    private static final String[] TEST_HOSTS = {"rutor.info", "rutor.is"};
+    // the hosts the app really needs first (catalog and posters come from TMDB); rutor stays for the torrent search
+    private static final String[] TEST_HOSTS = {"api.themoviedb.org", "image.tmdb.org", "rutor.info", "rutor.is"};
     private static volatile String[] strategy = STRATEGIES[0];
     /** File where the working strategy index is kept; set by the app before start(). */
     public static volatile File strategyFile;
@@ -317,19 +318,20 @@ public final class DpiBypass {
                 return;
             }
         }
-        boolean blocked = false;
+        // only the hosts that are really blocked here judge a strategy: an open host would pass any of them
+        List<String> blockedHosts = new ArrayList<String>();
         for (String host : TEST_HOSTS) {
             if (handshake(host, null, DIRECT_TIMEOUT_MS) == V_BLOCKED) {
-                blocked = true;
+                blockedHosts.add(host);
             }
         }
-        if (!blocked) {
+        if (blockedHosts.isEmpty()) {
             log("no blocking seen, keeping the default strategy");
             return;
         }
         for (int i = 0; i < STRATEGIES.length; i++) {
             restartWith(STRATEGIES[i]);
-            for (String host : TEST_HOSTS) {
+            for (String host : blockedHosts) {
                 if (handshake(host, new InetSocketAddress(HOST, CONNECT_PORT), DPI_TIMEOUT_MS) == V_OK) {
                     log("strategy " + i + " works against " + host);
                     commonIndex = i;
@@ -899,7 +901,10 @@ public final class DpiBypass {
             return V_BLOCKED;
         } catch (SocketException e) {
             String m = String.valueOf(e.getMessage()).toLowerCase();
-            return m.contains("reset") || m.contains("closed") || m.contains("broken pipe")
+            // a refusal straight from the provider looks like this too; only the direct way is judged so
+            // (a refusing local proxy is not a block)
+            boolean refused = connectProxy == null && m.contains("refused");
+            return refused || m.contains("reset") || m.contains("closed") || m.contains("broken pipe")
                     ? V_BLOCKED : V_OTHER;
         } catch (IOException e) {
             return V_OTHER;
