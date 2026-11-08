@@ -109,7 +109,7 @@ object Sources {
                 // keeps its place, the repeats go to the end of their year group, still in the same list
                 val seen = HashSet<String>()
                 val repeat = ranked.associateWith { !seen.add(copyKey(it)) }
-                return ranked.sortedWith(compareBy({ yearRank(it, year) }, { repeat[it] == true }))
+                return ranked.sortedWith(compareBy({ yearRank(it, year, listOf(title, original)) }, { repeat[it] == true }))
             }
             // the sources are collected as they answer: onPartial gets the ranked list of what is found so far, so the card
             // does not wait for the slowest site. One that did not answer in 12 seconds is skipped (the card waits up to 30)
@@ -262,25 +262,37 @@ object Sources {
      * 0 when the variant's year is close to [year] (±1), 1 when either year is unknown, 2 when it is another year. The
      * year is the one the note starts with; a site that puts it in the title instead ("Обитель зла (2002)",
      * "…(2026,4K)") is read from there: any year of the title near the wanted one counts.
+     * The ±1 year is allowed only for a variant that carries the wanted name itself (sites date one film differently):
+     * a longer title ("Зверь войны" for "Зверь") is another film and must have the exact year. Without [names] the
+     * tolerance applies to every variant.
      */
-    fun yearRank(variant: Variant, year: String): Int {
+    fun yearRank(variant: Variant, year: String, names: List<String> = emptyList()): Int {
         val wanted = year.take(4).toIntOrNull() ?: return 1
         val fromNote = Regex("^(\\d{4})").find(variant.note)?.groupValues?.get(1)?.toIntOrNull()
         val years = if (fromNote != null) listOf(fromNote)
         else Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").findAll(variant.title + " " + variant.alt).map { it.value.toInt() }.toList()
         if (years.isEmpty()) return 1
-        return if (years.any { kotlin.math.abs(it - wanted) <= 1 }) 0 else 2
+        val tolerance = if (names.isEmpty() || hasName(variant, names)) 1 else 0
+        return if (years.any { kotlin.math.abs(it - wanted) <= tolerance }) 0 else 2
+    }
+
+    /** True when the title of the variant (or one of its parts split by "|" and "/", without brackets) is exactly one of [names]. */
+    private fun hasName(variant: Variant, names: List<String>): Boolean {
+        fun plain(s: String) = s.lowercase().replace(Regex("\\([^)]*\\)"), " ").replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        val wanted = names.map { plain(it) }.filter { it.isNotEmpty() }.toSet()
+        val parts = (listOf(variant.title) + variant.title.split('|', '/') + variant.alt.split('|', '/')).map { plain(it) }
+        return parts.any { it in wanted }
     }
 
     /**
      * What the source list of a film shows: the variants of its year and how many others (another year, or none known) are kept back
      * for "Другие годы"; when no variant fits the year, everything is shown. A series, or [all], shows everything.
      */
-    fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean): Pair<List<Variant>, Int> {
+    fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean, names: List<String> = emptyList()): Pair<List<Variant>, Int> {
         if (tv) return variants to 0
         // the expanded list holds only what the first one kept back: the film of its year is not shown twice
-        if (all) return variants.filter { yearRank(it, year) != 0 }.ifEmpty { variants } to 0
-        val fitting = variants.filter { yearRank(it, year) == 0 }
+        if (all) return variants.filter { yearRank(it, year, names) != 0 }.ifEmpty { variants } to 0
+        val fitting = variants.filter { yearRank(it, year, names) == 0 }
         if (fitting.isEmpty()) return variants to 0
         return fitting to (variants.size - fitting.size)
     }

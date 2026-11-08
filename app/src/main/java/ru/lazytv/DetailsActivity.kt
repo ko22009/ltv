@@ -450,7 +450,7 @@ class DetailsActivity : Activity() {
                     Sources.searchCached(applicationContext, name, originalTitle, title.year, title.tv, kept) { partial ->
                         variants = partial
                         // a film of the right year is enough to start: the slower sites keep searching for the list
-                        if (!title.tv && partial.any { Sources.yearRank(it, title.year) == 0 }) quickReady.countDown()
+                        if (!title.tv && partial.any { Sources.yearRank(it, title.year, listOf(name, originalTitle)) == 0 }) quickReady.countDown()
                     }
                 }.getOrDefault(emptyList())
                 android.util.Log.i("LazyTV", "card: sources ready ${System.currentTimeMillis() - cardStarted} ms, variants ${variants.size}")
@@ -769,7 +769,7 @@ class DetailsActivity : Activity() {
     private fun showSourceDialog(name: String, allYears: Boolean = false) {
         val items = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
-        val (shown, hidden) = Sources.forYear(variants, currentTitle.year, currentTitle.tv, allYears)
+        val (shown, hidden) = Sources.forYear(variants, currentTitle.year, currentTitle.tv, allYears, listOf(name, originalTitle))
 
         if (allYears) {
             items.add("‹ Назад")
@@ -838,7 +838,7 @@ class DetailsActivity : Activity() {
         }
         val first = variants.firstOrNull()
         // a film of another year only (a part or a remake of the same name): the user picks from the list instead of getting a guess
-        if (first != null && !currentTitle.tv && currentTitle.year.isNotEmpty() && Sources.yearRank(first, currentTitle.year) == 2) {
+        if (first != null && !currentTitle.tv && currentTitle.year.isNotEmpty() && Sources.yearRank(first, currentTitle.year, listOf(name, originalTitle)) == 2) {
             Toast.makeText(this, "Точной копии нет, показаны похожие", Toast.LENGTH_LONG).show()
             showSourceDialog(name)
             return
@@ -885,7 +885,7 @@ class DetailsActivity : Activity() {
      * there is no site for it, or the torrents are chosen in the settings, the torrent search starts too.
      */
     private fun warmUp(name: String, title: Title) {
-        val first = variants.firstOrNull()?.takeIf { Sources.yearRank(it, title.year) != 2 || title.tv }
+        val first = variants.firstOrNull()?.takeIf { Sources.yearRank(it, title.year, listOf(name, originalTitle)) != 2 || title.tv }
         if (first != null && !title.tv) Thread { runCatching { Sources.episodesCached(first) } }.start()
         if (variants.isEmpty() || Settings.string(this, Settings.SOURCE_MODE, "sites") == "torrents") startTorrentSearch(name)
     }

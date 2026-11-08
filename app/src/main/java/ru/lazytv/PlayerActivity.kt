@@ -524,7 +524,7 @@ class PlayerActivity : Activity() {
         val items = mutableListOf<String>()
         val actions = mutableListOf<() -> Unit>()
         val currentItem = queue.getOrNull(queueIndex)
-        val (variants, hidden) = Sources.forYear(allVariants, mediaYear, isTv, allYears)
+        val (variants, hidden) = Sources.forYear(allVariants, mediaYear, isTv, allYears, listOf(mediaTitle, originalTitle))
 
         if (allYears) {
             items.add("‹ Назад")
