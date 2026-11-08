@@ -250,6 +250,11 @@ class DetailsActivity : Activity() {
         root.addView(FrameLayout(this).apply {
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+            // the same label as on the cards: the film is in the cinemas now
+            if (!currentTitle.tv && Cinema.contains(currentTitle.id)) {
+                addView(Cinema.label(this@DetailsActivity) { dp(it.toInt()) }.apply { visibility = android.view.View.VISIBLE },
+                    FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { topMargin = dp(8); leftMargin = dp(8) })
+            }
         }, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
             leftMargin = dp(176); topMargin = dp(228)
         })

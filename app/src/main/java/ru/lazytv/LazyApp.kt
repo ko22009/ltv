@@ -21,6 +21,7 @@ class LazyApp : Application() {
             override fun onActivityDestroyed(activity: Activity) {}
         })
         RemoteConfig.init(this)
+        Cinema.init(this)
         DpiBypass.enabled = Settings.bool(this, Settings.AUTO_BYPASS)
         DpiBypass.appProxyAllowed = Settings.bool(this, Settings.APP_PROXY)
         DpiBypass.appProxyTorrentsAllowed = Settings.bool(this, Settings.APP_PROXY_TORRENTS)

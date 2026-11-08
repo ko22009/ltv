@@ -129,6 +129,9 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         visibility = View.GONE
     }
 
+    /** "В КИНО" over the top left corner of the poster of a film that is in the cinemas now (not dimmed with the poster). */
+    private val cinema = Cinema.label(context) { px(it) }
+
     /** The mark of a card chosen for deletion (edit mode of the history): an indigo veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
         setBackgroundColor(0x994F46E5.toInt())
@@ -220,6 +223,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
                 topMargin = px(10f)
                 rightMargin = px(10f)
             })
+            addView(cinema, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
+                topMargin = px(10f)
+                leftMargin = px(10f)
+            })
         }, LayoutParams(-1, px(TITLE_POSTER_HEIGHT)))
         addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
@@ -282,6 +289,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         shownId = title.id
         shown = title
         applyWatched(title)
+        cinema.visibility = if (!title.tv && Cinema.contains(title.id)) View.VISIBLE else View.GONE
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
