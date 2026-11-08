@@ -293,7 +293,7 @@ class SettingsScreen : GuidedStepSupportFragment() {
         val ctx = requireContext()
 
         section(actions, "Источники видео")
-        Sources.all.forEach { source -> check(actions, source.name, "Сайт", Settings.service(source.id)) }
+        Sources.all.forEach { source -> check(actions, source.name, if (RemoteConfig.isDown(source.id)) "Сайт сейчас не отвечает" else "Сайт", Settings.service(source.id)) }
         check(actions, "Торренты", "Раздачи для TorrServe", "source_torrents")
         check(actions, "Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
 

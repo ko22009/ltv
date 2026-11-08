@@ -93,9 +93,21 @@ object RemoteConfig {
     /** An address of a site: [id]'s base plus [path], with or without the leading slash. */
     fun url(id: String, path: String): String = base(id).trimEnd('/') + "/" + path.trimStart('/')
 
-    /** When each address last failed (memory only): a dead mirror is skipped for [DEAD_MS] instead of costing its timeout again. */
+    /**
+     * When each address last failed and how many times in a row (memory only): a dead mirror is skipped instead of costing its
+     * timeout again, for longer after each new failure (1 minute, 5, 30 minutes, then 6 hours); one answer clears the count.
+     */
     private val failedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    private const val DEAD_MS = 5 * 60 * 1000L
+    private val failures = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val pauses = longArrayOf(1, 5, 30, 360)
+    private fun pauseMs(count: Int) = pauses[(count - 1).coerceIn(0, pauses.size - 1)] * 60_000L
+
+    /** No network at all (cable out, wifi down): then a failure says nothing about the site and nothing is marked. */
+    private fun online(): Boolean {
+        val manager = app?.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return true
+        val caps = manager.getNetworkCapabilities(manager.activeNetwork ?: return false) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
 
     /**
      * Runs [block] with the address of [id] and moves to the next one when it throws (a dead domain, a refused
@@ -109,19 +121,22 @@ object RemoteConfig {
         val now = System.currentTimeMillis()
         val good = app?.getSharedPreferences("mirrors", 0)?.getString(id, null)
         val all = bases(id).sortedBy { if (it == good) 0 else 1 }
-        val fresh = all.filter { now - (failedAt[it] ?: 0L) > DEAD_MS }
+        val fresh = all.filter { now - (failedAt[it] ?: 0L) > pauseMs(failures[it] ?: 1) }
         var unreachable = 0
         for (address in fresh.ifEmpty { all }) {
             try {
                 val result = Fetched(block(address), address)
                 failedAt.remove(address)
+                failures.remove(address)
+                failures.remove("source:$id")
                 downAt.remove(id)
                 if (address != good) app?.getSharedPreferences("mirrors", 0)?.edit()?.putString(id, address)?.apply()
                 return result
             } catch (t: Throwable) {
                 // only a site that does not answer is marked: a page that is missing or does not parse says nothing about the mirror
-                if (t is java.io.IOException && t !is java.io.FileNotFoundException) {
+                if (t is java.io.IOException && t !is java.io.FileNotFoundException && online()) {
                     failedAt[address] = System.currentTimeMillis()
+                    failures[address] = (failures[address] ?: 0) + 1
                     unreachable++
                 }
                 android.util.Log.i("LazyTV", "address $address failed: $t")
@@ -129,14 +144,18 @@ object RemoteConfig {
             }
         }
         // every address was tried and none answered: the site is left alone for a while instead of being asked on every search
-        if (unreachable > 0 && unreachable == fresh.ifEmpty { all }.size) downAt[id] = System.currentTimeMillis()
+        if (unreachable > 0 && unreachable == fresh.ifEmpty { all }.size) {
+            downAt[id] = System.currentTimeMillis()
+            failures["source:$id"] = (failures["source:$id"] ?: 0) + 1
+        }
         throw last ?: IllegalStateException("Нет адреса для источника «$id»")
     }
 
     private val downAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
-    /** True when no address of [id] answered in the last [DEAD_MS]: searches skip such a site and retry after the pause. */
-    fun isDown(id: String): Boolean = System.currentTimeMillis() - (downAt[id] ?: 0L) < DEAD_MS
+    /** True when no address of [id] answered lately: searches skip such a site and try it again after a growing pause. */
+    fun isDown(id: String): Boolean =
+        System.currentTimeMillis() - (downAt[id] ?: 0L) < pauseMs(failures["source:$id"] ?: 1)
 
     fun configured(context: Context): String = Settings.string(context, Settings.REMOTE_URL, "").trim()
 

@@ -793,7 +793,9 @@ class DetailsActivity : Activity() {
             actions.add { openTorrents(name) }
         }
 
-        showChoice(this, "Выбор источника", items, -1) { which -> actions.getOrNull(which)?.invoke() }
+        val down = Sources.unavailable(this, currentTitle.tv)
+        val heading = if (down.isEmpty()) "Выбор источника" else "Выбор источника (не отвечает: " + down.joinToString(", ") + ")"
+        showChoice(this, heading, items, -1) { which -> actions.getOrNull(which)?.invoke() }
     }
 
     /** Waits for the background site search if the user clicks "Смотреть" immediately on opening the card. */

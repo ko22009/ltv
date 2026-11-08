@@ -45,6 +45,10 @@ object Sources {
     fun enabled(context: Context, tv: Boolean = false) =
         all.filter { Settings.bool(context, Settings.service(it.id)) && (if (tv) it.forSeries else it.forFilms) }
 
+    /** Names of the enabled sources that do not answer now (shown to the user, so a missing source is not a mystery). */
+    fun unavailable(context: Context, tv: Boolean = false): List<String> =
+        enabled(context, tv).filter { RemoteConfig.isDown(it.id) }.map { it.name }
+
     /** Searches every enabled source at once; a source that fails or finds nothing simply adds no tiles. */
     fun search(
         context: Context, title: String, original: String, year: String, tv: Boolean = false,
