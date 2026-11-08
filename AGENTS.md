@@ -18,7 +18,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`.
 $env:JAVA_HOME='<JDK 17>'
 & '<Android SDK>\gradle-8.7\bin\gradle.bat' -p <проект> assembleRelease
 ```
-APK: `app/build/outputs/apk/release/app-release.apk`. Эмулятор: `adb -s emulator-5554`, приставка: `<приставка>:5555`.
+APK: `app/build/outputs/apk/release/app-release.apk`. Эмулятор: `adb -s emulator-5554`, приставка <приставка>: `<приставка>:5555` (лаунчер launcher3, нужна метка `LAUNCHER`). Вторая приставка: `<приставка>:5555` (<приставка>, лаунчер <лаунчер>). Сборки ставить на обе.
 Если эмулятор не запущен, запускать его на интерактивном рабочем столе без окна консоли через WMI:
 ```powershell
 $v = "$env:TEMP\launch_tv.vbs"; [IO.File]::WriteAllText($v, 'CreateObject("WScript.Shell").Run """<Android SDK>\emulator\emulator.exe"" -avd tv -gpu host -feature -Vulkan", 0, False', [Text.Encoding]::ASCII); Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "wscript.exe `"$v`"" }

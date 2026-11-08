@@ -14,7 +14,7 @@ android {
         applicationId = "ru.lazytv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 2
+        versionCode = 3
         versionName = "0.2"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
     }
