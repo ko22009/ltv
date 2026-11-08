@@ -461,6 +461,9 @@ class MainFragment : Fragment() {
     }
 
     inner class RootLayout(context: Context) : FrameLayout(context) {
+        /** Time of the last "left" key: told apart a held or fast-tapped key from a separate press at the edge. */
+        private var lastLeftAt = 0L
+
         override fun focusSearch(focused: View?, direction: Int): View? {
             if (direction == View.FOCUS_LEFT && focused != null) {
                 val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
@@ -478,11 +481,16 @@ class MainFragment : Fragment() {
         override fun dispatchKeyEvent(event: KeyEvent): Boolean {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    // a held or fast-tapped key: the row is still scrolling and the left neighbour may not be laid out yet,
+                    // so "nothing on the left" is not the edge; only a separate press at the edge opens the menu
+                    val rapid = event.repeatCount > 0 || event.eventTime - lastLeftAt < 350L
+                    lastLeftAt = event.eventTime
                     val content = findViewById<View>(CONTENT_CONTAINER_ID) as? ViewGroup
                     val focused = findFocus()
                     if (content != null && focused != null && isDescendant(content, focused)) {
                         val next = FocusFinder.getInstance().findNextFocus(content, focused, View.FOCUS_LEFT)
                         if (next == null) {
+                            if (rapid) return true
                             val target = currentNavItem()
                             if (target != null) {
                                 target.requestFocus()
