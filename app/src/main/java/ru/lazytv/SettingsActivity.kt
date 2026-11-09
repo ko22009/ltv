@@ -24,7 +24,7 @@ import androidx.leanback.widget.GuidedActionsStylist
  * dropdowns, and the Help section uses a full-width card page so multi-line answers fit without clipping.
  */
 class SettingsActivity : FragmentActivity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,10 +35,15 @@ class SettingsActivity : FragmentActivity() {
             return
         }
         if (savedInstanceState == null) {
-            val screen = SettingsScreen().apply {
-                arguments = Bundle().apply { putString("section", section) }
+            val args = Bundle().apply { putString("section", section) }
+            if (isMobileUi()) {
+                // the two-pane Leanback screen does not fit a phone: the same rows, drawn as a touch list
+                supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, ru.lazytv.mobile.MobileSettingsScreen().apply { arguments = args })
+                    .commit()
+            } else {
+                GuidedStepSupportFragment.addAsRoot(this, SettingsScreen().apply { arguments = args }, android.R.id.content)
             }
-            GuidedStepSupportFragment.addAsRoot(this, screen, android.R.id.content)
         }
     }
 
@@ -46,7 +51,7 @@ class SettingsActivity : FragmentActivity() {
         val root = FrameLayout(this).apply { background = calmBackground() }
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(px(64), px(36), px(64), px(24))
+            if (isMobileUi()) setPadding(px(16), px(16), px(16), px(12)) else setPadding(px(64), px(36), px(64), px(24))
         }
         val back = backButton(this, scale) { finish() }
         val header = LinearLayout(this).apply {
@@ -177,7 +182,7 @@ class SettingsActivity : FragmentActivity() {
     }
 }
 
-class SettingsScreen : GuidedStepSupportFragment() {
+open class SettingsScreen : GuidedStepSupportFragment() {
     /** Sub-option rows inside dropdown choices: sub-action id → (parent row id, setting key, value). */
     private val subOptionRows = HashMap<Long, Triple<Long, String, String>>()
     private val checkRows = HashMap<Long, String>()

@@ -19,7 +19,7 @@ import android.widget.TextView
  * the system dialog. Rows are focusable for the remote; the current choice is marked and gets the focus first.
  */
 fun showChoice(activity: Activity, title: String, items: List<String>, current: Int, onPick: (Int) -> Unit) {
-    val scale = activity.resources.displayMetrics.widthPixels / 1280f
+    val scale = activity.uiScale()
     fun px(v: Int) = (v * scale).toInt()
     val dialog = Dialog(activity)
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -65,7 +65,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
     dialog.setContentView(panel)
     dialog.window?.apply {
         setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        setLayout(px(640), -2)
+        setLayout(minOf(px(640), (activity.resources.displayMetrics.widthPixels * 0.92f).toInt()), -2)
         setDimAmount(0.6f)
     }
     dialog.setOnShowListener { first?.requestFocus() }

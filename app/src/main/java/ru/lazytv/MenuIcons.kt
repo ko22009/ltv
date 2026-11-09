@@ -147,7 +147,7 @@ const val SEARCH_HEADER = "ПОИСК"
 class IconHeaderPresenter : RowHeaderPresenter() {
     override fun onCreateViewHolder(parent: ViewGroup): Presenter.ViewHolder {
         val base = super.onCreateViewHolder(parent) as ViewHolder
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         val size = (scale * 28).toInt()
         val icon = ImageView(parent.context)
         icon.scaleType = ImageView.ScaleType.FIT_CENTER

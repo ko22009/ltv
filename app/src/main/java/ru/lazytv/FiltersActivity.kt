@@ -28,7 +28,7 @@ import android.widget.TextView
  * behind this screen is drawn again when the user comes back.
  */
 class FiltersActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
     private lateinit var category: Category
@@ -49,7 +49,7 @@ class FiltersActivity : Activity() {
         // the window is translucent: the list stays behind, dimmed, and the filters lie over it as a panel
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(24))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(24))
         page.background = android.graphics.drawable.GradientDrawable().apply {
             setColor(0xFF101216.toInt())
             cornerRadius = px(12).toFloat()

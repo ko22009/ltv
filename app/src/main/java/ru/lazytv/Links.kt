@@ -28,7 +28,7 @@ object Links {
     }
 
     private fun showAddress(activity: Activity, url: String) {
-        val scale = activity.resources.displayMetrics.widthPixels / 1280f
+        val scale = activity.uiScale()
         fun px(value: Int) = (value * scale).toInt()
         // the text is laid out by hand: the stock dialog message centres itself, and the lines then start anywhere
         val box = android.widget.LinearLayout(activity).apply {

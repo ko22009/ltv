@@ -46,7 +46,7 @@ private const val SETTINGS = "НАСТРОЙКИ"
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
 
-private val SETTINGS_SECTIONS = listOf(
+val SETTINGS_SECTIONS = listOf(
     SettingsSection("Источники видео", "Сайты и торренты, кэш источников"),
     SettingsSection("Адреса сайтов", "Конфиг с адресами, свои адреса сайтов"),
     SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),
@@ -721,7 +721,7 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
 
 class SkeletonPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
-        ViewHolder(SkeletonCardView(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
+        ViewHolder(SkeletonCardView(parent.context, parent.context.uiScale() * cardScale))
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {}
 
@@ -734,7 +734,7 @@ class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     }
 
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder =
-        ViewHolder(TitleCard(parent.context, parent.resources.displayMetrics.widthPixels / 1280f * cardScale))
+        ViewHolder(TitleCard(parent.context, parent.context.uiScale() * cardScale))
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val card = holder.view as TitleCard
@@ -787,7 +787,7 @@ class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
 
 class PlainTextPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         val view = TextView(parent.context).apply {
             setTextColor(0xFFCBD5E1.toInt())
             textSize = 18f
@@ -885,7 +885,7 @@ class SettingsPageFragment : Fragment() {
 
 class SettingsSectionPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(124))
@@ -928,7 +928,7 @@ class SettingsSectionPresenter : Presenter() {
 
 class FavoriteEpisodePresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(190))
@@ -969,7 +969,7 @@ class FavoriteEpisodePresenter : Presenter() {
 
 class TorrentCardPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(180))

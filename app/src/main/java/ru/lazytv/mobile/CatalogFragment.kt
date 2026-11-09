@@ -39,7 +39,7 @@ class CatalogFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val columns = calculateColumns()
+        val columns = mobileColumns(resources)
         val layoutManager = GridLayoutManager(requireContext(), columns)
         binding.catalogRecyclerView.layoutManager = layoutManager
 

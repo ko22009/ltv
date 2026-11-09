@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import ru.lazytv.Cinema
 import ru.lazytv.Title
+import ru.lazytv.Watched
 import ru.lazytv.databinding.ItemMobileTitleCardBinding
 import ru.lazytv.showPoster
 
@@ -71,6 +72,8 @@ class MobileTitleAdapter(
 
             // Poster
             binding.cardPoster.showPoster(title.poster)
+            // a title marked watched is dimmed, as on the TV cards
+            binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
 
             // Click listener
             binding.cardRipple.setOnClickListener {

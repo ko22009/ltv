@@ -22,10 +22,11 @@ import androidx.leanback.widget.VerticalGridView
  * TMDB while the cursor nears the end, so the list keeps going as long as the catalog has titles.
  */
 class TitlesGridActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards = ArrayObjectAdapter(CardPresenter(CARD_SCALE))
+    private val cards by lazy { ArrayObjectAdapter(CardPresenter(if (isMobileUi()) MOBILE_CARD_SCALE else CARD_SCALE)) }
+    private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
     private lateinit var bridge: ItemBridgeAdapter
     private lateinit var grid: VerticalGridView
     private lateinit var loadingMore: LoadingView
@@ -48,7 +49,7 @@ class TitlesGridActivity : Activity() {
         root.background = calmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(16))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(8)) else page.setPadding(px(64), px(36), px(64), px(16))
         // the focused card grows past the page padding at the sides: the page must not cut it there
         page.clipToPadding = false
         // the way back for a remote with no Back key or a mouse, same round button as on the title card
@@ -56,7 +57,7 @@ class TitlesGridActivity : Activity() {
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
-        header.addView(label(more.title, 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
+        header.addView(label(more.title, if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
         page.addView(header)
         message = label("", 16f, 0xFFCBD5E1.toInt()).apply {
             visibility = View.GONE
@@ -82,16 +83,16 @@ class TitlesGridActivity : Activity() {
                 }
             }
         })
-        grid = titleCardGrid(this, scale, bridge, COLUMNS)
+        grid = titleCardGrid(this, scale, bridge, columns)
         back.nextFocusDownId = grid.id
         grid.setOnKeyInterceptListener { event ->
             val up = event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
-            if (up && grid.selectedPosition < COLUMNS) { back.requestFocus(); true } else false
+            if (up && grid.selectedPosition < columns) { back.requestFocus(); true } else false
         }
         grid.setOnChildViewHolderSelectedListener(object : androidx.leanback.widget.OnChildViewHolderSelectedListener() {
             override fun onChildViewHolderSelected(parent: androidx.recyclerview.widget.RecyclerView, child: androidx.recyclerview.widget.RecyclerView.ViewHolder?, position: Int, subposition: Int) {
                 // two rows before the end: the next page is asked for
-                if (position >= cards.size() - COLUMNS * 2) loadNext()
+                if (position >= cards.size() - columns * 2) loadNext()
             }
         })
         loadingMore = LoadingView(this, scale, "Загружаем…")
@@ -160,6 +161,8 @@ class TitlesGridActivity : Activity() {
 
     private companion object {
         const val COLUMNS = 5
+        const val MOBILE_COLUMNS = 3
+        const val MOBILE_CARD_SCALE = 0.72f
         /** The cards are a bit smaller than in a row so five of them fit the width. */
         const val CARD_SCALE = 0.82f
     }

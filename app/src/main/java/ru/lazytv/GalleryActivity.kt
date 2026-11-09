@@ -24,7 +24,7 @@ import com.bumptech.glide.request.target.Target
  * Left/right arrows navigate between covers; Up or Back goes to the Back button.
  */
 class GalleryActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun dp(value: Int) = (value * scale).toInt()
 
     private val backdrops = mutableListOf<String>()

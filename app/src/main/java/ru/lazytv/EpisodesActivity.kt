@@ -19,7 +19,7 @@ import android.widget.TextView
 
 /** Playable items (episodes) of a variant found on a video site; picking one starts the player. */
 class EpisodesActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
     private lateinit var variant: Variant
@@ -77,12 +77,12 @@ class EpisodesActivity : Activity() {
         root.background = calmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(40), px(64), px(20))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(40), px(64), px(20))
         val back = backButton(this, scale) { finish() }
         backButton = back
         val titles = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(label(variant.title, 32f, Color.WHITE).apply {
+            addView(label(variant.title, if (isMobileUi()) 22f else 32f, Color.WHITE).apply {
                 typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
                 maxLines = 2
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -102,7 +102,7 @@ class EpisodesActivity : Activity() {
             addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         }
         page.addView(header)
-        page.addView(label("Удерживайте OK, чтобы отметить серию просмотренной или снять отметку", 14f, 0xFF94A3B8.toInt()).apply {
+        page.addView(label((if (isMobileUi()) "Удерживайте серию, чтобы отметить её просмотренной или снять отметку" else "Удерживайте OK, чтобы отметить серию просмотренной или снять отметку"), 14f, 0xFF94A3B8.toInt()).apply {
             setPadding(0, px(12), 0, px(12))
         })
         val status = label("", 15f, 0xFFCBD5E1.toInt())

@@ -15,11 +15,6 @@
         android:label="Поиск" />
 
     <fragment
-        android:id="@+id/nav_torrents"
-        android:name="ru.lazytv.mobile.TorrentsFragment"
-        android:label="Торренты" />
-
-    <fragment
         android:id="@+id/nav_favorites"
         android:name="ru.lazytv.mobile.FavoritesFragment"
         android:label="Закладки" />

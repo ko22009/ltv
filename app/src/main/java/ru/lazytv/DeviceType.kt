@@ -22,3 +22,15 @@ object DeviceType {
         return false
     }
 }
+
+/** True on a phone or tablet: screens use the touch layout instead of the remote-control one. */
+fun Context.isMobileUi(): Boolean = !DeviceType.isTv(this)
+
+/**
+ * Size of one layout unit in pixels. TV screens are drawn for a 1280-unit width; on a phone the virtual width is 480
+ * units of the short side, so texts and touch targets stay readable and the layout is the same in any rotation.
+ */
+fun Context.uiScale(): Float {
+    val m = resources.displayMetrics
+    return if (isMobileUi()) minOf(m.widthPixels, m.heightPixels) / 480f else m.widthPixels / 1280f
+}

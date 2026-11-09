@@ -31,9 +31,13 @@ import com.bumptech.glide.request.target.Target
  */
 class DetailsActivity : Activity() {
     /** The layout is drawn for a 1280-wide screen and scaled to the real width, so it looks the same on any TV. */
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
 
     private fun dp(value: Int) = (value * scale).toInt()
+
+    /** Phone layout (portrait, touch): a value for the TV screen and a value for the phone. */
+    private val mobile by lazy { isMobileUi() }
+    private fun m(tv: Int, phone: Int) = if (mobile) phone else tv
 
     private fun text(value: String, size: Float, color: Int = Color.WHITE, bold: Boolean = false) =
         TextView(this).apply {
@@ -105,7 +109,7 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-        root.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
+        root.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 210))))
 
         val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
         if (!passedBackdrop.isNullOrEmpty()) {
@@ -132,13 +136,13 @@ class DetailsActivity : Activity() {
             setOnClickListener { finish() }
         }
         root.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
-            topMargin = dp(32); leftMargin = dp(64)
+            topMargin = dp(m(32, 12)); leftMargin = dp(m(64, 12))
         })
 
         val bar = LinearLayout(this)
         bar.setBackgroundColor(0xFF161920.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setPadding(dp(389), 0, dp(24), 0)
+        bar.setPadding(dp(m(389, 140)), 0, dp(24), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
             id = View.generateViewId()
@@ -240,12 +244,21 @@ class DetailsActivity : Activity() {
                 } else false
             }
         }
-        root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
-
-        val ltvLogo = Logo.create(this, textSizeSp = 22f)
-        root.addView(ltvLogo, FrameLayout.LayoutParams(dp(80), dp(72), Gravity.START or Gravity.TOP).apply {
-            leftMargin = dp(64); topMargin = dp(360)
-        })
+        if (mobile) {
+            // the buttons do not fit one line on a phone: the bar scrolls sideways
+            val barScroll = android.widget.HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false
+                setBackgroundColor(0xFF161920.toInt())
+                addView(bar, FrameLayout.LayoutParams(-2, -1))
+            }
+            root.addView(barScroll, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
+        } else {
+            root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
+            val ltvLogo = Logo.create(this, textSizeSp = 22f)
+            root.addView(ltvLogo, FrameLayout.LayoutParams(dp(80), dp(72), Gravity.START or Gravity.TOP).apply {
+                leftMargin = dp(64); topMargin = dp(360)
+            })
+        }
 
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -261,8 +274,8 @@ class DetailsActivity : Activity() {
                 addView(Cinema.label(this@DetailsActivity) { dp(it.toInt()) }.apply { text = mark; visibility = android.view.View.VISIBLE },
                     FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { topMargin = dp(8); leftMargin = dp(8) })
             }
-        }, FrameLayout.LayoutParams(dp(170), dp(256)).apply {
-            leftMargin = dp(176); topMargin = dp(228)
+        }, FrameLayout.LayoutParams(dp(m(170, 108)), dp(m(256, 162))).apply {
+            leftMargin = dp(m(176, 16)); topMargin = dp(m(228, 150))
         })
 
         val scroll = ScrollView(this).apply {
@@ -272,13 +285,25 @@ class DetailsActivity : Activity() {
 
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
-        info.addView(text(name, 34f))
+        // on a phone the poster stands to the left of the title: the title block keeps a minimum height of the poster's overhang
         val original = text("", 16f, 0xFF94A3B8.toInt())
+        if (mobile) {
+            val head = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                minimumHeight = dp(60)
+                setPadding(dp(108), dp(8), 0, 0)
+                addView(text(name, 24f, bold = true))
+                addView(original)
+            }
+            info.addView(head)
+        } else {
+            info.addView(text(name, 34f))
+        }
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
         fillTable(table, baseRows, pageScroll = scroll)
-        info.addView(original)
+        if (!mobile) info.addView(original)
         info.addView(table)
 
         val rawOverview = intent.getStringExtra("overview").orEmpty()
@@ -340,11 +365,11 @@ class DetailsActivity : Activity() {
         scroll.addView(info)
         loadDetails(title, name, baseRows, original, table, scroll)
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
-            topMargin = dp(444); leftMargin = dp(389); rightMargin = dp(64)
+            topMargin = dp(m(444, 266)); leftMargin = dp(m(389, 16)); rightMargin = dp(m(64, 16))
         })
 
         setContentView(root)
-        watchButton.requestFocus()
+        if (!mobile) watchButton.requestFocus()
     }
 
     private var bannerSpinnerTask: Runnable? = null
@@ -480,7 +505,7 @@ class DetailsActivity : Activity() {
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
-            row.addView(text(caption, 17f, 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(160), -2))
+            row.addView(text(caption, m(17, 15).toFloat(), 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(m(160, 120)), -2))
             if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
                 val linksRow = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL

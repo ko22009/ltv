@@ -59,7 +59,7 @@ data class MoreTile(val title: String, val category: String = "", val sort: Stri
 /** The tile has the size of a title card, so the row keeps its height; focused, it is painted like the active left-menu item. */
 class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f * cardScale
+        val scale = parent.context.uiScale() * cardScale
         fun px(v: Float) = (v * scale).toInt()
         val context = parent.context
         val tile = LinearLayout(context)

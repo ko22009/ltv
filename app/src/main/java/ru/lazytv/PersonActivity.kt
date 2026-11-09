@@ -28,10 +28,11 @@ import com.bumptech.glide.request.target.Target
  * and biography, then the films and series the person is known for in the same card grid as the catalog.
  */
 class PersonActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards = ArrayObjectAdapter(CardPresenter(CARD_SCALE))
+    private val cards by lazy { ArrayObjectAdapter(CardPresenter(if (isMobileUi()) MOBILE_CARD_SCALE else CARD_SCALE)) }
+    private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
     private lateinit var bridge: ItemBridgeAdapter
     /** The "read more" button of a long biography; null when the text fits. */
     private var readMore: View? = null
@@ -49,14 +50,14 @@ class PersonActivity : Activity() {
         root.background = calmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(16))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(8)) else page.setPadding(px(64), px(36), px(64), px(16))
         // the focused card grows past the page padding at the sides: the page must not cut it there
         page.clipToPadding = false
 
         // the way back for a remote with no Back key or a mouse, same round button as on the other pages
         val back = backButton(this, scale) { finish() }
         val fallbackName = intent.getStringExtra("name").orEmpty()
-        val title = label(fallbackName, 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
+        val title = label(fallbackName, if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
         header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
@@ -93,14 +94,14 @@ class PersonActivity : Activity() {
                         return@onSuccess
                     }
                     page.addView(label("ФИЛЬМОГРАФИЯ", 18f).apply { setPadding(0, px(14), 0, 0) })
-                    val grid = titleCardGrid(this, scale, bridge, COLUMNS)
+                    val grid = titleCardGrid(this, scale, bridge, columns)
                     page.addView(grid, titleGridParams(scale))
                     cards.addAll(0, person.credits.map { it.title })
                     back.nextFocusDownId = (readMore ?: grid).id
                     grid.setOnKeyInterceptListener { e ->
                         val up = e.action == android.view.KeyEvent.ACTION_DOWN && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                         // only from the first row of the grid: the upper rows are reached by the grid itself
-                        if (up && grid.selectedPosition < COLUMNS) { reach.requestFocus(); true } else false
+                        if (up && grid.selectedPosition < columns) { reach.requestFocus(); true } else false
                     }
                     readMore?.let { button ->
                         button.nextFocusUpId = back.id
@@ -195,6 +196,8 @@ class PersonActivity : Activity() {
 
     private companion object {
         const val COLUMNS = 5
+        const val MOBILE_COLUMNS = 3
+        const val MOBILE_CARD_SCALE = 0.72f
         /** The cards are a bit smaller than in a row so five of them fit the width. */
         const val CARD_SCALE = 0.82f
     }

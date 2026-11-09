@@ -12,7 +12,12 @@ class LazyApp : Application() {
         super.onCreate()
         // the screen behind the cursor is remembered to come back to it after an update (docs/workflow.md)
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                // phone screens are drawn for portrait; only the player turns sideways (it sets its own orientation)
+                if (activity !is PlayerActivity && activity.isMobileUi()) {
+                    activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                }
+            }
             override fun onActivityStarted(activity: Activity) {}
             override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity) }
             override fun onActivityPaused(activity: Activity) {}

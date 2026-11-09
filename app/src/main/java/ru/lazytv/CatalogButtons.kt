@@ -23,7 +23,8 @@ fun backButton(context: Context, scale: Float, normalColor: Int = 0x66000000, on
         setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
         setPadding(pad, pad, pad, pad)
         background = focusShape(scale, normalColor, circle = true)
-        isFocusable = true
+        // a touch screen has no cursor: the indigo focus plate would stay on the button after the first tap
+        isFocusable = !context.isMobileUi()
         isClickable = true
         id = View.generateViewId()
         contentDescription = "Назад"
@@ -56,8 +57,8 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
     fun px(v: Int) = (v * scale).toInt()
     return LinearLayout(context).apply {
         gravity = Gravity.CENTER
-        isFocusable = true
-        isFocusableInTouchMode = true
+        isFocusable = !context.isMobileUi()
+        isFocusableInTouchMode = !context.isMobileUi()
         isClickable = true
         background = focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
@@ -91,7 +92,7 @@ fun View.setChipIcon(icon: String) = findViewWithTag<ImageView>("icon")?.setChip
 /** The chip above the rows, made by [chipButton]. */
 class CatalogButtonPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
-        val scale = parent.resources.displayMetrics.widthPixels / 1280f
+        val scale = parent.context.uiScale()
         val chip = chipButton(parent.context, scale, "")
         chip.layoutParams = ViewGroup.MarginLayoutParams(-2, (CHIP_HEIGHT * scale).toInt()).apply {
             rightMargin = (16 * scale).toInt()

@@ -37,7 +37,7 @@ private const val FAVORITES = "★"
  * dialog and then starts playback.
  */
 class TorrentsActivity : Activity() {
-    private val scale get() = resources.displayMetrics.widthPixels / 1280f
+    private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
     private val ui = Handler(Looper.getMainLooper())
 
@@ -82,7 +82,7 @@ class TorrentsActivity : Activity() {
         root.background = calmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        page.setPadding(px(64), px(36), px(64), px(20))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(20))
 
         // the query can be changed: typed or spoken, the same bar as on the search screen, with Back to its left
         back = backButton(this, scale) { finish() }
@@ -133,7 +133,13 @@ class TorrentsActivity : Activity() {
         page.addView(chipsScroll, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(14) })
         options = LinearLayout(this)
         options.orientation = LinearLayout.HORIZONTAL
-        page.addView(options, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(8) })
+        if (isMobileUi()) {
+            // the option buttons are wider than a phone: one row, scrolled sideways
+            page.addView(android.widget.HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false
+                addView(options, FrameLayout.LayoutParams(-2, -1))
+            }, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(8) })
+        } else page.addView(options, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(8) })
 
         list = ListView(this)
         list.divider = null
@@ -160,7 +166,7 @@ class TorrentsActivity : Activity() {
         page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(10) })
         // opened from a title card: its poster stands to the left of the list
         val poster = intent.getStringExtra("poster")
-        if (poster == null) root.addView(page, FrameLayout.LayoutParams(-1, -1))
+        if (poster == null || isMobileUi()) root.addView(page, FrameLayout.LayoutParams(-1, -1))
         else {
             val image = ImageView(this)
             image.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -378,14 +384,14 @@ class TorrentsActivity : Activity() {
 
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
-        card.setPadding(px(20), px(10), px(20), px(10))
+        if (isMobileUi()) card.setPadding(px(12), px(10), px(12), px(10)) else card.setPadding(px(20), px(10), px(20), px(10))
         card.background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x33000000); cornerRadius = px(3).toFloat() })
         }
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
-        texts.addView(label(main, 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
+        texts.addView(label(main, if (isMobileUi()) 16f else 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
         texts.addView(label(rest, 14f, 0xFFCBD5E1.toInt()).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
         texts.addView(label(torrent.source, 13f, 0xFF94A3B8.toInt()))
         card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
@@ -396,7 +402,7 @@ class TorrentsActivity : Activity() {
         numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
         numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFA5B4FC.toInt()))
         numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFEF9A9A.toInt()))
-        card.addView(numbers, LinearLayout.LayoutParams(px(110), -2))
+        card.addView(numbers, LinearLayout.LayoutParams(px(if (isMobileUi()) 80 else 110), -2))
 
         // the star right of the seeds: gold when the torrent is in the favorites; "right" on the row or a long press toggles it
         val marked = FavoriteTorrents.has(this, torrent)
@@ -405,6 +411,8 @@ class TorrentsActivity : Activity() {
             setColorFilter(if (marked) 0xFFE0B94F.toInt() else 0x66FFFFFF, android.graphics.PorterDuff.Mode.SRC_IN)
         })
         card.addView(star, LinearLayout.LayoutParams(px(30), px(30)).apply { leftMargin = px(16) })
+        // on a touch screen the star is a button of its own (there is no "right" key)
+        if (isMobileUi()) star.setOnClickListener { toggleFavorite(shown.indexOf(torrent)) }
 
         // ListView marks the focused row as selected: forward that to the card background
         val holder = object : FrameLayout(this) {
@@ -600,7 +608,7 @@ class TorrentsActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(18), px(24), px(18))
             background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = px(4).toFloat() }
-            minimumWidth = px(620)
+            if (!isMobileUi()) minimumWidth = px(620)
             addView(title)
             addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFFA5B4FC.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
             addView(file)

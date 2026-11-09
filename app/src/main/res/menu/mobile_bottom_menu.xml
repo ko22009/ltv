@@ -9,10 +9,6 @@
         android:icon="@drawable/ic_nav_search"
         android:title="Поиск" />
     <item
-        android:id="@+id/nav_torrents"
-        android:icon="@drawable/ic_nav_torrents"
-        android:title="Торренты" />
-    <item
         android:id="@+id/nav_favorites"
         android:icon="@drawable/ic_nav_favorites"
         android:title="Закладки" />
