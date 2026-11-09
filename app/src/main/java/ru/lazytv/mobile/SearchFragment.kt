@@ -53,6 +53,7 @@ class SearchFragment : Fragment() {
             }
         }
         binding.searchInput.visibility = View.VISIBLE
+        setupMicrophone()
         binding.chipGroup.isSingleSelection = false
         binding.chipGroup.isSelectionRequired = false
         binding.searchInput.setOnEditorActionListener { _, action, _ ->
@@ -67,6 +68,39 @@ class SearchFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
         })
         showIdle()
+    }
+
+    /** The system speech dialog fills the field and runs the search; it needs no microphone permission of the app. */
+    private val speech = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
+        val phrase = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (_binding != null && !phrase.isNullOrBlank()) {
+            binding.searchInput.setText(phrase)
+            binding.searchInput.setSelection(phrase.length)
+            search(phrase)
+        }
+    }
+
+    /** The microphone at the right end of the field, the same icon as on the TV search bar. */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun setupMicrophone() {
+        val input = binding.searchInput
+        val size = (24 * resources.displayMetrics.density).toInt()
+        val mic = ru.lazytv.PathDrawable(ru.lazytv.MenuIcons.MIC).apply {
+            setBounds(0, 0, size, size)
+            setColorFilter(0xFF94A3B8.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+        }
+        input.setCompoundDrawablesRelative(input.compoundDrawablesRelative[0], null, mic, null)
+        input.setOnTouchListener { v, event ->
+            val inMic = event.x > v.width - v.paddingRight - size - v.paddingRight
+            if (event.action == android.view.MotionEvent.ACTION_UP && inMic) {
+                val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "ru-RU")
+                runCatching { speech.launch(intent) }
+                    .onFailure { android.widget.Toast.makeText(requireContext(), "Голосовой ввод недоступен на этом устройстве", android.widget.Toast.LENGTH_SHORT).show() }
+                true
+            } else false
+        }
     }
 
     private fun saved(): List<String> {
