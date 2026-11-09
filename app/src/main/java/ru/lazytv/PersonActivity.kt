@@ -31,7 +31,7 @@ class PersonActivity : Activity() {
     private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards by lazy { ArrayObjectAdapter(CardPresenter(if (isMobileUi()) MOBILE_CARD_SCALE else CARD_SCALE)) }
+    private val cards by lazy { ArrayObjectAdapter(CardPresenter(CARD_SCALE)) }
     private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
     private lateinit var bridge: ItemBridgeAdapter
     /** The "read more" button of a long biography; null when the text fits. */
@@ -94,6 +94,19 @@ class PersonActivity : Activity() {
                         return@onSuccess
                     }
                     page.addView(label("ФИЛЬМОГРАФИЯ", 18f).apply { setPadding(0, px(14), 0, 0) })
+                    if (isMobileUi()) {
+                        // the same cards as the films page of the phone (rating on the poster), not the TV cards
+                        val list = androidx.recyclerview.widget.RecyclerView(this).apply {
+                            layoutManager = androidx.recyclerview.widget.GridLayoutManager(this@PersonActivity, columns)
+                            clipToPadding = false
+                            setPadding(0, px(6), 0, px(16))
+                            adapter = ru.lazytv.mobile.MobileTitleAdapter { title ->
+                                startActivity(Intent(this@PersonActivity, DetailsActivity::class.java).putExtras(title.toExtras()))
+                            }.also { it.setItems(person.credits.map { c -> c.title }) }
+                        }
+                        page.addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
+                        return@onSuccess
+                    }
                     val grid = titleCardGrid(this, scale, bridge, columns)
                     page.addView(grid, titleGridParams(scale))
                     cards.addAll(0, person.credits.map { it.title })
@@ -197,7 +210,6 @@ class PersonActivity : Activity() {
     private companion object {
         const val COLUMNS = 5
         const val MOBILE_COLUMNS = 3
-        const val MOBILE_CARD_SCALE = 0.72f
         /** The cards are a bit smaller than in a row so five of them fit the width. */
         const val CARD_SCALE = 0.82f
     }

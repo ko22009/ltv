@@ -21,6 +21,9 @@ const val TITLE_POSTER_HEIGHT = 300f
 const val TITLE_INFO_HEIGHT = 86f
 const val CARD_SCALE = 0.82f
 
+/** Card scale for a phone grid of [columns] columns: the card (240 units wide) fills its cell of the 480-unit screen, so nothing is clipped at the right. */
+fun mobileCardScale(columns: Int) = ((480f - 32f) / columns - 6f) / 240f
+
 /** Stand-in for a card of a row that is still loading: it keeps the row's height, so nothing jumps when the real cards come. */
 object SkeletonCard
 

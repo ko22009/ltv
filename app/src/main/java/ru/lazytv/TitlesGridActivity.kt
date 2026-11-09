@@ -25,7 +25,7 @@ class TitlesGridActivity : Activity() {
     private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards by lazy { ArrayObjectAdapter(CardPresenter(if (isMobileUi()) MOBILE_CARD_SCALE else CARD_SCALE)) }
+    private val cards by lazy { ArrayObjectAdapter(CardPresenter(CARD_SCALE)) }
     private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
     private lateinit var bridge: ItemBridgeAdapter
     private lateinit var grid: VerticalGridView
@@ -162,7 +162,6 @@ class TitlesGridActivity : Activity() {
     private companion object {
         const val COLUMNS = 5
         const val MOBILE_COLUMNS = 3
-        const val MOBILE_CARD_SCALE = 0.72f
         /** The cards are a bit smaller than in a row so five of them fit the width. */
         const val CARD_SCALE = 0.82f
     }
