@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mobile_nav_graph"
+    app:startDestination="@id/nav_catalog">
+
+    <fragment
+        android:id="@+id/nav_catalog"
+        android:name="ru.lazytv.mobile.CatalogFragment"
+        android:label="Каталог" />
+
+    <fragment
+        android:id="@+id/nav_search"
+        android:name="ru.lazytv.mobile.SearchFragment"
+        android:label="Поиск" />
+
+    <fragment
+        android:id="@+id/nav_torrents"
+        android:name="ru.lazytv.mobile.TorrentsFragment"
+        android:label="Торренты" />
+
+    <fragment
+        android:id="@+id/nav_favorites"
+        android:name="ru.lazytv.mobile.FavoritesFragment"
+        android:label="Закладки" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="ru.lazytv.mobile.SettingsFragment"
+        android:label="Настройки" />
+</navigation>

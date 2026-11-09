@@ -17,4 +17,14 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">true</item>
     </style>
+    <style name="Theme.LazyMobile" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">#101216</item>
+        <item name="colorPrimary">#4338CA</item>
+        <item name="colorSecondary">#818CF8</item>
+        <item name="colorSurface">#161920</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="android:statusBarColor">#101216</item>
+        <item name="android:navigationBarColor">#161920</item>
+    </style>
 </resources>

@@ -19,6 +19,14 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!DeviceType.isTv(this)) {
+            startActivity(Intent(this, ru.lazytv.mobile.MobileMainActivity::class.java).apply {
+                intent?.extras?.let { putExtras(it) }
+                addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
+            })
+            finish()
+            return
+        }
         if (savedInstanceState == null) {
             // the install script passes this after an update: come back to the screen the user was on (docs/workflow.md)
             val restore = intent?.getBooleanExtra(RESTORE, false) == true
