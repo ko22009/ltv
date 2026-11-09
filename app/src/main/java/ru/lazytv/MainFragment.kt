@@ -396,16 +396,20 @@ class MainFragment : Fragment() {
             val railFocus = navItems.firstOrNull { it.isFocused }
             val isCur = name == (railFocus?.name ?: currentPage)
             val focused = isFocused
-            val bg = when {
-                focused -> FOCUS_FILL
-                isCur -> FOCUS_FILL
-                else -> Color.TRANSPARENT
+            background = when {
+                focused -> plate(FOCUS_FILL, cell)
+                isCur -> GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = cell / 4f
+                    val strokePx = maxOf(2, (2f * resources.displayMetrics.density).toInt())
+                    setStroke(strokePx, FOCUS_FILL)
+                }
+                else -> null
             }
             val iconColor = when {
                 focused || isCur -> Color.WHITE
                 else -> 0xFF94A3B8.toInt()
             }
-            background = if (bg == Color.TRANSPARENT) null else plate(bg, cell)
             iconView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
         }
 
