@@ -1,6 +1,7 @@
 <resources>
     <style name="Theme.LazyTV" parent="@style/Theme.Leanback">
         <item name="android:windowBackground">#101216</item>
+        <item name="android:windowSplashScreenBackground">#101216</item>
         <!-- the pages start near the top edge: Leanback leaves 167dp there for its title bar, which is not used -->
         <item name="browseRowsMarginTop">28dp</item>
     </style>
@@ -19,6 +20,10 @@
     </style>
     <style name="Theme.LazyMobile" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowBackground">#101216</item>
+        <item name="android:windowSplashScreenBackground">#101216</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="colorPrimary">#4338CA</item>
         <item name="colorSecondary">#818CF8</item>
         <item name="colorSurface">#161920</item>
