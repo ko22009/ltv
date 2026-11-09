@@ -291,7 +291,7 @@ class DetailsActivity : Activity() {
             val head = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 minimumHeight = dp(60)
-                setPadding(dp(108), dp(8), 0, 0)
+                setPadding(dp(120), dp(8), 0, 0)
                 addView(text(name, 24f, bold = true))
                 addView(original)
             }
