@@ -41,7 +41,7 @@ class MobileMainActivity : AppCompatActivity() {
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.nav_catalog, R.id.nav_search,
+                R.id.nav_movies, R.id.nav_serials, R.id.nav_search,
                 R.id.nav_favorites,
                 R.id.nav_settings -> binding.mobileBottomNav.visibility = View.VISIBLE
                 else -> binding.mobileBottomNav.visibility = View.GONE

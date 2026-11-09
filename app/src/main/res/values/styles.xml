@@ -46,7 +46,6 @@
     <!-- bottom menu of the phone: dark plate, the active section is a plate with the indigo outline (no fill) -->
     <style name="Widget.LazyMobile.BottomNav" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">#161920</item>
-        <item name="itemBackground">@drawable/bg_mobile_nav_item</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.LazyMobile.BottomNav.Indicator</item>
         <item name="itemIconTint">@color/mobile_nav_item_colors</item>
         <item name="itemTextColor">@color/mobile_nav_item_colors</item>

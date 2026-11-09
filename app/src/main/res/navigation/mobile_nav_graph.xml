@@ -2,12 +2,28 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/mobile_nav_graph"
-    app:startDestination="@id/nav_catalog">
+    app:startDestination="@id/nav_movies">
+
+    <!-- films and series are one list screen with another category -->
+    <fragment
+        android:id="@+id/nav_movies"
+        android:name="ru.lazytv.mobile.CatalogFragment"
+        android:label="Фильмы">
+        <argument
+            android:name="category"
+            android:defaultValue="movies"
+            app:argType="string" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_catalog"
+        android:id="@+id/nav_serials"
         android:name="ru.lazytv.mobile.CatalogFragment"
-        android:label="Каталог" />
+        android:label="Сериалы">
+        <argument
+            android:name="category"
+            android:defaultValue="serials"
+            app:argType="string" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_search"

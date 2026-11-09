@@ -10,149 +10,145 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ru.lazytv.Category
+import ru.lazytv.CatalogFilter
+import ru.lazytv.CatalogSort
 import ru.lazytv.DetailsActivity
-import ru.lazytv.R
-import ru.lazytv.Title
+import ru.lazytv.Errors
+import ru.lazytv.FiltersActivity
+import ru.lazytv.MoreTile
 import ru.lazytv.Tmdb
 import ru.lazytv.databinding.FragmentMobileCatalogBinding
+import ru.lazytv.showChoice
 import ru.lazytv.toExtras
 
+/** Films or series ("category" argument): the filter and sort buttons on top, the cards in a vertical grid, more pages while scrolling. */
 class CatalogFragment : Fragment() {
     private var _binding: FragmentMobileCatalogBinding? = null
     private val binding get() = _binding!!
 
     private lateinit var adapter: MobileTitleAdapter
-    private var currentPage = 1
-    private var isLoading = false
-    private var currentMode = MODE_MOVIES
+    private val category get() = Tmdb.categories.first { it.id == requireArguments().getString("category", "movies") }
+    private var nextPage = 1
+    private var busy = false
+    private var finished = false
+    private var loadJob: Job? = null
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View {
+    /** The filter and the sort the list was built with: compared on return to know when it must be asked again. */
+    private var signature = ""
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMobileCatalogBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val columns = mobileColumns(resources)
-        val layoutManager = GridLayoutManager(requireContext(), columns)
+        val layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.catalogRecyclerView.layoutManager = layoutManager
-
         adapter = MobileTitleAdapter { title ->
             startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
         binding.catalogRecyclerView.adapter = adapter
-
-        // Pagination
         binding.catalogRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                if (dy <= 0 || isLoading) return
-                val totalItemCount = layoutManager.itemCount
-                val lastVisibleItem = layoutManager.findLastVisibleItemPosition()
-                if (lastVisibleItem + 6 >= totalItemCount) {
-                    loadNextPage()
-                }
+                if (dy > 0 && layoutManager.findLastVisibleItemPosition() + 6 >= layoutManager.itemCount) loadNext()
             }
         })
 
-        // Swipe to refresh
         binding.swipeRefresh.setColorSchemeColors(0xFF818CF8.toInt())
         binding.swipeRefresh.setProgressBackgroundColorSchemeColor(0xFF1E222A.toInt())
-        binding.swipeRefresh.setOnRefreshListener {
-            loadFirstPage()
-        }
+        binding.swipeRefresh.setOnRefreshListener { startOver() }
 
-        // Chip selection
-        binding.catalogChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            val newMode = when {
-                checkedIds.contains(R.id.chipSerials) -> MODE_SERIALS
-                checkedIds.contains(R.id.chipCinema) -> MODE_CINEMA
-                else -> MODE_MOVIES
-            }
-            if (newMode != currentMode) {
-                currentMode = newMode
-                loadFirstPage()
-            }
+        binding.filterButton.setOnClickListener {
+            startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", category.id))
         }
-
-        loadFirstPage()
+        binding.sortButton.setOnClickListener { chooseSort() }
+        binding.resetButton.setOnClickListener {
+            CatalogFilter.save(requireContext(), category.id, CatalogFilter())
+            startOver()
+        }
+        startOver()
     }
 
-    private fun calculateColumns(): Int {
-        val displayMetrics = resources.displayMetrics
-        val widthDp = displayMetrics.widthPixels / displayMetrics.density
-        return when {
-            widthDp >= 800 -> 5
-            widthDp >= 600 -> 4
-            else -> 3
-        }
+    /** The captions of the buttons and the line with what is chosen. */
+    private fun renderButtons() {
+        val ctx = requireContext()
+        val filter = CatalogFilter.load(ctx, category.id)
+        binding.filterButton.text = if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"
+        binding.sortButton.text = CatalogFilter.sort(ctx, category.id).label
+        binding.resetButton.visibility = if (filter.count > 0) View.VISIBLE else View.GONE
+        val chosen = filter.describe(category)
+        binding.filtersLine.text = chosen
+        binding.filtersLine.visibility = if (chosen.isEmpty()) View.GONE else View.VISIBLE
     }
 
-    private fun loadFirstPage() {
-        currentPage = 1
-        isLoading = true
-        binding.loadingIndicator.visibility = if (adapter.itemCount == 0) View.VISIBLE else View.GONE
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val list = fetchTitles(currentPage)
-            adapter.setItems(list)
-            isLoading = false
-            _binding?.loadingIndicator?.visibility = View.GONE
-            _binding?.swipeRefresh?.isRefreshing = false
+    private fun chooseSort() {
+        val ctx = requireContext()
+        val all = CatalogSort.values()
+        showChoice(requireActivity(), "Сортировка", all.map { it.label }, all.indexOf(CatalogFilter.sort(ctx, category.id))) { which ->
+            CatalogFilter.saveSort(ctx, category.id, all[which])
+            startOver()
         }
     }
 
-    private fun loadNextPage() {
-        isLoading = true
-        val nextPage = currentPage + 1
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val more = fetchTitles(nextPage)
-            if (more.isNotEmpty()) {
-                currentPage = nextPage
-                adapter.addItems(more)
-            }
-            isLoading = false
-        }
+    /** The filters or the sort were changed on their own screen: the list is built from the first page again. */
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null && signature != CatalogFilter.signature(requireContext(), category.id)) startOver()
     }
 
-    private suspend fun fetchTitles(page: Int): List<Title> = withContext(Dispatchers.IO) {
-        val ctx = context ?: return@withContext emptyList<Title>()
-        try {
-            when (currentMode) {
-                MODE_MOVIES -> {
-                    val cat = Tmdb.categories.firstOrNull { it.id == "movies" }
-                        ?: Category("movies", "Фильмы", false, "", 0, true)
-                    Tmdb.load(ctx, cat, "popularity.desc", page)
+    private fun startOver() {
+        loadJob?.cancel()
+        val ctx = requireContext()
+        signature = CatalogFilter.signature(ctx, category.id)
+        renderButtons()
+        adapter.setItems(emptyList())
+        nextPage = 1
+        busy = false
+        finished = false
+        binding.messageText.visibility = View.GONE
+        binding.loadingIndicator.visibility = View.VISIBLE
+        loadNext()
+    }
+
+    /** Asks TMDB for the next page; a page made up only of watched titles (with "hide watched") is skipped. */
+    private fun loadNext() {
+        if (busy || finished || _binding == null) return
+        busy = true
+        val page = nextPage
+        val ctx = requireContext().applicationContext
+        val list = MoreTile(category.title, category = category.id, sort = CatalogFilter.sort(ctx, category.id).sort, filtered = true)
+        loadJob = viewLifecycleOwner.lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) { runCatching { list.loadPage(ctx, page) } }
+            val b = _binding ?: return@launch
+            busy = false
+            b.loadingIndicator.visibility = View.GONE
+            b.swipeRefresh.isRefreshing = false
+            result.onSuccess { loaded ->
+                if (loaded.ended) finished = true else nextPage = page + 1
+                adapter.addItems(loaded.titles)
+                if (loaded.ended && adapter.itemCount == 0) {
+                    b.messageText.text = "Ничего не найдено.\nИзмените или сбросьте фильтры"
+                    b.messageText.visibility = View.VISIBLE
+                } else if (loaded.titles.isEmpty() && !loaded.ended) {
+                    loadNext()
                 }
-                MODE_SERIALS -> {
-                    val cat = Tmdb.categories.firstOrNull { it.id == "serials" }
-                        ?: Category("serials", "Сериалы", true, "", 0, true)
-                    Tmdb.load(ctx, cat, "popularity.desc", page)
+            }.onFailure {
+                finished = true
+                if (adapter.itemCount == 0) {
+                    b.messageText.text = Errors.explain(it)
+                    b.messageText.visibility = View.VISIBLE
                 }
-                MODE_CINEMA -> {
-                    Tmdb.loadCollection(ctx, Tmdb.Collection("В кино", false, "now_playing", "&region=RU"), page)
-                }
-                else -> emptyList()
             }
-        } catch (_: Exception) {
-            emptyList()
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        loadJob?.cancel()
         _binding = null
-    }
-
-    companion object {
-        private const val MODE_MOVIES = 0
-        private const val MODE_SERIALS = 1
-        private const val MODE_CINEMA = 2
     }
 }

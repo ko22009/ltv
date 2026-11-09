@@ -54,9 +54,9 @@ class FiltersActivity : Activity() {
             setColor(0xFF101216.toInt())
             cornerRadius = px(12).toFloat()
         }
-        root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { setMargins(px(40), px(40), px(40), px(40)) })
+        root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { val gap = px(if (isMobileUi()) 4 else 40); setMargins(gap, gap, gap, gap) })
         backBtn = backButton(this, scale) { onBackPressed() }
-        heading = text("", 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
+        heading = text("", if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
         header.addView(backBtn, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
@@ -114,7 +114,7 @@ class FiltersActivity : Activity() {
         val line = LinearLayout(this)
         line.gravity = Gravity.CENTER_VERTICAL
         line.setPadding(px(22), px(16), px(22), px(16))
-        line.background = focusShape(scale, 0x33FFFFFF)
+        line.background = focusShape(scale, if (isMobileUi()) 0xFF1C2029.toInt() else 0x33FFFFFF)
         line.isFocusable = true
         line.isClickable = true
         line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))

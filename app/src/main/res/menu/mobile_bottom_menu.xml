@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/nav_catalog"
-        android:icon="@drawable/ic_nav_catalog"
-        android:title="Каталог" />
+        android:id="@+id/nav_movies"
+        android:icon="@drawable/ic_nav_movies"
+        android:title="Фильмы" />
+    <item
+        android:id="@+id/nav_serials"
+        android:icon="@drawable/ic_nav_series"
+        android:title="Сериалы" />
     <item
         android:id="@+id/nav_search"
         android:icon="@drawable/ic_nav_search"
