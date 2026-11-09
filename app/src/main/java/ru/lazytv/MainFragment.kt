@@ -516,10 +516,11 @@ class MainFragment : Fragment() {
                     clockDialog = android.app.AlertDialog.Builder(host, android.R.style.Theme_Material_Dialog_Alert)
                         .setTitle("Сбились дата и время")
                         .setMessage(ClockCheck.MESSAGE)
-                        .setCancelable(false)
+                        .setCancelable(true)
                         .setPositiveButton("Настроить часы", null)
+                        .setNegativeButton("Пропустить") { d, _ -> d.dismiss() }
                         .create().also { dialog ->
-                            dialog.setCanceledOnTouchOutside(false)
+                            dialog.setCanceledOnTouchOutside(true)
                             dialog.show()
                             // set after show(): the default handler would close the window on the button press
                             dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
