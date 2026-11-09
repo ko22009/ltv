@@ -216,6 +216,25 @@ object Sources {
         return "variants16_" + digest.joinToString("") { "%02x".format(it) }
     }
 
+    /** Removes a dead/stub variant from the cached search results so it is not offered again on reopening the card. */
+    fun removeCachedVariant(context: Context, title: String, original: String, year: String, tv: Boolean, variant: Variant) {
+        val key = cacheKey(context, title, original, year, tv)
+        val prefs = context.getSharedPreferences("cache", 0)
+        val raw = prefs.getString(key, null) ?: return
+        runCatching {
+            val o = JSONObject(raw)
+            val arr = o.getJSONArray("v")
+            val newArr = org.json.JSONArray()
+            for (i in 0 until arr.length()) {
+                val item = arr.getJSONObject(i)
+                if (item.optString("i") == variant.sourceId && item.optString("r") == variant.ref) continue
+                newArr.put(item)
+            }
+            o.put("v", newArr)
+            prefs.edit().putString(key, o.toString()).apply()
+        }
+    }
+
     private fun variantToJson(v: Variant) = JSONObject().put("s", v.source).put("i", v.sourceId)
         .put("t", v.title).put("n", v.note).put("r", v.ref).put("a", v.alt).put("d", v.description)
 

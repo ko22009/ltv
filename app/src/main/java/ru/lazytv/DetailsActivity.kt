@@ -793,7 +793,7 @@ class DetailsActivity : Activity() {
                 }
             }
             items.add(label)
-            actions.add { openVariant(v) }
+            actions.add { openVariant(v, false) }
         }
 
         if (hidden > 0) {
@@ -848,23 +848,41 @@ class DetailsActivity : Activity() {
             showSourceDialog(name)
             return
         }
-        first?.let { openVariant(it) } ?: openTorrents(name)
+        first?.let { openVariant(it, true) } ?: openTorrents(name)
+    }
+
+    private fun excludeVariant(v: Variant) {
+        variants = variants.filterNot { it.sourceId == v.sourceId && it.ref == v.ref }
+        Sources.removeCachedVariant(
+            applicationContext, currentName.ifEmpty { currentTitle.name }, originalTitle, currentTitle.year, currentTitle.tv, v
+        )
     }
 
     /**
      * The release is asked for its videos first: a film with one video starts in the player straight from this card,
      * and only a release with several (a series) opens the episode page. No empty page flashes in between.
      */
-    private fun openVariant(v: Variant) {
+    private fun openVariant(v: Variant, fromDefault: Boolean = false) {
         if (opening) return
         setWatchLoading(true)
-        History.add(this, historyTitle())
         Thread {
             val episodes = runCatching { Sources.episodesCached(v) }.getOrNull()
             onUi {
                 setWatchLoading(false)
+                if (episodes.isNullOrEmpty()) {
+                    excludeVariant(v)
+                    Toast.makeText(this, "В источнике ${v.source} нет видео, запись исключена", Toast.LENGTH_SHORT).show()
+                    val targetName = currentName.ifEmpty { currentTitle.name }
+                    if (fromDefault) {
+                        openDefaultVariant(targetName)
+                    } else {
+                        showSourceDialog(targetName)
+                    }
+                    return@onUi
+                }
+                History.add(this, historyTitle())
                 // only a film with one video starts at once; a series always shows its episodes to choose from
-                if (episodes != null && episodes.size == 1 && !currentTitle.tv) {
+                if (episodes.size == 1 && !currentTitle.tv) {
                     playEpisode(
                         this, v, episodes, 0, choose = false,
                         mediaTitle = currentName.ifEmpty { currentTitle.name },
@@ -892,7 +910,12 @@ class DetailsActivity : Activity() {
     private fun warmUp(name: String, title: Title) {
         val first = Sources.best(variants, title.year, title.tv, listOf(name, originalTitle))
             ?.takeIf { Sources.yearRank(it, title.year, listOf(name, originalTitle)) != 2 || title.tv }
-        if (first != null && !title.tv) Thread { runCatching { Sources.episodesCached(first) } }.start()
+        if (first != null && !title.tv) Thread {
+            val eps = runCatching { Sources.episodesCached(first) }.getOrNull()
+            if (eps != null && eps.isEmpty()) {
+                onUi { excludeVariant(first) }
+            }
+        }.start()
         if (variants.isEmpty() || Settings.string(this, Settings.SOURCE_MODE, "sites") == "torrents") startTorrentSearch(name)
     }
 
