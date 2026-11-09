@@ -396,14 +396,9 @@ class MainFragment : Fragment() {
             val railFocus = navItems.firstOrNull { it.isFocused }
             val isCur = name == (railFocus?.name ?: currentPage)
             val focused = isFocused
+            // the current page is told by the white icon alone (no outline): only the focus gets the plate
             background = when {
                 focused -> plate(FOCUS_FILL, cell)
-                isCur -> GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
-                    cornerRadius = cell / 4f
-                    val strokePx = maxOf(2, (2f * resources.displayMetrics.density).toInt())
-                    setStroke(strokePx, FOCUS_FILL)
-                }
                 else -> null
             }
             val iconColor = when {
