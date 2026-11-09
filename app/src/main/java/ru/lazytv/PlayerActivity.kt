@@ -171,6 +171,9 @@ class PlayerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!DeviceType.isTv(this)) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         url = intent.getStringExtra("url").orEmpty()
         val name = intent.getStringExtra("name").orEmpty()
@@ -198,6 +201,16 @@ class PlayerActivity : Activity() {
         root.addView(view, FrameLayout.LayoutParams(-1, -1))
         bufferSpinner = Spinner(this, dp(64))
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
+
+        val touchOverlay = PlayerTouchOverlay(
+            context = this,
+            activity = this,
+            onSeek = { deltaMs -> seekByStep(deltaMs) },
+            onTogglePlay = { togglePlay() },
+            onToggleControls = { setControlsVisible(overlay.visibility != View.VISIBLE) },
+            onUserAction = { resetHideTimer() }
+        )
+        root.addView(touchOverlay, FrameLayout.LayoutParams(-1, -1))
 
         overlay = buildOverlay(name, meta)
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
@@ -374,27 +387,46 @@ class PlayerActivity : Activity() {
     }
 
     private fun buildOverlay(name: String, meta: String): View {
-        val overlay = FrameLayout(this)
+        val overlay = FrameLayout(this).apply {
+            isClickable = true
+            isFocusable = false
+            setOnClickListener { setControlsVisible(false) }
+        }
 
-        val top = LinearLayout(this)
-        top.orientation = LinearLayout.VERTICAL
-        top.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
-        top.setPadding(dp(48), dp(28), dp(48), dp(60))
-        titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 24f, Color.WHITE, true)
+        val top = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
+            setPadding(dp(24), dp(20), dp(48), dp(40))
+            setOnClickListener { resetHideTimer() }
+        }
+
+        val backBtn = round(MenuIcons.BACK) { finish() }.apply {
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { rightMargin = dp(16) }
+        }
+        top.addView(backBtn)
+
+        val titles = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 22f, Color.WHITE, true)
         baseMeta = queue.getOrNull(queueIndex)?.meta ?: meta
-        metaView = label(baseMeta, 15f, 0xFFCBD5E1.toInt()).apply {
-            setPadding(0, dp(6), 0, 0)
+        metaView = label(baseMeta, 14f, 0xFFCBD5E1.toInt()).apply {
+            setPadding(0, dp(4), 0, 0)
             visibility = if (baseMeta.isEmpty()) View.GONE else View.VISIBLE
         }
-        if (titleView.text.isNotEmpty()) top.addView(titleView)
-        top.addView(metaView)
+        if (titleView.text.isNotEmpty()) titles.addView(titleView)
+        titles.addView(metaView)
+        top.addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         overlay.addView(top, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
 
-        val bottom = LinearLayout(this)
+        val bottom = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
+            setPadding(dp(48), dp(60), dp(48), dp(28))
+            setOnClickListener { resetHideTimer() }
+        }
         bottomContainer = bottom
-        bottom.orientation = LinearLayout.VERTICAL
-        bottom.background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
-        bottom.setPadding(dp(48), dp(60), dp(48), dp(28))
 
         val seekRow = LinearLayout(this)
         seekRow.gravity = Gravity.CENTER_VERTICAL
