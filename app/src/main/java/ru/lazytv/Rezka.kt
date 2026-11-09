@@ -134,8 +134,9 @@ object Hdrezka : VideoSource {
             val url = urls.firstOrNull { it.contains(".mp4") && !it.contains(".m3u8") } ?: urls.firstOrNull() ?: return@mapNotNull null
             val rawTag = m.groupValues[1]
             val cleanLabel = rawTag.replace(Regex("<[^>]*>"), "").trim()
-            // the site marks paid qualities ("1080p Ultra") with a span/icon or text: they need a subscription (1-min stub), so drop them
-            if (rawTag.contains("prem", ignoreCase = true) || cleanLabel.contains("ultra", ignoreCase = true) || cleanLabel.contains("premium", ignoreCase = true)) {
+            // the site marks paid qualities ("1080p Ultra") or fake/promo releases with a 1-min stub video (zrkms.mp4)
+            if (url.contains("zrkms") || rawTag.contains("prem", ignoreCase = true) ||
+                cleanLabel.contains("ultra", ignoreCase = true) || cleanLabel.contains("premium", ignoreCase = true)) {
                 return@mapNotNull null
             }
             cleanLabel to url
