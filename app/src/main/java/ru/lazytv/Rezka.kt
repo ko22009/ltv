@@ -132,10 +132,13 @@ object Hdrezka : VideoSource {
         Regex("\\[([^\\]]+)]([^,\\[]+)").findAll(text).mapNotNull { m ->
             val urls = m.groupValues[2].split(" or ").map { it.trim() }.filter { it.startsWith("http") }
             val url = urls.firstOrNull { it.contains(".mp4") && !it.contains(".m3u8") } ?: urls.firstOrNull() ?: return@mapNotNull null
-            // the site marks paid qualities ("1080p Ultra") with a span and an icon: they need a subscription, so they are dropped;
-            // the label of a free quality is plain text, tags are stripped anyway
-            if (m.groupValues[1].contains("prem-quality")) return@mapNotNull null
-            m.groupValues[1].replace(Regex("<[^>]*>"), "").trim() to url
+            val rawTag = m.groupValues[1]
+            val cleanLabel = rawTag.replace(Regex("<[^>]*>"), "").trim()
+            // the site marks paid qualities ("1080p Ultra") with a span/icon or text: they need a subscription (1-min stub), so drop them
+            if (rawTag.contains("prem", ignoreCase = true) || cleanLabel.contains("ultra", ignoreCase = true) || cleanLabel.contains("premium", ignoreCase = true)) {
+                return@mapNotNull null
+            }
+            cleanLabel to url
         }.distinctBy { it.first }.sortedByDescending { height(it.first) }.toList()
 
     private fun height(label: String): Int = when {
