@@ -108,7 +108,7 @@ class PersonActivity : Activity() {
                         button.nextFocusDownId = grid.id
                     }
                     grid.selectedPosition = 0
-                    grid.post {
+                    if (!isMobileUi()) grid.post {
                         grid.requestFocus()
                         grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
                     }

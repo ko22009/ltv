@@ -29,31 +29,25 @@
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipMovies"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.LazyMobile.Chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Фильмы"
-                android:textColor="#FFFFFF"
-                app:chipBackgroundColor="@color/mobile_nav_colors"
                 android:checked="true" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipSerials"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.LazyMobile.Chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Сериалы"
-                android:textColor="#FFFFFF"
-                app:chipBackgroundColor="@color/mobile_nav_colors" />
+                android:text="Сериалы" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipCinema"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.LazyMobile.Chip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="В кино"
-                android:textColor="#FFFFFF"
-                app:chipBackgroundColor="@color/mobile_nav_colors" />
+                android:text="В кино" />
 
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>

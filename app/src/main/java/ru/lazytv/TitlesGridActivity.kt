@@ -75,7 +75,7 @@ class TitlesGridActivity : Activity() {
             }
 
             override fun onAttachedToWindow(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                if (pendingFirstFocus && viewHolder.absoluteAdapterPosition == 0) {
+                if (pendingFirstFocus && viewHolder.absoluteAdapterPosition == 0 && !isMobileUi()) {
                     pendingFirstFocus = false
                     viewHolder.itemView.post {
                         viewHolder.itemView.requestFocus()

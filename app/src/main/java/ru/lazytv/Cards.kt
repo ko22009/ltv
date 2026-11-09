@@ -355,7 +355,8 @@ private const val GRID_TOP_GAP = 14
  * the page's edge is.
  */
 fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
-    androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
+    // a touch screen has no cursor: no zoomed "active" card
+    if (!context.isMobileUi()) androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
     val side = (GRID_EDGE_SIDE * scale).toInt()
     // Leanback's GridLayoutManager allows secondary-axis scroll on touch drags, which slides a vertical grid sideways under a mouse
     return object : androidx.leanback.widget.VerticalGridView(context) {

@@ -32,4 +32,31 @@
         <item name="android:statusBarColor">#101216</item>
         <item name="android:navigationBarColor">#161920</item>
     </style>
+    <!-- the chip of the phone screens: the plate of the buttons (#1C2029); the chosen one gets the indigo outline, as the active season on the TV -->
+    <style name="Widget.LazyMobile.Chip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">#1C2029</item>
+        <item name="chipStrokeColor">@color/mobile_chip_stroke</item>
+        <item name="chipStrokeWidth">2dp</item>
+        <item name="chipCornerRadius">6dp</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- bottom menu of the phone: dark plate, the active section is a plate with the indigo outline (no fill) -->
+    <style name="Widget.LazyMobile.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">#161920</item>
+        <item name="itemBackground">@drawable/bg_mobile_nav_item</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.LazyMobile.BottomNav.Indicator</item>
+        <item name="itemIconTint">@color/mobile_nav_item_colors</item>
+        <item name="itemTextColor">@color/mobile_nav_item_colors</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.LazyMobile.NavLabel</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.LazyMobile.NavLabel</item>
+    </style>
+    <style name="Widget.LazyMobile.BottomNav.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@android:color/transparent</item>
+    </style>
+    <style name="TextAppearance.LazyMobile.NavLabel" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textSize">11sp</item>
+    </style>
 </resources>
