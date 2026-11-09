@@ -19,8 +19,10 @@ class MobileMainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // TV devices or boxes with remotes redirect to TV MainActivity
-        if (DeviceType.isTv(this)) {
+        // TV devices or boxes with remotes redirect to TV MainActivity unless forced
+        val force = intent?.getBooleanExtra("force", false) == true
+        val mode = ru.lazytv.Settings.string(this, "interface_mode", "auto")
+        if (!force && mode != "mobile" && DeviceType.isTv(this)) {
             startActivity(Intent(this, MainActivity::class.java).apply {
                 intent?.extras?.let { putExtras(it) }
                 addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
