@@ -40,8 +40,8 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
     var first: View? = null
     items.forEachIndexed { index, caption ->
         val row = TextView(activity).apply {
-            text = (if (index == current) "✓  " else "") + caption
-            setTextColor(if (index == current) 0xFFA5B4FC.toInt() else Color.WHITE)
+            text = caption
+            setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
             typeface = if (index == current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             // long lines (a source with its note) wrap to two lines instead of being cut
@@ -51,9 +51,10 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
             minHeight = px(CHIP_HEIGHT)
             setPadding(px(18), px(8), px(18), px(8))
             isFocusable = true
-            isFocusableInTouchMode = true
+            isFocusableInTouchMode = !activity.isMobileUi()
             isClickable = true
-            background = focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
+            // the current choice is the outlined plate (like the active season), not a tick
+            background = if (index == current) activeShape(scale, 0xFF1C2029.toInt(), radius = 6f) else focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
             setOnClickListener {
                 dialog.dismiss()
                 onPick(index)
@@ -75,6 +76,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
             attributes = attributes.apply { y = at[1] + anchor.height + px(6) }
         }
     }
-    dialog.setOnShowListener { first?.requestFocus() }
+    // a touch screen has no cursor: no row is focused (the outline already marks the current one)
+    if (!activity.isMobileUi()) dialog.setOnShowListener { first?.requestFocus() }
     dialog.show()
 }
