@@ -52,8 +52,8 @@ class DetailsActivity : Activity() {
 
     /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
     private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
-        // on a phone only "Смотреть" keeps its caption: the other buttons are icons, so all six fit one line
-        val iconOnly = mobile && label != "Смотреть"
+        // on a phone all the buttons are icons, so the six fit one line
+        val iconOnly = mobile
         text = if (iconOnly) "" else label.uppercase()
         contentDescription = label
         setSingleLine()
@@ -61,7 +61,7 @@ class DetailsActivity : Activity() {
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
-        setPadding(dp(if (iconOnly) 10 else 12), 0, dp(if (iconOnly) 10 else 12), 0)
+        setPadding(dp(if (iconOnly) 16 else 12), 0, dp(if (iconOnly) 16 else 12), 0)
         setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
         compoundDrawablePadding = dp(if (iconOnly) 0 else 8)
         isFocusable = true
