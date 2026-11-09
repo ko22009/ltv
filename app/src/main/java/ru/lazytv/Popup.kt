@@ -18,7 +18,8 @@ import android.widget.TextView
  * The single choice list of the app (season, voice-over, quality): a dark panel in the style of the chips instead of
  * the system dialog. Rows are focusable for the remote; the current choice is marked and gets the focus first.
  */
-fun showChoice(activity: Activity, title: String, items: List<String>, current: Int, onPick: (Int) -> Unit) {
+/** [anchor]: a button the list drops from (on a phone it stands right under it instead of the middle of the screen). */
+fun showChoice(activity: Activity, title: String, items: List<String>, current: Int, anchor: View? = null, onPick: (Int) -> Unit) {
     val scale = activity.uiScale()
     fun px(v: Int) = (v * scale).toInt()
     val dialog = Dialog(activity)
@@ -67,6 +68,12 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
         setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         setLayout(minOf(px(640), (activity.resources.displayMetrics.widthPixels * 0.92f).toInt()), -2)
         setDimAmount(0.6f)
+        if (anchor != null) {
+            val at = IntArray(2)
+            anchor.getLocationInWindow(at)
+            setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            attributes = attributes.apply { y = at[1] + anchor.height + px(6) }
+        }
     }
     dialog.setOnShowListener { first?.requestFocus() }
     dialog.show()

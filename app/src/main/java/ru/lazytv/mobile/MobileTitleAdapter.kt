@@ -16,6 +16,14 @@ class MobileTitleAdapter(
 
     private val items = mutableListOf<Title>()
 
+    /** Long press: removes the title from the list it stands in (bookmarks, history); null when the list has no such action. */
+    var onItemLongClick: ((Title) -> Unit)? = null
+
+    fun removeItem(title: Title) {
+        val index = items.indexOfFirst { it.id == title.id && it.tv == title.tv }
+        if (index >= 0) { items.removeAt(index); notifyItemRemoved(index) }
+    }
+
     fun setItems(newItems: List<Title>) {
         items.clear()
         items.addAll(newItems)
@@ -76,6 +84,7 @@ class MobileTitleAdapter(
             binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
 
             // Click listener
+            binding.cardRipple.setOnLongClickListener(onItemLongClick?.let { handler -> View.OnLongClickListener { handler(title); true } })
             binding.cardRipple.setOnClickListener {
                 onItemClick(title)
             }

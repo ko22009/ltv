@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#101216">
+
+    <!-- one page like the TV one: the bookmarked titles, then the saved episodes and torrents when there are any -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/favoritesScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/titlesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingStart="8dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="8dp" />
+
+            <TextView
+                android:id="@+id/episodesHeader"
+                style="@style/MobileSectionTitle"
+                android:text="ИЗБРАННЫЕ СЕРИИ"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/episodesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/torrentsHeader"
+                style="@style/MobileSectionTitle"
+                android:text="ИЗБРАННЫЕ РАЗДАЧИ"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/torrentsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <TextView
+        android:id="@+id/emptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.15"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp"
+        android:text="Пока пусто.\nДобавляйте фильмы кнопкой «Закладки» в карточке, а серии и раздачи в их списках"
+        android:textColor="#94A3B8"
+        android:textSize="15sp"
+        android:visibility="gone" />
+</FrameLayout>

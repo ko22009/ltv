@@ -6,56 +6,57 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.chip.Chip
 import ru.lazytv.DetailsActivity
+import ru.lazytv.EpisodeState
+import ru.lazytv.EpisodesActivity
 import ru.lazytv.FavoriteTorrents
 import ru.lazytv.Favorites
-import ru.lazytv.History
 import ru.lazytv.R
-import ru.lazytv.Torrent
 import ru.lazytv.TorrentsActivity
-import ru.lazytv.databinding.FragmentMobileGridBinding
+import ru.lazytv.databinding.FragmentMobileFavoritesBinding
 import ru.lazytv.toExtras
 
-/** Bookmarks of the device, the history of opened titles and the torrents marked with the star. */
+/** One page like the TV bookmarks: the bookmarked titles, then the saved episodes and the starred torrents. A long press removes. */
 class FavoritesFragment : Fragment() {
-    private enum class Mode(val caption: String) { BOOKMARKS("Закладки"), HISTORY("История"), TORRENTS("Раздачи") }
-
-    private var _binding: FragmentMobileGridBinding? = null
+    private var _binding: FragmentMobileFavoritesBinding? = null
     private val binding get() = _binding!!
     private lateinit var titles: MobileTitleAdapter
-    private var mode = Mode.BOOKMARKS
-    private val torrents = mutableListOf<Torrent>()
+    private val episodeRows = TextRows()
+    private val torrentRows = TextRows()
 
-    private val torrentAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    /** One line of the episode and torrent lists: a tap opens it, a long press takes it out of the bookmarks. */
+    private class TextRow(val title: String, val info: String, val open: () -> Unit, val remove: () -> Unit)
+
+    private inner class TextRows : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        val rows = mutableListOf<TextRow>()
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(
             LayoutInflater.from(parent.context).inflate(R.layout.item_mobile_torrent, parent, false)
         ) {}
 
-        override fun getItemCount() = torrents.size
+        override fun getItemCount() = rows.size
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val torrent = torrents[position]
-            holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = torrent.title
-            holder.itemView.findViewById<TextView>(R.id.torrentInfo).text =
-                listOf(torrent.size, "▲ ${torrent.seeds}", torrent.source).filter { it.isNotEmpty() }.joinToString("  •  ")
-            holder.itemView.setOnClickListener {
-                // a saved torrent goes straight to the preload, no new search
-                startActivity(
-                    Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", torrent.title)
-                        .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
-                        .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
-                )
+            val row = rows[position]
+            holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = row.title
+            holder.itemView.findViewById<TextView>(R.id.torrentInfo).text = row.info
+            holder.itemView.setOnClickListener { row.open() }
+            holder.itemView.setOnLongClickListener {
+                row.remove()
+                Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
+                refresh()
+                true
             }
         }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentMobileGridBinding.inflate(inflater, container, false)
+        _binding = FragmentMobileFavoritesBinding.inflate(inflater, container, false)
         return binding.root
     }
 
@@ -64,41 +65,60 @@ class FavoritesFragment : Fragment() {
         titles = MobileTitleAdapter { title ->
             startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
-        binding.chipScroll.visibility = View.VISIBLE
-        Mode.values().forEach { m ->
-            val chip = layoutInflater.inflate(R.layout.chip_mobile_filter, binding.chipGroup, false) as Chip
-            chip.text = m.caption
-            chip.id = View.generateViewId()
-            chip.isChecked = m == mode
-            chip.setOnClickListener { mode = m; refresh() }
-            binding.chipGroup.addView(chip)
+        titles.onItemLongClick = { title ->
+            Favorites.set(requireContext(), title, null)
+            Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
+            refresh()
         }
+        binding.titlesList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
+        binding.titlesList.adapter = titles
+        binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
+        binding.episodesList.adapter = episodeRows
+        binding.torrentsList.layoutManager = LinearLayoutManager(requireContext())
+        binding.torrentsList.adapter = torrentRows
     }
 
     private fun refresh() {
         val ctx = requireContext()
-        val count: Int
-        if (mode == Mode.TORRENTS) {
-            torrents.clear()
-            torrents.addAll(FavoriteTorrents.all(ctx))
-            binding.recycler.layoutManager = LinearLayoutManager(ctx)
-            binding.recycler.adapter = torrentAdapter
-            torrentAdapter.notifyDataSetChanged()
-            count = torrents.size
-            binding.emptyText.text = "Раздач пока нет.\nОтметьте раздачу звёздочкой в списке торрентов"
-        } else {
-            val list = if (mode == Mode.HISTORY) History.all(ctx) else Favorites.all(ctx)
-            binding.recycler.layoutManager = GridLayoutManager(ctx, mobileColumns(resources))
-            binding.recycler.adapter = titles
-            titles.setItems(list)
-            count = list.size
-            binding.emptyText.text = if (mode == Mode.HISTORY) "История пуста.\nЗдесь появятся открытые фильмы и сериалы"
-            else "Закладок пока нет.\nДобавьте фильм кнопкой «Закладки» на его странице"
+        val saved = Favorites.all(ctx)
+        titles.setItems(saved)
+
+        episodeRows.rows.clear()
+        EpisodeState.favorites(ctx).forEach { item ->
+            episodeRows.rows += TextRow(item.seriesTitle, listOf(item.episodeTitle, item.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
+                startActivity(
+                    Intent(ctx, EpisodesActivity::class.java)
+                        .putExtra("source", item.source).putExtra("sourceId", item.sourceId)
+                        .putExtra("title", item.seriesTitle).putExtra("note", item.note).putExtra("ref", item.ref)
+                        .putExtra("alt", item.alt).putExtra("description", item.description)
+                        .putExtra("episodeIndex", item.index)
+                )
+            }, { EpisodeState.toggleFavorite(ctx, item) })
         }
-        binding.emptyText.visibility = if (count == 0) View.VISIBLE else View.GONE
+        episodeRows.notifyDataSetChanged()
+
+        torrentRows.rows.clear()
+        FavoriteTorrents.all(ctx).forEach { torrent ->
+            torrentRows.rows += TextRow(torrent.title, listOf(torrent.size, "▲ ${torrent.seeds}", torrent.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
+                // a saved torrent goes straight to the preload, no new search
+                startActivity(
+                    Intent(ctx, TorrentsActivity::class.java).putExtra("name", torrent.title)
+                        .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
+                        .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
+                )
+            }, { FavoriteTorrents.toggle(ctx, torrent) })
+        }
+        torrentRows.notifyDataSetChanged()
+
+        fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
+        show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
+        show(torrentRows.rows.isNotEmpty(), binding.torrentsHeader, binding.torrentsList)
+        val empty = saved.isEmpty() && episodeRows.rows.isEmpty() && torrentRows.rows.isEmpty()
+        binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
+        binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }
 
-    // the lists change on other screens (a card, the torrent list): redraw when coming back
+    // the lists change on other screens (a card, the list of episodes or torrents): redraw when coming back
     override fun onResume() {
         super.onResume()
         if (_binding != null) refresh()

@@ -88,7 +88,7 @@ class CatalogFragment : Fragment() {
     private fun chooseSort() {
         val ctx = requireContext()
         val all = CatalogSort.values()
-        showChoice(requireActivity(), "Сортировка", all.map { it.label }, all.indexOf(CatalogFilter.sort(ctx, category.id))) { which ->
+        showChoice(requireActivity(), "Сортировка", all.map { it.label }, all.indexOf(CatalogFilter.sort(ctx, category.id)), binding.sortButton) { which ->
             CatalogFilter.saveSort(ctx, category.id, all[which])
             startOver()
         }

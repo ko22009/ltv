@@ -257,10 +257,6 @@ class DetailsActivity : Activity() {
             root.addView(barScroll, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
         } else {
             root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
-            val ltvLogo = Logo.create(this, textSizeSp = 22f)
-            root.addView(ltvLogo, FrameLayout.LayoutParams(dp(80), dp(72), Gravity.START or Gravity.TOP).apply {
-                leftMargin = dp(64); topMargin = dp(360)
-            })
         }
 
         posterView = ImageView(this)

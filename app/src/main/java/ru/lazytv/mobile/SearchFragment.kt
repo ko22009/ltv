@@ -44,6 +44,14 @@ class SearchFragment : Fragment() {
         }
         binding.recycler.layoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.recycler.adapter = adapter
+        // long press on a recently opened title takes it out of the history (only while nothing is typed)
+        adapter.onItemLongClick = { title ->
+            if (binding.searchInput.text.isNullOrBlank()) {
+                History.remove(requireContext(), listOf(title))
+                adapter.removeItem(title)
+                android.widget.Toast.makeText(requireContext(), "Убрано из недавних", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
         binding.searchInput.visibility = View.VISIBLE
         binding.chipGroup.isSingleSelection = false
         binding.chipGroup.isSelectionRequired = false
@@ -66,6 +74,11 @@ class SearchFragment : Fragment() {
         return (0 until array.length()).map { array.getString(it) }
     }
 
+    private fun forget(phrase: String) {
+        val list = saved().filter { !it.equals(phrase, true) }
+        Settings.setString(requireContext(), Settings.SEARCH_HISTORY, JSONArray(list).toString())
+    }
+
     private fun remember(phrase: String) {
         val list = (listOf(phrase) + saved().filter { !it.equals(phrase, true) }).take(12)
         Settings.setString(requireContext(), Settings.SEARCH_HISTORY, JSONArray(list).toString())
@@ -81,6 +94,10 @@ class SearchFragment : Fragment() {
             val chip = layoutInflater.inflate(R.layout.chip_mobile_filter, binding.chipGroup, false) as Chip
             chip.text = phrase
             chip.isCheckable = false
+            // the cross takes this one phrase out of the history
+            chip.isCloseIconVisible = true
+            chip.closeIconTint = android.content.res.ColorStateList.valueOf(0xFF94A3B8.toInt())
+            chip.setOnCloseIconClickListener { forget(phrase); showIdle() }
             chip.setOnClickListener {
                 binding.searchInput.setText(phrase)
                 binding.searchInput.setSelection(phrase.length)
@@ -88,10 +105,21 @@ class SearchFragment : Fragment() {
             }
             binding.chipGroup.addView(chip)
         }
+        if (phrases.size > 1) {
+            val clear = layoutInflater.inflate(R.layout.chip_mobile_filter, binding.chipGroup, false) as Chip
+            clear.text = "Очистить всё"
+            clear.isCheckable = false
+            clear.setTextColor(0xFF94A3B8.toInt())
+            clear.setOnClickListener {
+                Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
+                showIdle()
+            }
+            binding.chipGroup.addView(clear)
+        }
         binding.chipScroll.visibility = if (phrases.isEmpty()) View.GONE else View.VISIBLE
         val recent = History.all(requireContext())
         adapter.setItems(recent)
-        binding.sectionTitle.text = "НЕДАВНО ОТКРЫТЫЕ"
+        binding.sectionTitle.text = "НЕДАВНО ОТКРЫТЫЕ  (удерживайте, чтобы убрать)"
         binding.sectionTitle.visibility = if (recent.isEmpty()) View.GONE else View.VISIBLE
         binding.emptyText.text = "Введите название фильма или сериала"
         binding.emptyText.visibility = if (recent.isEmpty()) View.VISIBLE else View.GONE
