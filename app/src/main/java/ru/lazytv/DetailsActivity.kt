@@ -99,9 +99,6 @@ class DetailsActivity : Activity() {
 
         val root = FrameLayout(this)
         root.setBackgroundColor(0xFF101216.toInt())
-        // on a phone the banner, the buttons and the poster are the top of one scrolling page, so the poster scrolls away
-        // with them instead of riding over the facts; on the TV they lie directly on the screen
-        val stage = if (mobile) FrameLayout(this).apply { clipChildren = false; clipToPadding = false } else root
 
         // a calm dark band; the frame of the film (TMDB backdrop) fades in under a dark veil once it is known
         val banner = FrameLayout(this)
@@ -115,7 +112,7 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-        stage.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 210))))
+        root.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 210))))
 
         val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
         if (!passedBackdrop.isNullOrEmpty()) {
@@ -141,7 +138,7 @@ class DetailsActivity : Activity() {
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
-        stage.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
+        root.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
             topMargin = dp(m(32, 12)); leftMargin = dp(m(64, 12))
         })
 
@@ -257,7 +254,7 @@ class DetailsActivity : Activity() {
                 setBackgroundColor(0xFF161920.toInt())
                 addView(bar, FrameLayout.LayoutParams(-2, -1))
             }
-            stage.addView(barScroll, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
+            root.addView(barScroll, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
         } else {
             root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
         }
@@ -267,7 +264,7 @@ class DetailsActivity : Activity() {
         posterView.setBackgroundColor(0xFF1C2029.toInt())
         posterSpinner = Spinner(this, dp(40))
         posterView.showPoster(posterPath, posterSpinner)
-        stage.addView(FrameLayout(this).apply {
+        root.addView(FrameLayout(this).apply {
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             // the same label as on the cards: the film is in the cinemas now or comes soon
@@ -277,7 +274,7 @@ class DetailsActivity : Activity() {
                     FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { topMargin = dp(8); leftMargin = dp(8) })
             }
         }, FrameLayout.LayoutParams(dp(m(170, 108)), dp(m(256, 162))).apply {
-            leftMargin = dp(m(176, 16)); topMargin = dp(m(228, 150))
+            leftMargin = dp(m(176, 16)); topMargin = dp(m(228, 104))
         })
 
         val scroll = ScrollView(this).apply {
@@ -292,8 +289,7 @@ class DetailsActivity : Activity() {
         if (mobile) {
             val head = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                minimumHeight = dp(60)
-                setPadding(dp(120), dp(8), 0, 0)
+                setPadding(0, dp(12), 0, 0)
                 addView(text(name, 24f, bold = true))
                 addView(original)
             }
@@ -364,24 +360,11 @@ class DetailsActivity : Activity() {
         }
         info.addView(overviewView)
 
+        scroll.addView(info)
         loadDetails(title, name, baseRows, original, table, scroll)
-        if (mobile) {
-            // the page: the top (banner, buttons, poster) and under it the facts; everything scrolls together
-            info.setPadding(dp(16), 0, dp(16), dp(16))
-            scroll.clipChildren = false
-            scroll.addView(LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                clipChildren = false
-                addView(stage, LinearLayout.LayoutParams(-1, dp(266)))
-                addView(info, LinearLayout.LayoutParams(-1, -2))
-            })
-            root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
-        } else {
-            scroll.addView(info)
-            root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
-                topMargin = dp(444); leftMargin = dp(389); rightMargin = dp(64)
-            })
-        }
+        root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
+            topMargin = dp(m(444, 266)); leftMargin = dp(m(389, 16)); rightMargin = dp(m(64, 16))
+        })
 
         setContentView(root)
         if (!mobile) watchButton.requestFocus()
