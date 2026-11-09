@@ -76,7 +76,8 @@ class DetailsActivity : Activity() {
             // a quick double press on the card lands here: the first moments ignore clicks, so the video does not start by itself
             if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
         }
-        layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(if (iconOnly) 2 else 8) }
+        // on a phone the six icons share the width of the bar evenly
+        layoutParams = if (iconOnly) LinearLayout.LayoutParams(0, dp(44), 1f) else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,7 +149,7 @@ class DetailsActivity : Activity() {
         val bar = LinearLayout(this)
         bar.setBackgroundColor(0xFF161920.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setPadding(dp(m(389, 128)), 0, dp(8), 0)
+        bar.setPadding(dp(m(389, 4)), 0, dp(m(24, 4)), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
             id = View.generateViewId()
@@ -177,10 +178,10 @@ class DetailsActivity : Activity() {
             isClickable = false
         }
         val watchSlot = FrameLayout(this).apply {
-            addView(watchButton, FrameLayout.LayoutParams(-2, dp(44)))
+            addView(watchButton, FrameLayout.LayoutParams(-2, dp(44), Gravity.CENTER))
             addView(watchSpinner, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
         }
-        bar.addView(watchSlot, LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
+        bar.addView(watchSlot, if (mobile) LinearLayout.LayoutParams(0, dp(44), 1f) else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
 
         val galleryButton = button(MenuIcons.GALLERY, "Галерея") { openGallery() }
         galleryButton.nextFocusUpId = back.id
@@ -251,13 +252,7 @@ class DetailsActivity : Activity() {
             }
         }
         if (mobile) {
-            // the buttons do not fit one line on a phone: the bar scrolls sideways
-            val barScroll = android.widget.HorizontalScrollView(this).apply {
-                isHorizontalScrollBarEnabled = false
-                setBackgroundColor(0xFF161920.toInt())
-                addView(bar, FrameLayout.LayoutParams(-2, -1))
-            }
-            stage.addView(barScroll, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
+            stage.addView(bar, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
         } else {
             root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
         }
@@ -267,7 +262,7 @@ class DetailsActivity : Activity() {
         posterView.setBackgroundColor(0xFF1C2029.toInt())
         posterSpinner = Spinner(this, dp(40))
         posterView.showPoster(posterPath, posterSpinner)
-        stage.addView(FrameLayout(this).apply {
+        val posterBox = FrameLayout(this).apply {
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             // the same label as on the cards: the film is in the cinemas now or comes soon
@@ -276,9 +271,9 @@ class DetailsActivity : Activity() {
                 addView(Cinema.label(this@DetailsActivity) { dp(it.toInt()) }.apply { text = mark; visibility = android.view.View.VISIBLE },
                     FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply { topMargin = dp(8); leftMargin = dp(8) })
             }
-        }, FrameLayout.LayoutParams(dp(m(170, 108)), dp(m(256, 162))).apply {
-            leftMargin = dp(m(176, 16)); topMargin = dp(m(228, 150))
-        })
+        }
+        // on the TV the poster lies over the banner; on a phone it stands in the main block, left of the title
+        if (!mobile) root.addView(posterBox, FrameLayout.LayoutParams(dp(170), dp(256)).apply { leftMargin = dp(176); topMargin = dp(228) })
 
         val scroll = ScrollView(this).apply {
             isFocusable = false
@@ -287,15 +282,17 @@ class DetailsActivity : Activity() {
 
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
-        // on a phone the poster stands to the left of the title: the title block keeps a minimum height of the poster's overhang
         val original = text("", 16f, 0xFF94A3B8.toInt())
         if (mobile) {
-            val head = LinearLayout(this).apply {
+            val titles = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                minimumHeight = dp(60)
-                setPadding(dp(120), dp(8), 0, 0)
                 addView(text(name, 24f, bold = true))
                 addView(original)
+            }
+            val head = LinearLayout(this).apply {
+                setPadding(0, dp(16), 0, 0)
+                addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
+                addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
             }
             info.addView(head)
         } else {
