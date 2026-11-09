@@ -52,15 +52,18 @@ class DetailsActivity : Activity() {
 
     /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
     private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
-        text = label.uppercase()
+        // on a phone only "Смотреть" keeps its caption: the other buttons are icons, so all six fit one line
+        val iconOnly = mobile && label != "Смотреть"
+        text = if (iconOnly) "" else label.uppercase()
+        contentDescription = label
         setSingleLine()
         ellipsize = android.text.TextUtils.TruncateAt.END
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
-        setPadding(dp(12), 0, dp(12), 0)
+        setPadding(dp(if (iconOnly) 10 else 12), 0, dp(if (iconOnly) 10 else 12), 0)
         setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
-        compoundDrawablePadding = dp(8)
+        compoundDrawablePadding = dp(if (iconOnly) 0 else 8)
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
@@ -73,7 +76,7 @@ class DetailsActivity : Activity() {
             // a quick double press on the card lands here: the first moments ignore clicks, so the video does not start by itself
             if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
         }
-        layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
+        layoutParams = LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(if (iconOnly) 2 else 8) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,7 +145,7 @@ class DetailsActivity : Activity() {
         val bar = LinearLayout(this)
         bar.setBackgroundColor(0xFF161920.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setPadding(dp(m(389, 140)), 0, dp(24), 0)
+        bar.setPadding(dp(m(389, 128)), 0, dp(8), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
             id = View.generateViewId()
