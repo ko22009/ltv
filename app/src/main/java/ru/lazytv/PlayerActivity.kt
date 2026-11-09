@@ -122,6 +122,7 @@ class PlayerActivity : Activity() {
                 if (dur > 0 && dur != C.TIME_UNSET) {
                     seek.max = (dur / 1000).toInt()
                     seek.progress = (exo.currentPosition / 1000).toInt()
+                    seek.secondaryProgress = (exo.bufferedPosition / 1000).toInt()
                     duration.text = stamp(dur)
                 }
                 position.text = stamp(exo.currentPosition)
@@ -130,6 +131,7 @@ class PlayerActivity : Activity() {
                 })
                 updateStreamMeta(exo)
             }
+            updateSeekColors()
             handler.postDelayed(this, 500)
         }
     }
@@ -237,6 +239,7 @@ class PlayerActivity : Activity() {
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
                 bufferSpinner.visibility = if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
+                updateSeekColors()
                 if (state == Player.STATE_ENDED) {
                     clearPosition()
                     advance()
@@ -386,6 +389,27 @@ class PlayerActivity : Activity() {
         setOnClickListener { resetHideTimer(); action() }
     }
 
+    private fun updateSeekColors() {
+        if (!::seek.isInitialized) return
+        val exo = player
+        val isBuffering = exo?.playbackState == Player.STATE_BUFFERING
+        val isSeeking = userSeeking
+        val isPending = isBuffering || isSeeking
+        val progressColor = when {
+            isPending -> 0xFF64748B.toInt()
+            seek.isFocused -> 0xFF818CF8.toInt()
+            else -> 0xFF6366F1.toInt()
+        }
+        val thumbColor = when {
+            isPending -> 0xFF94A3B8.toInt()
+            seek.isFocused -> FOCUS_FILL
+            else -> 0xFFA5B4FC.toInt()
+        }
+        seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
+        seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
+        seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x4464748B.toInt())
+    }
+
     private fun buildOverlay(name: String, meta: String): View {
         val overlay = FrameLayout(this).apply {
             isClickable = true
@@ -434,11 +458,9 @@ class PlayerActivity : Activity() {
         duration = label("0:00", 14f, 0xFFCBD5E1.toInt())
         seek = SeekBar(android.view.ContextThemeWrapper(this, R.style.PlayerSeekOverlay))
         seek.isFocusable = true
-        seek.progressTintList = android.content.res.ColorStateList.valueOf(0xFF6366F1.toInt())
-        seek.thumbTintList = android.content.res.ColorStateList.valueOf(0xFFA5B4FC.toInt())
-        seek.setOnFocusChangeListener { _, hasFocus ->
-            seek.progressTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) 0xFF818CF8.toInt() else 0xFF6366F1.toInt())
-            seek.thumbTintList = android.content.res.ColorStateList.valueOf(if (hasFocus) FOCUS_FILL else 0xFFA5B4FC.toInt())
+        updateSeekColors()
+        seek.setOnFocusChangeListener { _, _ ->
+            updateSeekColors()
         }
         seek.setOnKeyListener { _, keyCode, event ->
             if (event.action == KeyEvent.ACTION_DOWN) {
@@ -465,8 +487,15 @@ class PlayerActivity : Activity() {
         }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, value: Int, byUser: Boolean) {}
-            override fun onStartTrackingTouch(sb: SeekBar) { userSeeking = true }
-            override fun onStopTrackingTouch(sb: SeekBar) { userSeeking = false; player?.seekTo(sb.progress * 1000L) }
+            override fun onStartTrackingTouch(sb: SeekBar) {
+                userSeeking = true
+                updateSeekColors()
+            }
+            override fun onStopTrackingTouch(sb: SeekBar) {
+                userSeeking = false
+                updateSeekColors()
+                player?.seekTo(sb.progress * 1000L)
+            }
         })
         seekRow.addView(position)
         seekRow.addView(seek, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = dp(12); rightMargin = dp(12) })
