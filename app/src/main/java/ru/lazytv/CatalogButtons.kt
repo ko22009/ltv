@@ -84,8 +84,7 @@ const val WATCH_PLATE = 0xFF272C36.toInt()
 const val PLACEHOLDER_FROM = 0xFF283048.toInt()
 const val PLACEHOLDER_TO = 0xFF181D2A.toInt()
 
-/** One-off roles: the dim scrim over the banner picture, the neutral grey switch (no teal), the red of the stop-listening microphone, the gold mark. */
-const val OVERLAY_SCRIM = 0x40000000
+/** One-off roles: the neutral grey switch (no teal), the red of the stop-listening microphone, the gold mark. */
 const val SWITCH_TRACK_ON = 0xFF6B7280.toInt()
 const val SWITCH_TRACK_OFF = 0xFF3A3D42.toInt()
 const val SWITCH_THUMB_OFF = 0xFFB4B7BC.toInt()

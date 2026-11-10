@@ -136,7 +136,7 @@ class DetailsActivity : Activity() {
         backdrop = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; alpha = 0f }
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
-        banner.addView(View(this).apply { setBackgroundColor(OVERLAY_SCRIM) }, FrameLayout.LayoutParams(-1, -1))
+        banner.addView(View(this).apply { setBackgroundColor(OVERLAY_SOFT) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(SPINNER_IMAGE)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         if (mobile) {
