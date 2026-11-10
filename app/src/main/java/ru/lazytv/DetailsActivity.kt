@@ -396,6 +396,13 @@ class DetailsActivity : Activity() {
                 metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { setPadding(0, dp(6), 0, 0) }
                 addView(genresLine)
                 addView(metaLine)
+                // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
+                minimumHeight = dp(162)
+                addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
+                addView(LinearLayout(this@DetailsActivity).apply {
+                    addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
+                    addView(favorite, LinearLayout.LayoutParams(dp(52), dp(52)).apply { leftMargin = dp(10) })
+                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
             }
             val head = LinearLayout(this).apply {
                 setPadding(0, dp(20), 0, 0)
@@ -403,12 +410,8 @@ class DetailsActivity : Activity() {
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
             }
             info.addView(head)
-            // the wide watch button with the square bookmark beside it, under them the row of three captioned actions
-            info.addView(LinearLayout(this).apply {
-                addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
-                addView(favorite, LinearLayout.LayoutParams(dp(52), dp(52)).apply { leftMargin = dp(10) })
-            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
-            info.addView(bar, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(12) })
+            // under the poster the row of three captioned actions
+            info.addView(bar, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(16) })
         } else {
             info.addView(text(name, 34f))
         }
