@@ -73,10 +73,7 @@ class MobileSettingsScreen : SettingsScreen() {
     // the stylists of the TV layout have no views here: nothing to focus, nothing to restore
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {}
 
-    private fun row(
-        title: CharSequence, description: CharSequence?, onClick: (() -> Unit)?, trailing: View? = null,
-        plate: Int = 0xFF1C2029.toInt(),
-    ): View {
+    private fun row(title: CharSequence, description: CharSequence?, onClick: (() -> Unit)?, trailing: View? = null): View {
         val ctx = requireContext()
         val texts = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -86,7 +83,7 @@ class MobileSettingsScreen : SettingsScreen() {
         return LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(px(14), px(12), px(14), px(12))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(plate); cornerRadius = px(8).toFloat() }
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = px(8).toFloat() }
             addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
             if (trailing != null) addView(trailing, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
             if (onClick != null) {
@@ -121,7 +118,7 @@ class MobileSettingsScreen : SettingsScreen() {
                         action.isChecked = !action.isChecked
                         toggle.isChecked = action.isChecked
                         onGuidedActionClicked(action)
-                    }, toggle, plate = 0xFF1F2023.toInt()).also { toggle.isClickable = false }
+                    }, toggle).also { toggle.isClickable = false }
                 }
                 !action.subActions.isNullOrEmpty() -> row(action.title, action.description, {
                     val subs = action.subActions
