@@ -166,7 +166,7 @@ class MainFragment : Fragment() {
         railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
         railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        val railLogo = Logo.create(ctx, textSizeSp = 14f).apply {
+        val railLogo = Logo.create(ctx, textSizeSp = 9f).apply {
             isFocusable = false
             isClickable = false
         }
