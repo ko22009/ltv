@@ -78,6 +78,8 @@ class PlayerActivity : Activity() {
     private lateinit var waitingDots: View
     private var bufferEmpty = false
     private lateinit var touchOverlay: PlayerTouchOverlay
+    /** The Back button in the top left of the controls: up from the progress bar lands on it. */
+    private lateinit var playerBack: View
     private lateinit var pauseBadge: View
     private fun updatePauseBadge() {
         if (!::pauseBadge.isInitialized || !::overlay.isInitialized) return
@@ -520,6 +522,7 @@ class PlayerActivity : Activity() {
         val backBtn = round(MenuIcons.BACK) { finish() }.apply {
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { rightMargin = dp(16) }
         }
+        playerBack = backBtn
         top.addView(backBtn)
 
         val titles = LinearLayout(this).apply {
@@ -1082,10 +1085,18 @@ class PlayerActivity : Activity() {
                     } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER) togglePlay()
                     return true
                 }
-                // up from the progress bar and down from the lowest row hide the panel
                 val focused = currentFocus
+                // the Back button: down returns to the progress bar, the other arrows stay on it (OK leaves the player)
+                if (focused === playerBack) {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { seek.requestFocus(); resetHideTimer(); return true }
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> { resetHideTimer(); return true }
+                    }
+                }
+                // up from the progress bar goes to the Back button; down from the lowest row hides the panel
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focused === seek) {
-                    setControlsVisible(false)
+                    playerBack.requestFocus()
+                    resetHideTimer()
                     return true
                 }
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN &&
