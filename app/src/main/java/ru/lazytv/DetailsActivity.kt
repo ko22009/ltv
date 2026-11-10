@@ -449,7 +449,9 @@ class DetailsActivity : Activity() {
             val head = LinearLayout(this).apply {
                 setPadding(0, dp(20), 0, 0)
                 addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
-                addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
+                // the block is lifted a little: the capital letters of the title stand at the poster's upper edge, and the button ends
+                // slightly above the poster's lower edge instead of at (or below) it
+                addView(titles, LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = -dp(4) })
             }
             info.addView(head)
             // under the poster the row of three captioned actions
