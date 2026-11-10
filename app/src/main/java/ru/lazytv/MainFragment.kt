@@ -689,12 +689,14 @@ class SettingsPageFragment : Fragment() {
                 }
             }
         }
-        val gap = px(12)
+        // the same gap as between the cards of the other grids (tvGridPitch): the cards' top and bottom margins and the spacing
+        val gap = ((24f * CARD_SCALE + 6f) * scale).toInt()
         val side = px(20)
         val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap, titleCards = false)
-        val gridWidth = COLUMNS * px(290) + (COLUMNS - 1) * gap + 2 * side
+        val gridWidth = COLUMNS * (px(290) + gap) + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
-            setMargins(-side, px(2), 0, 0)
+            // half of the gap more to the left: the first tile starts exactly under the caption, like the cards of the other grids
+            setMargins(-side - gap / 2, px(2), 0, 0)
         })
         return page
     }
