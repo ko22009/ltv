@@ -1087,9 +1087,10 @@ class DetailsActivity : Activity() {
                             true
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                            // ScrollView does not scroll back when focus leaves it upwards, so bring the facts back into view
-                            pageScroll.smoothScrollTo(0, 0)
+                            // the focus goes first: a smooth scroll started before it fought with the jump the ScrollView makes to the
+                            // focused view and the page flew past; then the page glides up to the top once
                             (firstDirectorLink ?: (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else null) ?: watchButton).requestFocus()
+                            pageScroll.post { pageScroll.smoothScrollTo(0, 0) }
                             true
                         }
                         else -> false
