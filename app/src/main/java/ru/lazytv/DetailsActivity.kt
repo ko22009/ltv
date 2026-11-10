@@ -313,9 +313,8 @@ class DetailsActivity : Activity() {
             isClickable = true
             background = StateListDrawable().apply {
                 val focused = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
+                    setColor(FOCUS_FILL)
                     cornerRadius = dp(6).toFloat()
-                    setStroke(dp(2), 0xFFA5B4FC.toInt())
                 }
                 val normal = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
