@@ -945,7 +945,7 @@ class FavoriteEpisodePresenter : Presenter() {
         val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(150))
+        tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(136))
         tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
@@ -985,7 +985,7 @@ class TorrentCardPresenter : Presenter() {
         val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(150))
+        tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(136))
         tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
