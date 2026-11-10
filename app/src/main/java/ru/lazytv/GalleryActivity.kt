@@ -159,7 +159,7 @@ class GalleryActivity : Activity() {
         val side = dp(16)
         val width = resources.displayMetrics.widthPixels - 2 * side
         // the gallery lies over the card as a dimmed layer; the frame keeps its own shape
-        root.background = android.graphics.drawable.ColorDrawable(0xF0101216.toInt())
+        root.background = android.graphics.drawable.ColorDrawable(PAGE_COVER)
         // a tap on the picture shows the next one (after the last one the first); a tap beside it turns the picture the way of
         // that side: on the left (posters: above) one back, on the right (below) one forward; the gallery closes only with the cross and Back
         val nextPicture = { if (backdrops.size > 1) showImage((selectedIndex + 1) % backdrops.size) }
@@ -222,13 +222,13 @@ class GalleryActivity : Activity() {
         // the same counter as on the banner of the title card: the same plate and the same place, in the upper right corner of the picture
         phoneCounter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         phoneCounter.setPadding(dp(12), dp(4), dp(12), dp(4))
-        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
+        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(OVERLAY_LIGHT); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
         root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
         mainImage.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         phoneCounter.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
-        arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
-        arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
+        arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), OVERLAY_LIGHT) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
+        arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), OVERLAY_LIGHT) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
         // the round arrow is small to look at, but the tap zone around it is wide and tall: a thumb does not miss when turning the picture
         fun zone(arrow: View, gravity: Int, step: Int) {
             arrow.isClickable = false

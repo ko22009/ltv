@@ -100,7 +100,7 @@ object OfflineCover {
     private fun build(activity: Activity): FrameLayout {
         val density = activity.resources.displayMetrics.density
         val cover = FrameLayout(activity).apply {
-            setBackgroundColor(0xF2101216.toInt())
+            setBackgroundColor(PAGE_COVER)
             // takes every touch: the screen under the plate is not used
             isClickable = true
             isFocusable = true

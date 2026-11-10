@@ -168,12 +168,12 @@ class DetailsActivity : Activity() {
             banner.addView(ImageView(this).apply {
                 setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
                 setPadding(dp(12), dp(12), dp(12), dp(12))
-                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_LIGHT) }
                 contentDescription = "Галерея"
             }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(10); bottomMargin = dp(10) })
             bannerCounter = text("", 14f).apply {
                 setPadding(dp(12), dp(4), dp(12), dp(4))
-                background = GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
+                background = GradientDrawable().apply { setColor(OVERLAY_LIGHT); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
                 visibility = View.GONE
             }
             banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(10); rightMargin = dp(10) })
@@ -200,7 +200,7 @@ class DetailsActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(12))
             background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), softDisc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
-                addState(intArrayOf(), softDisc(0x99000000.toInt()))
+                addState(intArrayOf(), softDisc(OVERLAY_LIGHT))
             }
             isFocusable = true
             isClickable = true
@@ -372,7 +372,7 @@ class DetailsActivity : Activity() {
             if (mobile) addView(ImageView(this@DetailsActivity).apply {
                 setImageDrawable(PathDrawable(MenuIcons.SEARCH_ICON).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
                 setPadding(dp(8), dp(8), dp(8), dp(8))
-                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_LIGHT) }
             }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(6); rightMargin = dp(6) })
             // the same label as on the cards: the film is in the cinemas now or comes soon
             val mark = Cinema.caption(currentTitle.id, currentTitle.tv)

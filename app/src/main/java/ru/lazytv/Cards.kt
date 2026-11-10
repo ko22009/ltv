@@ -131,7 +131,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setPadding(px(4f), px(4f), px(4f), px(4f))
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(0xE6101216.toInt())
+            setColor(OVERLAY_DENSE)
         }
         visibility = View.GONE
     }
@@ -141,7 +141,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     /** The mark of a card chosen for deletion (edit mode of the history): a teal veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
-        setBackgroundColor((FOCUS_FILL and 0x00FFFFFF) or 0x99000000.toInt())
+        setBackgroundColor((FOCUS_FILL and 0x00FFFFFF) or OVERLAY_LIGHT)
         visibility = View.GONE
         // a square of its own: the icon is drawn by width, a stretched view would cut it
         addView(ImageView(context).apply {

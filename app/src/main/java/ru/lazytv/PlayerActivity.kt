@@ -412,7 +412,7 @@ class PlayerActivity : Activity() {
         background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(cursorFill(this@PlayerActivity)); shape = GradientDrawable.OVAL })
             addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(cursorFill(this@PlayerActivity)); shape = GradientDrawable.OVAL })
-            addState(intArrayOf(), GradientDrawable().apply { setColor(0x55000000); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(), GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL })
         }
         setOnClickListener { resetHideTimer(); action() }
     }
@@ -463,7 +463,7 @@ class PlayerActivity : Activity() {
         val top = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(OVERLAY_DENSE, 0x00000000))
             setPadding(dp(24), dp(16), dp(48), dp(40))
             setOnClickListener { resetHideTimer() }
         }
@@ -489,7 +489,7 @@ class PlayerActivity : Activity() {
 
         val bottom = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
+            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(OVERLAY_DENSE, 0x00000000))
             setPadding(dp(48), dp(60), dp(48), dp(24))
             setOnClickListener { resetHideTimer() }
         }
@@ -756,7 +756,7 @@ class PlayerActivity : Activity() {
     /** Repaints the episode strip: the current episode is the light plate like the active season on the series page, the focused one is teal. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
-            styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = TEXT_SECONDARY)
+            styleChoice(view, view, index == queueIndex, scale, plate = OVERLAY_SOFT, restText = TEXT_SECONDARY)
         }
     }
 

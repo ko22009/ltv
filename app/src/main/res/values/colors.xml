@@ -8,4 +8,9 @@
     <color name="accent_light">#E2E8F0</color>
     <color name="touch_fill">#343B47</color>
     <color name="focus_fill">#0F766E</color>
+    <!-- the dark plates over a picture or a video: soft (back button, rows over the video), light (round buttons, the counter), dense (the rating, the bubbles of the player); the cover is the page colour over the page -->
+    <color name="overlay_soft">#66000000</color>
+    <color name="overlay_light">#99000000</color>
+    <color name="overlay_dense">#CC000000</color>
+    <color name="page_cover">#F0101216</color>
 </resources>

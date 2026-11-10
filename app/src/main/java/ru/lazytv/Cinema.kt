@@ -117,7 +117,7 @@ object Cinema {
         setPadding(px(8f), px(4f), px(8f), px(4f))
         // a dark glass plate: the poster stays visible through it
         background = GradientDrawable().apply {
-            setColor(0x99101216.toInt())
+            setColor(OVERLAY_LIGHT)
             cornerRadius = px(SMALL_RADIUS).toFloat()
         }
         isFocusable = false

@@ -551,7 +551,7 @@ class BadgeDrawable(private val text: String, color: Int) : android.graphics.dra
         textSize = 40f
         typeface = Typeface.DEFAULT_BOLD
         textAlign = android.graphics.Paint.Align.CENTER
-        setShadowLayer(5f, 0f, 1f, 0xCC000000.toInt())
+        setShadowLayer(5f, 0f, 1f, OVERLAY_DENSE)
     }
 
     override fun draw(canvas: android.graphics.Canvas) {

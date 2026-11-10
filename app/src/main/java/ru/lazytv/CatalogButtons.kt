@@ -16,7 +16,7 @@ import android.widget.TextView
 const val CHIP_HEIGHT = 44
 
 /** Round 56dp Back button for secondary screens so mouse and remotes without a Back key can always leave the page. */
-fun backButton(context: Context, scale: Float, normalColor: Int = 0x66000000, onClick: () -> Unit): ImageView {
+fun backButton(context: Context, scale: Float, normalColor: Int = OVERLAY_SOFT, onClick: () -> Unit): ImageView {
     val pad = (12 * scale).toInt()
     return ImageView(context).apply {
         setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
@@ -66,6 +66,12 @@ val ACTIVE_TEXT: Int get() = PAGE_BG
 
 /** The colour of the page behind everything (the same as the window background of the themes). */
 val PAGE_BG: Int get() = LazyApp.res.getColor(R.color.page_bg, null)
+
+/** Dark plates over a picture or a video (colors.xml): soft, light, dense; the cover is the page colour laid over the page. */
+val OVERLAY_SOFT: Int get() = LazyApp.res.getColor(R.color.overlay_soft, null)
+val OVERLAY_LIGHT: Int get() = LazyApp.res.getColor(R.color.overlay_light, null)
+val OVERLAY_DENSE: Int get() = LazyApp.res.getColor(R.color.overlay_dense, null)
+val PAGE_COVER: Int get() = LazyApp.res.getColor(R.color.page_cover, null)
 
 /** The lighter grey of secondary text (a description, the rest of a name); one place, no number in the code. */
 const val TEXT_SECONDARY = 0xFFCBD5E1.toInt()
