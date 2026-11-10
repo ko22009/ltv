@@ -5,8 +5,6 @@ import android.graphics.Canvas
 import android.graphics.CornerPathEffect
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RadialGradient
-import android.graphics.Shader
 import android.view.View
 
 /**
@@ -30,8 +28,6 @@ class LogoView(context: Context, private val capHeightDp: Float, markColor: Int 
         color = arcColor ?: markColor
     }
 
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
     init {
         isFocusable = false
         isClickable = false
@@ -51,20 +47,6 @@ class LogoView(context: Context, private val capHeightDp: Float, markColor: Int 
         // centred in whatever room the parent gave
         canvas.save()
         canvas.translate((width - w) / 2f, (height - h * totalHeights) / 2f)
-        if (arcColor != null) {
-            // the soft glow under the arc: a wide ellipse rising from below, the brightest at the lower edge; it is cut off at the
-            // letters, so they stay clean white
-            val cx = w / 2f
-            val cy = h * 1.62f
-            val r = 0.60f * h  // the top of the glow reaches the letters' lower edge with no brightness left
-            glowPaint.shader = RadialGradient(0f, 0f, r, intArrayOf((arcColor and 0x00FFFFFF) or 0x70000000.toInt(), arcColor and 0x00FFFFFF), null, Shader.TileMode.CLAMP)
-            canvas.save()
-            canvas.clipRect(-w, h * 1.03f, w * 2, h * 4)
-            canvas.translate(cx, cy)
-            canvas.scale(2.8f, 1f)
-            canvas.drawCircle(0f, 0f, r, glowPaint)
-            canvas.restore()
-        }
         paint.strokeWidth = STROKE * h
         // the corner of the L is rounder than the stroke alone gives
         paint.pathEffect = CornerPathEffect(0.16f * h)
