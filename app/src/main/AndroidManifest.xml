@@ -45,14 +45,14 @@
                 <action android:name="android.media.tv.action.INITIALIZE_PROGRAMS" />
             </intent-filter>
         </receiver>
-        <activity android:name=".DetailsActivity" android:exported="false" />
-        <activity android:name=".GalleryActivity" android:exported="false" android:theme="@style/Theme.LazyTV.Filters" />
-        <activity android:name=".SettingsActivity" android:exported="false" android:theme="@style/Theme.LazyTV" />
-        <activity android:name=".EpisodesActivity" android:exported="false" />
-        <activity android:name=".PersonActivity" android:exported="false" />
-        <activity android:name=".TorrentsActivity" android:exported="false" />
-        <activity android:name=".TitlesGridActivity" android:exported="false" />
-        <activity android:name=".FiltersActivity" android:exported="false" android:theme="@style/Theme.LazyTV.Filters" />
+        <activity android:name=".DetailsActivity" android:exported="false" android:screenOrientation="behind" />
+        <activity android:name=".GalleryActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV.Filters" />
+        <activity android:name=".SettingsActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV" />
+        <activity android:name=".EpisodesActivity" android:exported="false" android:screenOrientation="behind" />
+        <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="behind" />
+        <activity android:name=".TorrentsActivity" android:exported="false" android:screenOrientation="behind" />
+        <activity android:name=".TitlesGridActivity" android:exported="false" android:screenOrientation="behind" />
+        <activity android:name=".FiltersActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV.Filters" />
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 </manifest>
