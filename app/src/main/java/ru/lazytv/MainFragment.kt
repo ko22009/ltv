@@ -1005,7 +1005,7 @@ class TorrentCardPresenter : Presenter() {
         @Suppress("UNCHECKED_CAST")
         val pair = tile.tag as Pair<TextView, TextView>
         pair.first.text = torrent.title
-        pair.second.text = "${torrent.source} · ${torrent.size}"
+        pair.second.text = "${torrent.source}, ${torrent.size}"
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
