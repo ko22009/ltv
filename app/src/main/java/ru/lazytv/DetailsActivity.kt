@@ -105,6 +105,8 @@ class DetailsActivity : Activity() {
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
             // the year stands here until the details arrive with the full date
             RELEASE to intent.getStringExtra("year").orEmpty(),
+            // the rating stands in the facts of the card, not on its poster
+            "Рейтинг" to shownRating,
         )
 
         val root = FrameLayout(this)
@@ -353,13 +355,6 @@ class DetailsActivity : Activity() {
                 setPadding(dp(6), dp(6), dp(6), dp(6))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
             }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(6); rightMargin = dp(6) })
-            // the rating sits on the poster corner, as on the cards of the lists
-            RatingBadge.label(shownRating)?.let { label ->
-                addView(TextView(this@DetailsActivity).apply {
-                    text = label
-                    RatingBadge.style(this, m(18, 14) * scale, dp(m(10, 8)), dp(m(5, 4)))
-                }, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(m(10, 6)); bottomMargin = dp(m(10, 6)) })
-            }
             // the same label as on the cards: the film is in the cinemas now or comes soon
             val mark = Cinema.caption(currentTitle.id, currentTitle.tv)
             if (mark != null) {
@@ -660,6 +655,10 @@ class DetailsActivity : Activity() {
                     addView(cards)
                 }
                 row.addView(cardsScroll, LinearLayout.LayoutParams(0, -2, 1f))
+            } else if (caption == "Рейтинг") {
+                val ratingVal = value.replace(',', '.').toDoubleOrNull()
+                val color = if (ratingVal != null && ratingVal < 6.0) 0x99FFFFFF.toInt() else Color.WHITE
+                row.addView(text("★ $value", 18f, color).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
             } else {
                 val valueView = text(value, 18f, Color.WHITE).apply {
                     if (caption in listOf(RELEASE, "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
