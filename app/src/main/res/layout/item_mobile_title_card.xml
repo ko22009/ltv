@@ -69,18 +69,17 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 tools:text="★ 7.8" />
 
-            <!-- the bookmark: the title is saved in the favorites (icon and plate are set in the adapter) -->
-            <ImageView
+            <!-- the bookmark: the title is saved in the favorites (the plate of the rating, the icon is set in the adapter) -->
+            <TextView
                 android:id="@+id/cardFavorite"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="8dp"
                 android:contentDescription="В закладках"
-                android:padding="5dp"
                 android:visibility="gone"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
 
             <View
                 android:id="@+id/cardRipple"

@@ -136,27 +136,22 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         visibility = View.GONE
     }
 
-    /** The bookmark in the top right corner of the poster: the title is saved in the favorites. The watched tick moves left of it. */
-    private val fav = ImageView(context).apply {
-        setImageDrawable(PathDrawable(MenuIcons.BOOKMARK).apply {
+    /** The bookmark in the lower left corner of the poster: the title is saved in the favorites. The plate of the rating, with the icon instead of the text. */
+    private val fav = TextView(context).apply {
+        val size = 16f * scale
+        RatingBadge.style(this, size, px(10f), px(5f))
+        // the icon is as tall as the rating text, so the plate has the height of the rating plate
+        val icon = PathDrawable(MenuIcons.BOOKMARK).apply {
             setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
-        })
-        setPadding(px(7f), px(7f), px(7f), px(7f))
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(OVERLAY_DENSE)
+            setBounds(0, 0, size.toInt(), size.toInt())
         }
+        setCompoundDrawables(icon, null, null, null)
         visibility = View.GONE
     }
 
     private fun applyMarks() {
         val title = shown ?: return
-        val saved = Favorites.contains(context, title)
-        fav.visibility = if (saved) View.VISIBLE else View.GONE
-        (badge.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let {
-            val margin = px(10f) + if (saved) px(42f) else 0
-            if (it.rightMargin != margin) { it.rightMargin = margin; badge.requestLayout() }
-        }
+        fav.visibility = if (Favorites.contains(context, title)) View.VISIBLE else View.GONE
     }
 
     /** "В КИНО" over the top left corner of the poster of a film that is in the cinemas now (not dimmed with the poster). */
@@ -247,9 +242,9 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
                 topMargin = px(10f)
                 rightMargin = px(10f)
             })
-            addView(fav, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
-                topMargin = px(10f)
-                rightMargin = px(10f)
+            addView(fav, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.BOTTOM).apply {
+                bottomMargin = px(10f)
+                leftMargin = px(10f)
             })
             addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
                 bottomMargin = px(10f)
