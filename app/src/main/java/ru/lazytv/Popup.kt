@@ -128,7 +128,7 @@ fun showMessage(
     }
     if (message != null) body.addView(TextView(activity).apply {
         text = message
-        setTextColor(0xFFCBD5E1.toInt())
+        setTextColor(TEXT_SECONDARY)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         gravity = Gravity.START
         setLineSpacing(0f, 1.15f)

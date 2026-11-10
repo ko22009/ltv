@@ -110,7 +110,7 @@ class EpisodesActivity : Activity() {
         page.addView(label((if (isMobileUi()) "Удерживайте серию, чтобы отметить её просмотренной или снять отметку" else "Удерживайте OK, чтобы отметить серию просмотренной или снять отметку"), 14f, TEXT_MUTED).apply {
             setPadding(0, px(12), 0, px(12))
         })
-        val status = label("", 15f, 0xFFCBD5E1.toInt())
+        val status = label("", 15f, TEXT_SECONDARY)
         status.visibility = View.GONE
         page.addView(status)
         val errorRow = LinearLayout(this).apply {

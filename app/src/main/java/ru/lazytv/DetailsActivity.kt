@@ -531,9 +531,9 @@ class DetailsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             visibility = if (rawOverview.isEmpty()) View.GONE else View.VISIBLE
             setOnClickListener { showFullOverview() }
-            addView(text("Читать полностью", 15f, 0xFFCBD5E1.toInt(), bold = true))
+            addView(text("Читать полностью", 15f, TEXT_SECONDARY, bold = true))
             addView(ImageView(this@DetailsActivity).apply {
-                setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply { setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
+                setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply { setColorFilter(TEXT_SECONDARY, android.graphics.PorterDuff.Mode.SRC_IN) })
             }, LinearLayout.LayoutParams(dp(22), dp(22)))
         }
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply {
@@ -1100,7 +1100,7 @@ class DetailsActivity : Activity() {
                     .apply { shape = GradientDrawable.OVAL }
                 // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
-                addView(text(initials, 30f, 0xFFCBD5E1.toInt()).apply { gravity = Gravity.CENTER },
+                addView(text(initials, 30f, TEXT_SECONDARY).apply { gravity = Gravity.CENTER },
                     FrameLayout.LayoutParams(-1, -1))
                 val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 addView(image, FrameLayout.LayoutParams(-1, -1))

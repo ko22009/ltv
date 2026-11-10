@@ -478,7 +478,7 @@ class PlayerActivity : Activity() {
         }
         titleView = label(queue.getOrNull(queueIndex)?.title ?: name, 22f, Color.WHITE, true)
         baseMeta = queue.getOrNull(queueIndex)?.meta ?: meta
-        metaView = label(baseMeta, 14f, 0xFFCBD5E1.toInt()).apply {
+        metaView = label(baseMeta, 14f, TEXT_SECONDARY).apply {
             setPadding(0, dp(4), 0, 0)
             visibility = if (baseMeta.isEmpty()) View.GONE else View.VISIBLE
         }
@@ -497,8 +497,8 @@ class PlayerActivity : Activity() {
 
         val seekRow = LinearLayout(this)
         seekRow.gravity = Gravity.CENTER_VERTICAL
-        position = label("0:00", 14f, 0xFFCBD5E1.toInt())
-        duration = label("0:00", 14f, 0xFFCBD5E1.toInt())
+        position = label("0:00", 14f, TEXT_SECONDARY)
+        duration = label("0:00", 14f, TEXT_SECONDARY)
         seek = SeekBar(android.view.ContextThemeWrapper(this, R.style.PlayerSeekOverlay))
         seek.isFocusable = true
         updateSeekColors()
@@ -581,7 +581,7 @@ class PlayerActivity : Activity() {
             episodeButtons.orientation = LinearLayout.HORIZONTAL
             queue.forEachIndexed { index, item ->
                 val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
-                val button = label(caption, 15f, 0xFFCBD5E1.toInt()).apply {
+                val button = label(caption, 15f, TEXT_SECONDARY).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(18), 0, dp(18), 0)
                     isFocusable = true
@@ -756,7 +756,7 @@ class PlayerActivity : Activity() {
     /** Repaints the episode strip: the current episode is the light plate like the active season on the series page, the focused one is teal. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
-            styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = 0xFFCBD5E1.toInt())
+            styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = TEXT_SECONDARY)
         }
     }
 

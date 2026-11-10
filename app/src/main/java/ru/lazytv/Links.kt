@@ -36,14 +36,14 @@ object Links {
             setPadding(0, 0, 0, 0)
             addView(TextView(activity).apply {
                 text = "Браузера на этом устройстве нет. Откройте ссылку на телефоне или компьютере и поставьте TorrServe оттуда."
-                setTextColor(0xFFCBD5E1.toInt())
+                setTextColor(TEXT_SECONDARY)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
                 gravity = Gravity.START
                 setLineSpacing(0f, 1.15f)
             })
             addView(TextView(activity).apply {
                 text = url
-                setTextColor(0xFFCBD5E1.toInt())
+                setTextColor(TEXT_SECONDARY)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                 gravity = Gravity.START
                 setTextIsSelectable(true)

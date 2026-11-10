@@ -639,7 +639,7 @@ class PlainTextPresenter : Presenter() {
     override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
         val scale = parent.context.uiScale()
         val view = TextView(parent.context).apply {
-            setTextColor(0xFFCBD5E1.toInt())
+            setTextColor(TEXT_SECONDARY)
             textSize = 18f
             gravity = Gravity.START
             setPadding(0, (18 * scale).toInt(), (24 * scale).toInt(), (18 * scale).toInt())
@@ -758,7 +758,7 @@ class FavoriteEpisodePresenter : Presenter() {
             setTextColor(Color.WHITE); textSize = 16f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD
         }
         val episode = TextView(parent.context).apply {
-            setTextColor(0xFFCBD5E1.toInt()); textSize = 13f; maxLines = 2; setPadding(0, dp(8), 0, 0)
+            setTextColor(TEXT_SECONDARY); textSize = 13f; maxLines = 2; setPadding(0, dp(8), 0, 0)
         }
         val mark = TextView(parent.context).apply { setTextColor(0xFFE0B94F.toInt()); textSize = 13f }
         texts.addView(series)

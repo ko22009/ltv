@@ -166,7 +166,7 @@ class SearchPageFragment : Fragment() {
         recentHeader.addView(recentActions, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { leftMargin = px(8) })
         page.addView(recentHeader)
 
-        message = label("", 16f, 0xFFCBD5E1.toInt())
+        message = label("", 16f, TEXT_SECONDARY)
         message.setPadding(0, px(14), 0, 0)
         message.visibility = View.GONE
         page.addView(message)

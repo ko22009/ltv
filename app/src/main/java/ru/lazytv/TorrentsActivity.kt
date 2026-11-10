@@ -115,7 +115,7 @@ class TorrentsActivity : Activity() {
         page.addView(header, LinearLayout.LayoutParams(-1, px(56)))
 
         // the line under the query bar only carries messages (nothing found, errors) and hides when empty
-        status = label("", 15f, 0xFFCBD5E1.toInt())
+        status = label("", 15f, TEXT_SECONDARY)
         status.visibility = View.GONE
         status.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) { status.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE }
@@ -573,8 +573,8 @@ class TorrentsActivity : Activity() {
     private inner class PreloadView {
         val title = label("", 18f, Color.WHITE, true)
         val file = label("", 15f, Color.WHITE)
-        val info = label("", 14f, 0xFFCBD5E1.toInt())
-        val buffer = label("", 14f, 0xFFCBD5E1.toInt())
+        val info = label("", 14f, TEXT_SECONDARY)
+        val buffer = label("", 14f, TEXT_SECONDARY)
         val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             // the white line of the player and the spinners

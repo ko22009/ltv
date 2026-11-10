@@ -68,7 +68,7 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
         addView(Spinner(context, (SPINNER_SCREEN * scale).toInt()))
         label.text = caption
         label.gravity = Gravity.CENTER
-        label.setTextColor(0xFFCBD5E1.toInt())
+        label.setTextColor(TEXT_SECONDARY)
         label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
         label.setPadding(0, (16 * scale).toInt(), 0, 0)
         addView(label)

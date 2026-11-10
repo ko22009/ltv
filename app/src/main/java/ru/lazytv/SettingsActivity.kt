@@ -103,7 +103,7 @@ class SettingsActivity : FragmentActivity() {
                     isDuplicateParentStateEnabled = true
                     setTextColor(android.content.res.ColorStateList(
                         arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                        intArrayOf(Color.WHITE, 0xFFCBD5E1.toInt())))
+                        intArrayOf(Color.WHITE, TEXT_SECONDARY)))
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
                     setLineSpacing(0f, 1.2f)
                     setPadding(0, px(6), 0, 0)

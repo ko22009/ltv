@@ -43,7 +43,7 @@ fun torrentRowCard(context: Context, torrent: Torrent, marked: Boolean, compact:
     val texts = LinearLayout(context)
     texts.orientation = LinearLayout.VERTICAL
     texts.addView(label(main, if (mobile || compact) 16f else 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
-    texts.addView(label(rest, 14f, 0xFFCBD5E1.toInt()).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
+    texts.addView(label(rest, 14f, TEXT_SECONDARY).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
     texts.addView(label(torrent.source, 13f, TEXT_MUTED))
     card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
 

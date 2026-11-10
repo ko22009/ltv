@@ -105,7 +105,7 @@ class CatalogPageFragment : Fragment() {
         page.addView(filtersText)
 
         message = TextView(requireContext()).apply {
-            setTextColor(0xFFCBD5E1.toInt())
+            setTextColor(TEXT_SECONDARY)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setPadding(0, px(10), 0, 0)
             visibility = View.GONE

@@ -67,6 +67,9 @@ val ACTIVE_TEXT: Int get() = PAGE_BG
 /** The colour of the page behind everything (the same as the window background of the themes). */
 val PAGE_BG: Int get() = LazyApp.res.getColor(R.color.page_bg, null)
 
+/** The lighter grey of secondary text (a description, the rest of a name); one place, no number in the code. */
+const val TEXT_SECONDARY = 0xFFCBD5E1.toInt()
+
 /** The muted grey of captions and inactive icons. */
 val TEXT_MUTED: Int get() = LazyApp.res.getColor(R.color.text_muted, null)
 

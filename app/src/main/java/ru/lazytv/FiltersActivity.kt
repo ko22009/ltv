@@ -119,7 +119,7 @@ class FiltersActivity : Activity() {
         line.isClickable = true
         // the name keeps its width; the chosen value takes the rest (right-aligned) and is cut with "..." when it is long
         line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD; maxLines = 1 }, LinearLayout.LayoutParams(-2, -2))
-        val shown = text(value, 17f, 0xFFCBD5E1.toInt()).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; gravity = Gravity.END }
+        val shown = text(value, 17f, TEXT_SECONDARY).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; gravity = Gravity.END }
         line.addView(shown, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = px(24) })
         line.setOnClickListener { onClick(shown) }
         if (onKey != null) line.setOnKeyListener { _, code, event -> event.action == KeyEvent.ACTION_DOWN && onKey(code, shown) }

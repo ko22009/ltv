@@ -124,7 +124,7 @@ class PersonActivity : Activity() {
                         grid.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus()
                     }
                 }.onFailure { err ->
-                    page.addView(label(Errors.explain(err), 16f, 0xFFCBD5E1.toInt()).apply {
+                    page.addView(label(Errors.explain(err), 16f, TEXT_SECONDARY).apply {
                         setPadding(0, px(12), 0, 0)
                     })
                     val action = Errors.actionOf(err)
@@ -162,7 +162,7 @@ class PersonActivity : Activity() {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
                 .apply { cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             clipToOutline = true
-            addView(label(initials, 40f, 0xFFCBD5E1.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
+            addView(label(initials, 40f, TEXT_SECONDARY).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
             if (!person.photo.isNullOrEmpty()) {
@@ -188,7 +188,7 @@ class PersonActivity : Activity() {
         val facts = listOf(person.role, person.birthday, person.place).filter { it.isNotEmpty() }.joinToString(" • ")
         // no font padding: the first line starts at the top edge of the photo, and both texts share the left edge
         if (facts.isNotEmpty()) texts.addView(label(facts, 16f, TEXT_MUTED).apply { includeFontPadding = false })
-        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, 0xFFCBD5E1.toInt()).apply {
+        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, TEXT_SECONDARY).apply {
             includeFontPadding = false
             setLineSpacing(0f, 1.2f)
             setPadding(0, px(if (facts.isEmpty()) 0 else 10), 0, 0)
