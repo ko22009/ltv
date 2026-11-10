@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#101216"
+    android:background="@color/page_bg"
     android:orientation="vertical">
 
     <!-- search field: shown only on the search tab -->
@@ -18,7 +18,7 @@
         android:background="@drawable/bg_mobile_input"
         android:drawableStart="@drawable/ic_nav_search"
         android:drawablePadding="10dp"
-        android:drawableTint="#94A3B8"
+        android:drawableTint="@color/text_muted"
         android:hint="Фильмы и сериалы"
         android:imeOptions="actionSearch"
         android:importantForAutofill="no"
@@ -58,7 +58,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="16dp"
-        android:textColor="#94A3B8"
+        android:textColor="@color/text_muted"
         android:textSize="13sp"
         android:textStyle="bold"
         android:visibility="gone" />
@@ -87,7 +87,7 @@
             android:lineSpacingMultiplier="1.15"
             android:paddingStart="32dp"
             android:paddingEnd="32dp"
-            android:textColor="#94A3B8"
+            android:textColor="@color/text_muted"
             android:textSize="15sp"
             android:visibility="gone" />
 

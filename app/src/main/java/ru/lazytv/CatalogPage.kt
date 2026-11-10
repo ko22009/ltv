@@ -97,7 +97,7 @@ class CatalogPageFragment : Fragment() {
         header.addView(buttons, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = barCut })
         // what is chosen now, one line under the buttons
         filtersText = TextView(requireContext()).apply {
-            setTextColor(0xFF94A3B8.toInt())
+            setTextColor(TEXT_MUTED)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 15f * scale)
             setPadding(0, px(6), 0, 0)
             visibility = View.GONE

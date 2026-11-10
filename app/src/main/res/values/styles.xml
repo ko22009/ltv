@@ -1,10 +1,10 @@
 <resources>
     <style name="Theme.LazyTV" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#101216</item>
-        <item name="android:windowSplashScreenBackground">#101216</item>
+        <item name="android:windowBackground">@color/page_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/page_bg</item>
         <!-- on a phone the bars of the system take the colour of the page instead of the grey-green of the system theme -->
-        <item name="android:statusBarColor">#101216</item>
-        <item name="android:navigationBarColor">#101216</item>
+        <item name="android:statusBarColor">@color/page_bg</item>
+        <item name="android:navigationBarColor">@color/page_bg</item>
     </style>
     <!-- the progress bar of the player: the halo around the focused thumb takes the colour of the focus instead of grey -->
     <style name="PlayerSeekOverlay">
@@ -18,22 +18,22 @@
         <item name="android:backgroundDimEnabled">true</item>
     </style>
     <style name="Theme.LazyMobile" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:windowBackground">#101216</item>
-        <item name="android:windowSplashScreenBackground">#101216</item>
+        <item name="android:windowBackground">@color/page_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/page_bg</item>
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
-        <item name="colorPrimary">#E2E8F0</item>
-        <item name="colorSecondary">#E2E8F0</item>
-        <item name="colorSurface">#161920</item>
+        <item name="colorPrimary">@color/accent_light</item>
+        <item name="colorSecondary">@color/accent_light</item>
+        <item name="colorSurface">@color/backdrop_plate</item>
         <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorOnPrimary">#101216</item>
-        <item name="android:statusBarColor">#101216</item>
-        <item name="android:navigationBarColor">#161920</item>
+        <item name="colorOnPrimary">@color/page_bg</item>
+        <item name="android:statusBarColor">@color/page_bg</item>
+        <item name="android:navigationBarColor">@color/backdrop_plate</item>
     </style>
     <!-- the chip of the phone screens: the plate of the buttons (#1C2029); the chosen one gets a light outline (the phone has no teal) -->
     <style name="Widget.LazyMobile.Chip" parent="Widget.Material3.Chip.Filter">
-        <item name="chipBackgroundColor">#1C2029</item>
+        <item name="chipBackgroundColor">@color/plate_fill</item>
         <item name="chipStrokeColor">@color/mobile_chip_stroke</item>
         <item name="chipStrokeWidth">2dp</item>
         <item name="chipCornerRadius">6dp</item>
@@ -44,7 +44,7 @@
     </style>
     <!-- bottom menu of the phone: dark plate, the active section is a plate with the teal outline (no fill) -->
     <style name="Widget.LazyMobile.BottomNav" parent="Widget.Material3.BottomNavigationView">
-        <item name="backgroundTint">#161920</item>
+        <item name="backgroundTint">@color/backdrop_plate</item>
         <!-- no elevation overlay: it tinted the menu purple, and the system bar under it (#161920) no longer matched -->
         <item name="android:elevation">0dp</item>
         <item name="elevation">0dp</item>
@@ -72,7 +72,7 @@
         <item name="android:layout_marginTop">14dp</item>
         <item name="android:layout_marginEnd">16dp</item>
         <item name="android:layout_marginBottom">4dp</item>
-        <item name="android:textColor">#94A3B8</item>
+        <item name="android:textColor">@color/text_muted</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textStyle">bold</item>
     </style>

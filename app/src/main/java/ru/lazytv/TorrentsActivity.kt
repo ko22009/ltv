@@ -504,7 +504,7 @@ class TorrentsActivity : Activity() {
         }
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, 0xFF94A3B8.toInt()))
+            addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, TEXT_MUTED))
             addView(input, LinearLayout.LayoutParams(-1, px(52)).apply { topMargin = px(8) })
         }
         showMessage(this, "Адрес TorrServe", content = box, initialFocus = input, buttons = listOf(
@@ -587,7 +587,7 @@ class TorrentsActivity : Activity() {
             background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             if (!isMobileUi()) minimumWidth = px(620)
             addView(title)
-            addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFF94A3B8.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
+            addView(label("ПРЕДЗАГРУЗКА", 14f, TEXT_MUTED, true).apply { setPadding(0, px(8), 0, px(4)) })
             addView(file)
             addView(info.apply { setPadding(0, px(6), 0, 0) })
             addView(buffer)

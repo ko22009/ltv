@@ -51,7 +51,7 @@ class FiltersActivity : Activity() {
         page.orientation = LinearLayout.VERTICAL
         if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(24))
         page.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xFF101216.toInt())
+            setColor(PAGE_BG)
             cornerRadius = if (isMobileUi()) 0f else px(12).toFloat() // a whole page on a phone, a panel on a TV
         }
         root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { val gap = if (isMobileUi()) 0 else px(40); setMargins(gap, gap, gap, gap) })
@@ -324,7 +324,7 @@ class FiltersActivity : Activity() {
             } else {
                 val matches = allCountries.filter { it.second.lowercase().contains(q) || it.first.lowercase().contains(q) }
                 if (matches.isEmpty()) {
-                    val emptyText = text("Ничего не найдено", 18f, 0xFF94A3B8.toInt()).apply {
+                    val emptyText = text("Ничего не найдено", 18f, TEXT_MUTED).apply {
                         setPadding(px(14), px(24), px(14), px(24))
                     }
                     val colSpec = GridLayout.spec(0, 1, GridLayout.FILL, 1f)

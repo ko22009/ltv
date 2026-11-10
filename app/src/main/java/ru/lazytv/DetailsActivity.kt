@@ -122,7 +122,7 @@ class DetailsActivity : Activity() {
         )
 
         val root = FrameLayout(this)
-        root.setBackgroundColor(0xFF101216.toInt())
+        root.setBackgroundColor(PAGE_BG)
         // on a phone the banner, the buttons and the poster are the top of one scrolling page, so the poster scrolls away
         // with them instead of riding over the facts; on the TV they lie directly on the screen
         val stage = if (mobile) FrameLayout(this).apply { clipChildren = false; clipToPadding = false } else root
@@ -391,7 +391,7 @@ class DetailsActivity : Activity() {
 
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
-        val original = text("", 16f, 0xFF94A3B8.toInt()).apply {
+        val original = text("", 16f, TEXT_MUTED).apply {
             includeFontPadding = false
             // one line, like the heading: a long original title must not push the lines below and the button down
             if (mobile) { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
@@ -410,7 +410,7 @@ class DetailsActivity : Activity() {
                 }
                 addView(titleView)
                 addView(original)
-                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply {
+                genresLine = text("", 15f, TEXT_MUTED).apply {
                     includeFontPadding = false; setPadding(0, dp(5), 0, 0)
                     // the full list of genres stands in the table below
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
@@ -815,7 +815,7 @@ class DetailsActivity : Activity() {
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
-            row.addView(text(caption, m(17, 15).toFloat(), 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(m(160, 120)), -2))
+            row.addView(text(caption, m(17, 15).toFloat(), TEXT_MUTED), LinearLayout.LayoutParams(dp(m(160, 120)), -2))
             if (value.isBlank()) {
                 // a grey bar of the height the filled value will have (one line of the value text; the director is a tile),
                 // so the rows do not move when the details come
@@ -1111,7 +1111,7 @@ class DetailsActivity : Activity() {
             // one line each: with two-line names and roles the tallest card made all the others tall, with empty space under the text
             card.addView(text(person.name, 15f, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                 LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
-            if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, 0xFF94A3B8.toInt()).apply {
+            if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, TEXT_MUTED).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
             }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(2) })
             // all the cards of the row are as tall as the tallest one

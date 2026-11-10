@@ -39,10 +39,10 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
  * like the other tiles. The caption is the child with the tag "caption". Filters, sort and the page header buttons are this one.
  */
 /** The one colour of every focus and selection highlight in the app (menu, tiles, buttons, rows, chips). */
-val FOCUS_FILL = 0xFF0F766E.toInt()
+val FOCUS_FILL: Int get() = LazyApp.res.getColor(R.color.focus_fill, null)
 
 /** The plate of a pressed or focused button on a phone: a lighter grey, not the teal that belongs to the cursor of a TV remote. */
-val TOUCH_FILL = 0xFF343B47.toInt()
+val TOUCH_FILL: Int get() = LazyApp.res.getColor(R.color.touch_fill, null)
 
 /** The highlight under the cursor or the finger: teal on a TV, the neutral lighter plate on a phone. */
 fun cursorFill(context: android.content.Context): Int = if (DeviceType.isTv(context)) FOCUS_FILL else TOUCH_FILL
@@ -51,25 +51,31 @@ fun cursorFill(context: android.content.Context): Int = if (DeviceType.isTv(cont
 fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
 
 /** The one dark plate of cards and tiles: the text strip of a title card, the "show all" tile, the text tile. */
-val PLATE_FILL = 0xFF1C2029.toInt()
+val PLATE_FILL: Int get() = LazyApp.res.getColor(R.color.plate_fill, null)
 
 /** The darker plate of a page block (the banner, the bar of buttons, the cast cards, the left menu) and the colours of a watched episode. */
-val BACKDROP_PLATE = 0xFF161920.toInt()
+val BACKDROP_PLATE: Int get() = LazyApp.res.getColor(R.color.backdrop_plate, null)
 val PLATE_LINE = 0xFF232836.toInt()
 val PLATE_WATCHED = 0xFF121418.toInt()
 val PLATE_WATCHED_LINE = 0xFF1B1F2A.toInt()
 
 /** The plate of the chosen item among equals (the open season, the playing episode, the picked source, the current choice in a list). */
-const val ACTIVE_PLATE = 0xFFE2E8F0.toInt()
+val ACTIVE_PLATE: Int get() = LazyApp.res.getColor(R.color.accent_light, null)
 /** The caption on [ACTIVE_PLATE]: the colour of the page. */
-const val ACTIVE_TEXT = 0xFF101216.toInt()
+val ACTIVE_TEXT: Int get() = PAGE_BG
+
+/** The colour of the page behind everything (the same as the window background of the themes). */
+val PAGE_BG: Int get() = LazyApp.res.getColor(R.color.page_bg, null)
+
+/** The muted grey of captions and inactive icons. */
+val TEXT_MUTED: Int get() = LazyApp.res.getColor(R.color.text_muted, null)
 
 /**
  * The one look of "the chosen one among equals": resting it is the usual [plate] with the [restText] caption, the chosen
  * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the teal [FOCUS_FILL]
  * with a white caption. [text] is the caption view (the item itself or its child); the chip takes the focus, the caption follows it.
  */
-fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = PLATE_FILL, restText: Int = 0xFF94A3B8.toInt()) {
+fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = PLATE_FILL, restText: Int = TEXT_MUTED) {
     val corner = radius * scale
     view.background = android.graphics.drawable.StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(cursorFill(view.context)); cornerRadius = corner })

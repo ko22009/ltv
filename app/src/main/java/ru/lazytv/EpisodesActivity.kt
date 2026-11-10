@@ -94,7 +94,7 @@ class EpisodesActivity : Activity() {
             })
             // the original name is its own line, not glued to the description
             if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
-                addView(label(variant.alt, 21f, 0xFF94A3B8.toInt()).apply {
+                addView(label(variant.alt, 21f, TEXT_MUTED).apply {
                     setPadding(0, px(2), 0, 0)
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
@@ -107,7 +107,7 @@ class EpisodesActivity : Activity() {
             addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         }
         page.addView(header)
-        page.addView(label((if (isMobileUi()) "Удерживайте серию, чтобы отметить её просмотренной или снять отметку" else "Удерживайте OK, чтобы отметить серию просмотренной или снять отметку"), 14f, 0xFF94A3B8.toInt()).apply {
+        page.addView(label((if (isMobileUi()) "Удерживайте серию, чтобы отметить её просмотренной или снять отметку" else "Удерживайте OK, чтобы отметить серию просмотренной или снять отметку"), 14f, TEXT_MUTED).apply {
             setPadding(0, px(12), 0, px(12))
         })
         val status = label("", 15f, 0xFFCBD5E1.toInt())
@@ -378,7 +378,7 @@ class EpisodesActivity : Activity() {
             line = if (watched) PLATE_WATCHED_LINE else PLATE_LINE,
         )
         if (editMode) card.addView(label(if (watched) "☑" else "☐", 20f, 0)
-            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else 0xFF94A3B8.toInt())) })
+            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else TEXT_MUTED)) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there

@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
 /** Colour of the inactive left-menu icons; the logo under the menu uses the same one. */
-private const val NAV_INACTIVE_COLOR = 0xFF94A3B8.toInt()
+private val NAV_INACTIVE_COLOR: Int get() = TEXT_MUTED
 
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
@@ -715,7 +715,7 @@ class SettingsSectionPresenter : Presenter() {
             setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD; maxLines = 2
         }
         val description = TextView(parent.context).apply {
-            setTextColor(0xFF94A3B8.toInt()); textSize = 13f; maxLines = 3; setPadding(0, dp(8), 0, 0)
+            setTextColor(TEXT_MUTED); textSize = 13f; maxLines = 3; setPadding(0, dp(8), 0, 0)
         }
         texts.addView(title)
         texts.addView(description)
@@ -731,7 +731,7 @@ class SettingsSectionPresenter : Presenter() {
         val texts = tile.tag as Pair<TextView, TextView>
         // the grey description is unreadable on the focus colour, so it turns white with the focus
         fun paint(focused: Boolean) {
-            texts.second.setTextColor(if (focused) Color.WHITE else 0xFF94A3B8.toInt())
+            texts.second.setTextColor(if (focused) Color.WHITE else TEXT_MUTED)
         }
         paint(tile.isFocused)
         tile.setOnFocusChangeListener { _, focused -> paint(focused) }

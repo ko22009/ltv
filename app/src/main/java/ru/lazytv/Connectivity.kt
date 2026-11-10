@@ -123,7 +123,7 @@ object OfflineCover {
         })
         column.addView(TextView(activity).apply {
             text = "Без сети приложение не работает.\nОжидание включения интернета..."
-            setTextColor(0xFF94A3B8.toInt())
+            setTextColor(TEXT_MUTED)
             textSize = if (tv) 22f else 15f
             gravity = Gravity.CENTER
             setPadding(0, (8 * density).toInt(), 0, (20 * density).toInt())

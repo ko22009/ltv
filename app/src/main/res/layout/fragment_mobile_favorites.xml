@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#101216">
+    android:background="@color/page_bg">
 
     <!-- one page like the TV one: the bookmarked titles, then the saved episodes and torrents when there are any -->
     <androidx.core.widget.NestedScrollView
@@ -69,7 +69,7 @@
         android:paddingStart="32dp"
         android:paddingEnd="32dp"
         android:text="Пока пусто.\nДобавляйте фильмы кнопкой «Закладки» в карточке, а серии и раздачи в их списках"
-        android:textColor="#94A3B8"
+        android:textColor="@color/text_muted"
         android:textSize="15sp"
         android:visibility="gone" />
 </FrameLayout>

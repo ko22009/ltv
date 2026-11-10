@@ -92,7 +92,7 @@ class GalleryActivity : Activity() {
         }
         counterView = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
-            setTextColor(0xFF94A3B8.toInt())
+            setTextColor(TEXT_MUTED)
             setPadding(0, dp(2), 0, 0)
         }
         titleBox.addView(titleView)
@@ -105,7 +105,7 @@ class GalleryActivity : Activity() {
 
         emptyView = TextView(this).apply {
             text = "В галерее нет обложек"
-            setTextColor(0xFF94A3B8.toInt())
+            setTextColor(TEXT_MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
             gravity = Gravity.CENTER
             visibility = View.GONE

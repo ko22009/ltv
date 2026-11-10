@@ -126,7 +126,7 @@ class FavoritesPageFragment : Fragment() {
         if (titles.isEmpty() && episodes.isEmpty() && torrents.isEmpty()) {
             content.addView(TextView(ctx).apply {
                 text = "Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"
-                setTextColor(0xFF94A3B8.toInt())
+                setTextColor(TEXT_MUTED)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                 setPadding(pad, (6 * scale).toInt(), 0, 0)
             })

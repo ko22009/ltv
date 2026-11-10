@@ -276,19 +276,19 @@ open class SettingsScreen : Fragment() {
         val mobile = requireContext().isMobileUi()
         val focusable = row.kind != RowKind.SECTION && row.kind != RowKind.INFO
         if (row.kind == RowKind.SECTION) {
-            return label(row.title, if (mobile) 12f else 14f, 0xFF94A3B8.toInt(), bold = true).apply {
+            return label(row.title, if (mobile) 12f else 14f, TEXT_MUTED, bold = true).apply {
                 setPadding(px(4), px(18), 0, px(6))
             }
         }
         val titleView = label(row.title, if (mobile) 15f else 18f, Color.WHITE, bold = true)
-        val desc = label(row.description, if (mobile) 13f else 15f, 0xFF94A3B8.toInt()).apply {
+        val desc = label(row.description, if (mobile) 13f else 15f, TEXT_MUTED).apply {
             setPadding(0, px(3), 0, 0)
             visibility = if (row.description.isEmpty()) View.GONE else View.VISIBLE
             // white while the row is focused: the grey is hard to read on the focus colour
             isDuplicateParentStateEnabled = true
             setTextColor(android.content.res.ColorStateList(
                 arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                intArrayOf(Color.WHITE, 0xFF94A3B8.toInt())))
+                intArrayOf(Color.WHITE, TEXT_MUTED)))
         }
         row.descView = desc
         val texts = LinearLayout(ctx).apply {

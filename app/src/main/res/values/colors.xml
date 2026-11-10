@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- the one source of the colours shared by the XML and the code: the code reads them as PLATE_FILL, BACKDROP_PLATE, PAGE_BG, TEXT_MUTED, ACTIVE_PLATE, TOUCH_FILL, FOCUS_FILL (CatalogButtons.kt) -->
+    <color name="plate_fill">#1C2029</color>
+    <color name="backdrop_plate">#161920</color>
+    <color name="page_bg">#101216</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="accent_light">#E2E8F0</color>
+    <color name="touch_fill">#343B47</color>
+    <color name="focus_fill">#0F766E</color>
+</resources>

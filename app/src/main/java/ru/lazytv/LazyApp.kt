@@ -8,8 +8,14 @@ import com.lmd.dpi.DpiBypass
 
 /** Starts the automatic block bypass: direct, then the built-in ByeDPI, then the LazyMedia proxy. */
 class LazyApp : Application() {
+    companion object {
+        /** Resources of the app for the colours that the XML styles share with the code (see colors.xml). */
+        lateinit var res: android.content.res.Resources
+    }
+
     override fun onCreate() {
         super.onCreate()
+        res = resources
         // the screen behind the cursor is remembered to come back to it after an update (docs/workflow.md)
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
@@ -17,10 +23,18 @@ class LazyApp : Application() {
                 if (activity !is PlayerActivity && activity !is GalleryActivity && activity.isMobileUi()) {
                     activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 }
+                // a phone page comes in from the right and leaves to the right, like a turned page (not the system slide up and down)
+                if (slides(activity) && savedInstanceState == null && !activity.isTaskRoot) {
+                    activity.overridePendingTransition(R.anim.page_in_right, R.anim.page_out_left)
+                }
             }
+            private fun slides(activity: Activity) = activity !is PlayerActivity && activity.isMobileUi()
             override fun onActivityStarted(activity: Activity) {}
             override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity); OfflineCover.resumed(activity) }
-            override fun onActivityPaused(activity: Activity) { OfflineCover.paused(activity) }
+            override fun onActivityPaused(activity: Activity) {
+                OfflineCover.paused(activity)
+                if (slides(activity) && activity.isFinishing) activity.overridePendingTransition(R.anim.page_in_left, R.anim.page_out_right)
+            }
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}

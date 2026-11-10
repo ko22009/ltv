@@ -1,5 +1,6 @@
 package ru.lazytv.mobile
 
+import ru.lazytv.TEXT_MUTED
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -87,7 +88,7 @@ class SearchFragment : Fragment() {
         val size = (24 * resources.displayMetrics.density).toInt()
         val mic = ru.lazytv.PathDrawable(ru.lazytv.MenuIcons.MIC).apply {
             setBounds(0, 0, size, size)
-            setColorFilter(0xFF94A3B8.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            setColorFilter(TEXT_MUTED, android.graphics.PorterDuff.Mode.SRC_IN)
         }
         input.setCompoundDrawablesRelative(input.compoundDrawablesRelative[0], null, mic, null)
         input.setOnTouchListener { v, event ->
@@ -130,7 +131,7 @@ class SearchFragment : Fragment() {
             chip.isCheckable = false
             // the cross takes this one phrase out of the history
             chip.isCloseIconVisible = true
-            chip.closeIconTint = android.content.res.ColorStateList.valueOf(0xFF94A3B8.toInt())
+            chip.closeIconTint = android.content.res.ColorStateList.valueOf(TEXT_MUTED)
             chip.setOnCloseIconClickListener { forget(phrase); showIdle() }
             chip.setOnClickListener {
                 binding.searchInput.setText(phrase)
@@ -143,7 +144,7 @@ class SearchFragment : Fragment() {
             val clear = layoutInflater.inflate(R.layout.chip_mobile_filter, binding.chipGroup, false) as Chip
             clear.text = "Очистить всё"
             clear.isCheckable = false
-            clear.setTextColor(0xFF94A3B8.toInt())
+            clear.setTextColor(TEXT_MUTED)
             clear.setOnClickListener {
                 Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
                 showIdle()
