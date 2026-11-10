@@ -80,7 +80,7 @@ class CatalogFragment : Fragment() {
         val filter = CatalogFilter.load(ctx, category.id)
         binding.filterButton.text = if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"
         binding.sortButton.text = CatalogFilter.sort(ctx, category.id).label
-        binding.resetButton.visibility = if (filter.count > 0) View.VISIBLE else View.GONE
+        binding.resetButton.visibility = if (filter.count > 0) View.VISIBLE else View.INVISIBLE
         val chosen = filter.describe(category)
         binding.filtersLine.text = chosen
         binding.filtersLine.visibility = if (chosen.isEmpty()) View.GONE else View.VISIBLE
