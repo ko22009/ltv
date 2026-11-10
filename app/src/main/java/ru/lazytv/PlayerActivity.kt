@@ -77,6 +77,7 @@ class PlayerActivity : Activity() {
     private var resumeWhenOnline = false
     private lateinit var waitingDots: View
     private var bufferEmpty = false
+    private lateinit var touchOverlay: PlayerTouchOverlay
     private lateinit var pauseBadge: View
     private fun updatePauseBadge() {
         if (!::pauseBadge.isInitialized || !::overlay.isInitialized) return
@@ -259,7 +260,7 @@ class PlayerActivity : Activity() {
             pauseBadge.translationY = shift
         }
 
-        val touchOverlay = PlayerTouchOverlay(
+        touchOverlay = PlayerTouchOverlay(
             context = this,
             activity = this,
             onSeek = { deltaMs -> seekByStep(deltaMs) },
@@ -1117,12 +1118,15 @@ class PlayerActivity : Activity() {
                         return true
                     }
                     // seek directly without opening the bar, so repeated Left/Right presses keep seeking instead of walking buttons
+                    // the same "-10 сек" / "+10 сек" bubble as after a double tap on a phone
                     KeyEvent.KEYCODE_DPAD_LEFT -> {
                         seekByStep(-10_000L)
+                        touchOverlay.showSeekFeedback(isForward = false)
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         seekByStep(10_000L)
+                        touchOverlay.showSeekFeedback(isForward = true)
                         return true
                     }
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_SPACE -> {

@@ -251,7 +251,7 @@ class PlayerTouchOverlay(
         }.start()
     }
 
-    private fun showSeekFeedback(isForward: Boolean) {
+    fun showSeekFeedback(isForward: Boolean) {
         seekBubbleLeft.visibility = if (!isForward) View.VISIBLE else View.GONE
         seekBubbleRight.visibility = if (isForward) View.VISIBLE else View.GONE
         postDelayedHide(700)
