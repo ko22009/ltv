@@ -160,7 +160,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     /** Shows or hides a small progress arc inside the right end of the input field while background sources are still reporting. */
     fun setLoading(loading: Boolean) {
         spinner.visibility = if (loading) View.VISIBLE else View.GONE
-        input.setPadding(px(18), 0, px(if (loading) 50 else 18), 0)
+        input.setPadding(px(16), 0, px(if (loading) 48 else 16), 0)
     }
 
     fun setPhrase(phrase: String) {

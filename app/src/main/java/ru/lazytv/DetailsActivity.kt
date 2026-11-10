@@ -410,7 +410,7 @@ class DetailsActivity : Activity() {
                 }
                 addView(titleView)
                 addView(original)
-                genresLine = text("", 15f, TEXT_MUTED).apply {
+                genresLine = text("", 16f, TEXT_MUTED).apply {
                     includeFontPadding = false; setPadding(0, dp(4), 0, 0)
                     // the full list of genres stands in the table below
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
@@ -531,7 +531,7 @@ class DetailsActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             visibility = if (rawOverview.isEmpty()) View.GONE else View.VISIBLE
             setOnClickListener { showFullOverview() }
-            addView(text("Читать полностью", 15f, TEXT_SECONDARY, bold = true))
+            addView(text("Читать полностью", 16f, TEXT_SECONDARY, bold = true))
             addView(ImageView(this@DetailsActivity).apply {
                 setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply { setColorFilter(TEXT_SECONDARY, android.graphics.PorterDuff.Mode.SRC_IN) })
             }, LinearLayout.LayoutParams(dp(22), dp(22)))
@@ -553,7 +553,7 @@ class DetailsActivity : Activity() {
         }
         // on a phone the description comes first, then the facts under the heading "О фильме"
         if (mobile) {
-            info.addView(text("О фильме", 20f, bold = true), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+            info.addView(text("О фильме", 18f, bold = true), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
             info.addView(table)
             // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
             if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
@@ -1100,7 +1100,7 @@ class DetailsActivity : Activity() {
                     .apply { shape = GradientDrawable.OVAL }
                 // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
-                addView(text(initials, 30f, TEXT_SECONDARY).apply { gravity = Gravity.CENTER },
+                addView(text(initials, 34f, TEXT_SECONDARY).apply { gravity = Gravity.CENTER },
                     FrameLayout.LayoutParams(-1, -1))
                 val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 addView(image, FrameLayout.LayoutParams(-1, -1))
@@ -1109,7 +1109,7 @@ class DetailsActivity : Activity() {
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             // one line each: with two-line names and roles the tallest card made all the others tall, with empty space under the text
-            card.addView(text(person.name, 15f, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
+            card.addView(text(person.name, 16f, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                 LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
             if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, TEXT_MUTED).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END

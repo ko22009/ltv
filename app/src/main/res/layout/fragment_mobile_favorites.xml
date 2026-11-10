@@ -70,6 +70,6 @@
         android:paddingEnd="32dp"
         android:text="Пока пусто.\nДобавляйте фильмы кнопкой «Закладки» в карточке, а серии и раздачи в их списках"
         android:textColor="@color/text_muted"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:visibility="gone" />
 </FrameLayout>

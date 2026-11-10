@@ -115,7 +115,7 @@ class TorrentsActivity : Activity() {
         page.addView(header, LinearLayout.LayoutParams(-1, px(56)))
 
         // the line under the query bar only carries messages (nothing found, errors) and hides when empty
-        status = label("", 15f, TEXT_SECONDARY)
+        status = label("", 16f, TEXT_SECONDARY)
         status.visibility = View.GONE
         status.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) { status.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE }
@@ -332,7 +332,7 @@ class TorrentsActivity : Activity() {
     }
 
     private fun chip(parent: LinearLayout, text: String, active: Boolean, icon: String? = null, action: () -> Unit) {
-        val view = label(text, 15f, Color.WHITE)
+        val view = label(text, 16f, Color.WHITE)
         view.gravity = Gravity.CENTER_VERTICAL
         view.setPadding(px(16), 0, px(16), 0)
         if (icon != null) {
@@ -572,7 +572,7 @@ class TorrentsActivity : Activity() {
     /** Preload card: title, stage, file, peers/seeds/speed/size, buffer line and a progress bar. */
     private inner class PreloadView {
         val title = label("", 18f, Color.WHITE, true)
-        val file = label("", 15f, Color.WHITE)
+        val file = label("", 16f, Color.WHITE)
         val info = label("", 14f, TEXT_SECONDARY)
         val buffer = label("", 14f, TEXT_SECONDARY)
         val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply {

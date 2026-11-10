@@ -39,7 +39,7 @@
         <item name="chipCornerRadius">6dp</item>
         <item name="checkedIconVisible">false</item>
         <item name="android:textColor">#FFFFFF</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
     </style>
     <!-- bottom menu of the phone: dark plate, the active section is a plate with the teal outline (no fill) -->

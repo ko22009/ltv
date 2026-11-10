@@ -188,7 +188,7 @@ class PersonActivity : Activity() {
         val facts = listOf(person.role, person.birthday, person.place).filter { it.isNotEmpty() }.joinToString(" • ")
         // no font padding: the first line starts at the top edge of the photo, and both texts share the left edge
         if (facts.isNotEmpty()) texts.addView(label(facts, 16f, TEXT_MUTED).apply { includeFontPadding = false })
-        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 15f, TEXT_SECONDARY).apply {
+        if (person.biography.isNotEmpty()) texts.addView(label(person.biography, 16f, TEXT_SECONDARY).apply {
             includeFontPadding = false
             setLineSpacing(0f, 1.2f)
             setPadding(0, px(if (facts.isEmpty()) 0 else 10), 0, 0)

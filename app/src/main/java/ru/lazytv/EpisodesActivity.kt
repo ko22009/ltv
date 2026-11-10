@@ -94,7 +94,7 @@ class EpisodesActivity : Activity() {
             })
             // the original name is its own line, not glued to the description
             if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
-                addView(label(variant.alt, 21f, TEXT_MUTED).apply {
+                addView(label(variant.alt, 22f, TEXT_MUTED).apply {
                     setPadding(0, px(4), 0, 0)
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
@@ -110,7 +110,7 @@ class EpisodesActivity : Activity() {
         page.addView(label((if (isMobileUi()) "Удерживайте серию, чтобы отметить её просмотренной или снять отметку" else "Удерживайте OK, чтобы отметить серию просмотренной или снять отметку"), 14f, TEXT_MUTED).apply {
             setPadding(0, px(12), 0, px(12))
         })
-        val status = label("", 15f, TEXT_SECONDARY)
+        val status = label("", 16f, TEXT_SECONDARY)
         status.visibility = View.GONE
         page.addView(status)
         val errorRow = LinearLayout(this).apply {

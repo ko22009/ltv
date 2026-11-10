@@ -581,7 +581,7 @@ class PlayerActivity : Activity() {
             episodeButtons.orientation = LinearLayout.HORIZONTAL
             queue.forEachIndexed { index, item ->
                 val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
-                val button = label(caption, 15f, TEXT_SECONDARY).apply {
+                val button = label(caption, 16f, TEXT_SECONDARY).apply {
                     gravity = Gravity.CENTER
                     setPadding(dp(16), 0, dp(16), 0)
                     isFocusable = true
