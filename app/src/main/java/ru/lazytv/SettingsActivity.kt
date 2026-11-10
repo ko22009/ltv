@@ -69,18 +69,10 @@ class SettingsActivity : FragmentActivity() {
         }
         page.addView(header)
 
-        val retuneBtn = chipButton(this, scale, "Подобрать приём обхода").apply {
-            setOnClickListener {
-                com.lmd.dpi.DpiBypass.retune()
-                android.widget.Toast.makeText(this@SettingsActivity, "Подбор запущен, занимает до минуты", android.widget.Toast.LENGTH_LONG).show()
-            }
-        }
-        // no "date settings" button here: when the clock is wrong, the error box itself offers the way to the settings
-        page.addView(retuneBtn, LinearLayout.LayoutParams(if (isMobileUi()) -1 else -2, px(CHIP_HEIGHT)).apply { topMargin = px(16); bottomMargin = px(14) })
-
+        // no action buttons here: "Подобрать приём обхода" is in the "Сеть" section, and for a wrong clock the error box offers the settings itself
         val topics = listOf(
             "Сайт не открывается" to
-                "Включите обход блокировок в разделе «Сеть» или нажмите «Подобрать приём обхода» выше. Если показ закрыт для вашего региона, используйте торренты.",
+                "Включите обход блокировок в разделе «Сеть» и нажмите там «Подобрать приём обхода». Если показ закрыт для вашего региона, используйте торренты.",
             "Видео не запускается или нет звука" to
                 "Если встроенный плеер не поддерживает кодек раздачи, выберите внешний плеер в разделе «Воспроизведение» или удерживайте OK на серии для выбора другого качества.",
             "Торренты и TorrServe" to
@@ -128,7 +120,7 @@ class SettingsActivity : FragmentActivity() {
                         KeyEvent.KEYCODE_DPAD_UP -> {
                             if (index == 0) {
                                 scroll.smoothScrollTo(0, 0)
-                                retuneBtn.requestFocus()
+                                back.requestFocus()
                             } else cards[index - 1].requestFocus()
                             true
                         }
@@ -151,17 +143,8 @@ class SettingsActivity : FragmentActivity() {
         back.setOnKeyListener { _, code, event ->
             if (event.action != KeyEvent.ACTION_DOWN) false
             else when (code) {
-                KeyEvent.KEYCODE_DPAD_DOWN -> retuneBtn.requestFocus()
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> true
-                else -> false
-            }
-        }
-        retuneBtn.setOnKeyListener { _, code, event ->
-            if (event.action != KeyEvent.ACTION_DOWN) false
-            else when (code) {
-                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> true
-                KeyEvent.KEYCODE_DPAD_UP -> back.requestFocus()
                 KeyEvent.KEYCODE_DPAD_DOWN -> cards.firstOrNull()?.requestFocus() ?: true
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> true
                 else -> false
             }
         }
