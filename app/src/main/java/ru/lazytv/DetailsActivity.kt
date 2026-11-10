@@ -150,10 +150,13 @@ class DetailsActivity : Activity() {
                     v.parent?.requestDisallowInterceptTouchEvent(true)
                 swipe.onTouchEvent(ev)
             }
+            // the gallery mark: a dark round plate in the lower right corner, the same plate as the back button
             banner.addView(ImageView(this).apply {
-                setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(0xCCFFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
+                setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
                 contentDescription = "Галерея"
-            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
+            }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(10); bottomMargin = dp(10) })
             bannerCounter = text("", 14f).apply {
                 setPadding(dp(12), dp(4), dp(12), dp(4))
                 background = GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
