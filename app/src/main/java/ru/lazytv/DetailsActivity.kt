@@ -484,6 +484,15 @@ class DetailsActivity : Activity() {
             } else setPadding(0, dp(8), 0, dp(8))
         }
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
+        if (!mobile) {
+            // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
+            repeat(4) { info.addView(skeletonBar(dp(420), dp(22), dp(14)), info.indexOfChild(table) + 1) }
+            if (rawOverview.isEmpty()) {
+                overviewView.visibility = View.GONE
+                repeat(3) { info.addView(skeletonBar(-1, dp(18), dp(10))) }
+            }
+            info.addView(skeletonBar(-1, dp(150), dp(24)))
+        }
         // on a phone the description comes first, then the facts under the heading "О фильме"
         if (mobile) {
             info.addView(text("О фильме", 20f, bold = true), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
