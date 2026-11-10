@@ -245,13 +245,15 @@ class PlayerActivity : Activity() {
         // on pause with the controls hidden the sign stays, so nobody takes the still picture for a freeze
         pauseBadge = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.PAUSE).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            // the same size and padding as the play/pause button of the controls, so the sign does not jump when they hide
-            val pad = dp(14)
+            // exactly the size of the sign that flashes after a double tap (PlayerTouchOverlay: 84 dp, padding 16 dp, real dp),
+            // so the static sign is the same disc that stays on the screen
+            val density = resources.displayMetrics.density
+            val pad = (16 * density).toInt()
             setPadding(pad, pad, pad, pad)
             background = GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL }
             visibility = View.GONE
         }
-        root.addView(pauseBadge, FrameLayout.LayoutParams(dp(68), dp(68), android.view.Gravity.CENTER))
+        root.addView(pauseBadge, FrameLayout.LayoutParams((84 * resources.displayMetrics.density).toInt(), (84 * resources.displayMetrics.density).toInt(), android.view.Gravity.CENTER))
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val at = IntArray(2)
