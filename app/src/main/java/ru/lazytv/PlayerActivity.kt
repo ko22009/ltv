@@ -393,7 +393,8 @@ class PlayerActivity : Activity() {
         if (!::seek.isInitialized) return
         // the colours of the loading spinner (Loading.kt): vivid indigo arc on a faint white track, in every state
         val progressColor = 0xFF6366F1.toInt()
-        val thumbColor = 0xFF6366F1.toInt()
+        // under the cursor the thumb takes the light plate of the active season (design system), so the focus is plain to see
+        val thumbColor = if (seek.isFocused) ACTIVE_PLATE else 0xFF6366F1.toInt()
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
         seek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x33FFFFFF)
