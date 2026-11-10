@@ -838,12 +838,32 @@ class PlayerActivity : Activity() {
             systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
         }
+        if (!barsWatched) {
+            barsWatched = true
+            // the shade of the device brings the bars back, and the first hide after it can be ignored by the system:
+            // whenever the bars are seen again with the window in the focus, they are hidden once more a moment later
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+                if (insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.systemBars()) && !releasing) {
+                    handler.removeCallbacks(rehideBars)
+                    handler.postDelayed(rehideBars, 1200)
+                }
+                androidx.core.view.ViewCompat.onApplyWindowInsets(v, insets)
+            }
+        }
     }
+
+    private var barsWatched = false
+    private val rehideBars = Runnable { if (!isFinishing && hasWindowFocus()) hideSystemBars() }
 
     // the bars come back after a dialog, a notification shade or a swipe: hide them again when the window has the focus
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideSystemBars()
+        if (hasFocus) {
+            hideSystemBars()
+            // the system may still be closing the shade at this moment and ignore the first request: once more a bit later
+            handler.removeCallbacks(rehideBars)
+            handler.postDelayed(rehideBars, 400)
+        }
     }
 
     override fun finish() {
