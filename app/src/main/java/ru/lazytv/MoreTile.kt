@@ -75,7 +75,7 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
         // the focused tile has the colour of the focused item of the left menu (#4338CA) and a white icon
         fun plate(color: Int) = GradientDrawable().apply {
             setColor(color)
-            cornerRadius = px(4f).toFloat()
+            cornerRadius = px(TITLE_CARD_RADIUS).toFloat()
         }
         tile.background = android.graphics.drawable.StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), plate(FOCUS_FILL))

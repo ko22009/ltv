@@ -18,7 +18,9 @@ import android.widget.TextView
  * a row is as tall as its tallest card, so a tile or a card that is a few pixels taller makes the rows below jump while it scrolls in and out.
  */
 const val TITLE_POSTER_HEIGHT = 300f
-const val TITLE_INFO_HEIGHT = 86f
+const val TITLE_INFO_HEIGHT = 100f
+/** Corner of the card, the skeleton and the "show all" tile: the same rounding everywhere. */
+const val TITLE_CARD_RADIUS = 12f
 const val CARD_SCALE = 0.82f
 
 /** Card scale for a phone grid of [columns] columns: the card (240 units wide) fills its cell of the 480-unit screen, so nothing is clipped at the right. */
@@ -49,7 +51,7 @@ class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = TIT
         }
         background = GradientDrawable().apply {
             setColor(0xFF1C2029.toInt())
-            cornerRadius = 4 * scale
+            cornerRadius = TITLE_CARD_RADIUS * scale
         }
         // the same heights as the poster and the text plate of a real card
         addView(View(context), LayoutParams(-1, (posterHeight * scale).toInt()))
@@ -151,9 +153,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         pick.visibility = if (on) View.VISIBLE else View.GONE
     }
 
+    // bigger type than before: the name is the main line, the genre under it is light, the year with the runtime is grey
     private val name = TextView(context).apply {
         setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         typeface = Typeface.DEFAULT_BOLD
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
@@ -161,15 +164,15 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private val year = TextView(context).apply {
-        setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+        setTextColor(0xFF94A3B8.toInt())
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         maxLines = 1
         includeFontPadding = false
     }
 
     private val genre = TextView(context).apply {
-        setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+        setTextColor(0xFFE2E8F0.toInt())
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         includeFontPadding = false
@@ -193,10 +196,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         orientation = VERTICAL
         // the same quiet plate the rows use, so the title and the year read on any poster
         setBackgroundColor(0xFF1E222A.toInt())
-        setPadding(px(12f), px(7f), px(12f), px(7f))
+        setPadding(px(14f), px(10f), px(14f), px(8f))
         addView(name, LayoutParams(-1, -2))
-        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(3f) })
-        addView(year, LayoutParams(-1, -2).apply { topMargin = px(3f) })
+        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(5f) })
+        addView(year, LayoutParams(-1, -2).apply { topMargin = px(5f) })
     }
 
     init {
@@ -231,7 +234,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
             setColor(0xFF1C2029.toInt())
-            cornerRadius = px(4f).toFloat()
+            cornerRadius = px(TITLE_CARD_RADIUS).toFloat()
         }
         clipToOutline = true
     }
