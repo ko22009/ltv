@@ -87,7 +87,7 @@ class PlayerTouchOverlay(
 
         gestureProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(0xFF818CF8.toInt())
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFF6366F1.toInt())
             progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0xFF334155.toInt())
             layoutParams = LinearLayout.LayoutParams(dp(110), dp(6))
         }

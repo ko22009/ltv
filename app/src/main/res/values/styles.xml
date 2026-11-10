@@ -30,7 +30,7 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="colorPrimary">#4338CA</item>
-        <item name="colorSecondary">#818CF8</item>
+        <item name="colorSecondary">#6366F1</item>
         <item name="colorSurface">#161920</item>
         <item name="colorOnSurface">#FFFFFF</item>
         <item name="colorOnPrimary">#FFFFFF</item>

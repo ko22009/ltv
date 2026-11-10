@@ -58,7 +58,7 @@ class CatalogFragment : Fragment() {
             }
         })
 
-        binding.swipeRefresh.setColorSchemeColors(0xFF818CF8.toInt())
+        binding.swipeRefresh.setColorSchemeColors(0xFF6366F1.toInt())
         binding.swipeRefresh.setProgressBackgroundColorSchemeColor(0xFF1E222A.toInt())
         binding.swipeRefresh.setOnRefreshListener { startOver() }
 
