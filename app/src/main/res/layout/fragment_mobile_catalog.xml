@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#101216">
 
-    <!-- the filters, the basket (reset) and the sort are pressed to the right edge: nothing runs off the screen -->
+    <!-- the sort, then the filters, then the basket (reset), from the left: nothing runs off the screen -->
     <LinearLayout
         android:id="@+id/categoriesScroll"
         android:layout_width="0dp"
@@ -21,16 +21,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/sortButton"
+            style="@style/Widget.LazyMobile.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checkable="false"
+            android:text="Сортировка" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/filterButton"
             style="@style/Widget.LazyMobile.Chip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:checkable="false"
             android:text="Фильтры" />
 
@@ -54,15 +58,6 @@
             app:textEndPadding="0dp"
             app:textStartPadding="0dp"
             android:visibility="gone" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/sortButton"
-            style="@style/Widget.LazyMobile.Chip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:checkable="false"
-            android:text="Сортировка" />
     </LinearLayout>
 
     <TextView

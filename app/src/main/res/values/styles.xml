@@ -49,6 +49,10 @@
         <item name="android:elevation">0dp</item>
         <item name="elevation">0dp</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.LazyMobile.BottomNav.Indicator</item>
+        <!-- lower than the Material default (80dp): less air above and under the icon and the caption -->
+        <item name="android:minHeight">56dp</item>
+        <item name="itemPaddingTop">6dp</item>
+        <item name="itemPaddingBottom">6dp</item>
         <item name="itemIconTint">@color/mobile_nav_item_colors</item>
         <item name="itemTextColor">@color/mobile_nav_item_colors</item>
         <item name="itemTextAppearanceActive">@style/TextAppearance.LazyMobile.NavLabel</item>
