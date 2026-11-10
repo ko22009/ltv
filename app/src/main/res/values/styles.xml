@@ -23,15 +23,15 @@
         <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
-        <item name="colorPrimary">#0F766E</item>
-        <item name="colorSecondary">#0F766E</item>
+        <item name="colorPrimary">#E2E8F0</item>
+        <item name="colorSecondary">#E2E8F0</item>
         <item name="colorSurface">#161920</item>
         <item name="colorOnSurface">#FFFFFF</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimary">#101216</item>
         <item name="android:statusBarColor">#101216</item>
         <item name="android:navigationBarColor">#161920</item>
     </style>
-    <!-- the chip of the phone screens: the plate of the buttons (#1C2029); the chosen one gets the teal outline, as the active season on the TV -->
+    <!-- the chip of the phone screens: the plate of the buttons (#1C2029); the chosen one gets a light outline (the phone has no teal) -->
     <style name="Widget.LazyMobile.Chip" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">#1C2029</item>
         <item name="chipStrokeColor">@color/mobile_chip_stroke</item>

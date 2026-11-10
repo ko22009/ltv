@@ -1352,5 +1352,3 @@ class DetailsActivity : Activity() {
 /** What stands where a fact of the card is not known. */
 private const val DASH = "–"
 
-/** The plate of a pressed or tapped button on a phone (the teal FOCUS_FILL belongs to the remote's cursor on a TV). */
-private const val TOUCH_FILL = 0xFF343B47.toInt()

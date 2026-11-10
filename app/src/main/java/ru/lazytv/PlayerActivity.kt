@@ -410,7 +410,8 @@ class PlayerActivity : Activity() {
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(cursorFill(this@PlayerActivity)); shape = GradientDrawable.OVAL })
+            addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(cursorFill(this@PlayerActivity)); shape = GradientDrawable.OVAL })
             addState(intArrayOf(), GradientDrawable().apply { setColor(0x55000000); shape = GradientDrawable.OVAL })
         }
         setOnClickListener { resetHideTimer(); action() }
@@ -422,7 +423,7 @@ class PlayerActivity : Activity() {
         val progressColor = Color.WHITE
         // as the season buttons of the design system: the light plate at rest, the teal of the focus under the cursor
         // as the season buttons of the design system: the light plate at rest, the dark teal of the focus under the cursor
-        val thumbColor = if (seek.isFocused) FOCUS_FILL else ACTIVE_PLATE
+        val thumbColor = if (seek.isFocused) cursorFill(this) else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
         // the same size at rest (the plate is clear) so the bar does not shift when the focus comes

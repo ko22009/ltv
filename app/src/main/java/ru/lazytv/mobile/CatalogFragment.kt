@@ -1,7 +1,6 @@
 package ru.lazytv.mobile
 
 import android.content.Intent
-import ru.lazytv.FOCUS_FILL
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -59,7 +58,7 @@ class CatalogFragment : Fragment() {
             }
         })
 
-        binding.swipeRefresh.setColorSchemeColors(FOCUS_FILL)
+        binding.swipeRefresh.setColorSchemeColors(android.graphics.Color.WHITE)
         binding.swipeRefresh.setProgressBackgroundColorSchemeColor(ru.lazytv.PLATE_FILL)
         binding.swipeRefresh.setOnRefreshListener { startOver() }
 

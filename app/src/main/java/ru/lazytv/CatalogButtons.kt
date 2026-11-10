@@ -41,6 +41,12 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
 /** The one colour of every focus and selection highlight in the app (menu, tiles, buttons, rows, chips). */
 val FOCUS_FILL = 0xFF0F766E.toInt()
 
+/** The plate of a pressed or focused button on a phone: a lighter grey, not the teal that belongs to the cursor of a TV remote. */
+val TOUCH_FILL = 0xFF343B47.toInt()
+
+/** The highlight under the cursor or the finger: teal on a TV, the neutral lighter plate on a phone. */
+fun cursorFill(context: android.content.Context): Int = if (DeviceType.isTv(context)) FOCUS_FILL else TOUCH_FILL
+
 /** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, teal under focus. */
 fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
 
@@ -60,7 +66,7 @@ const val ACTIVE_TEXT = 0xFF101216.toInt()
 fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = 0xFF1C2029.toInt(), restText: Int = 0xFF94A3B8.toInt()) {
     val corner = radius * scale
     view.background = android.graphics.drawable.StateListDrawable().apply {
-        addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = corner })
+        addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(cursorFill(view.context)); cornerRadius = corner })
         addState(intArrayOf(), android.graphics.drawable.GradientDrawable().apply { setColor(if (active) ACTIVE_PLATE else plate); cornerRadius = corner })
     }
     if (text == null) return
