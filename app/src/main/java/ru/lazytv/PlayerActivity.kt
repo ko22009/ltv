@@ -404,7 +404,8 @@ class PlayerActivity : Activity() {
         val halo = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
             if (seek.isFocused) {
-                setColor(0x8C101216.toInt())
+                // the light plate of the active season at 40%
+                setColor(0x66E2E8F0)
             } else setColor(Color.TRANSPARENT)
         }
         val dot = android.graphics.drawable.GradientDrawable().apply {
