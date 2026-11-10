@@ -474,6 +474,23 @@ class TorrentsActivity : Activity() {
         if ((hintShown && !direct) || isFinishing) return
         hintShown = true
         val sameDevice = address.startsWith("127.") || address.startsWith("localhost")
+        // the program is already on this device: it is not "not installed", it is not running (or its server is not set up inside it)
+        val launch = if (sameDevice) torrServeLaunchIntent() else null
+        if (launch != null) {
+            val text = android.text.SpannableStringBuilder().apply {
+                append("TorrServe на этом устройстве есть, но не отвечает по адресу $address.\n\n")
+                val start = length
+                append("Запустите TorrServe и, если сервер в нём ещё не поставлен, нажмите кнопку «Установить».")
+                setSpan(android.text.style.StyleSpan(Typeface.BOLD), start, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                append("\n\nЕсли TorrServe работает на другом устройстве в сети (приставка, компьютер, NAS), укажите его адрес.")
+            }
+            showMessage(this, "TorrServe не запущен", message = text, buttons = listOf(
+                DialogButton("Открыть TorrServe") { runCatching { startActivity(launch) } },
+                DialogButton("Указать адрес") { askTorrServeAddress() },
+                DialogButton("Закрыть") { if (direct) finish() },
+            ), onCancel = { if (direct) finish() })
+            return
+        }
         val where = if (sameDevice) "На этом устройстве он не установлен или не запущен."
             else "По адресу $address он не отвечает: не запущен или недоступен по сети."
         // the step after the installation stands on its own line, with one empty line before it, in bold: it is the one people miss
@@ -492,6 +509,13 @@ class TorrentsActivity : Activity() {
             DialogButton("Закрыть") { if (direct) finish() },
         ), onCancel = { if (direct) finish() })
     }
+
+    /** How to start the TorrServe app if it is installed on this device (the packages of its two builds), otherwise null. */
+    private fun torrServeLaunchIntent(): Intent? = runCatching {
+        listOf("ru.yourok.torrserve", "ru.yourok.torrserve.ts").firstNotNullOfOrNull {
+            packageManager.getLaunchIntentForPackage(it) ?: packageManager.getLeanbackLaunchIntentForPackage(it)
+        }
+    }.getOrNull()
 
     // back from the player or from the preload: a screen that was only a doorway for a bookmark closes
     override fun onRestart() {

@@ -8,6 +8,9 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <queries>
+        <!-- TorrServe: to tell "installed but not running" from "not installed" -->
+        <package android:name="ru.yourok.torrserve" />
+        <package android:name="ru.yourok.torrserve.ts" />
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
