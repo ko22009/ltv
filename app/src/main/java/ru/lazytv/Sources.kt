@@ -286,13 +286,14 @@ object Sources {
      * a longer title ("Зверь войны" for "Зверь") is another film and must have the exact year. Without [names] the
      * tolerance applies to every variant.
      */
-    fun yearRank(variant: Variant, year: String, names: List<String> = emptyList()): Int {
+    fun yearRank(variant: Variant, year: String, names: List<String> = emptyList(), exactYear: Boolean = false): Int {
         val wanted = year.take(4).toIntOrNull() ?: return 1
         val fromNote = Regex("^(\\d{4})").find(variant.note)?.groupValues?.get(1)?.toIntOrNull()
         val years = if (fromNote != null) listOf(fromNote)
         else Regex("(?<!\\d)(19|20)\\d{2}(?!\\d)").findAll(variant.title + " " + variant.alt).map { it.value.toInt() }.toList()
         if (years.isEmpty()) return 1
-        val tolerance = if (names.isEmpty() || hasName(variant, names)) 1 else 0
+        // [exactYear] (a series): no +-1 year, the year must be the very one
+        val tolerance = if (!exactYear && (names.isEmpty() || hasName(variant, names))) 1 else 0
         return if (years.any { kotlin.math.abs(it - wanted) <= tolerance }) 0 else 2
     }
 
@@ -322,7 +323,7 @@ object Sources {
     private fun mainList(variants: List<Variant>, year: String, names: List<String>, tv: Boolean): List<Variant> {
         // a series is judged by its year too (a film of another year is not the series), but a site that gives no year
         // for a series (a season list) stays in the main list: only a known different year is kept back
-        val ofYear = variants.filter { if (tv) yearRank(it, year, names) != 2 else yearRank(it, year, names) == 0 }
+        val ofYear = variants.filter { if (tv) yearRank(it, year, names, exactYear = true) != 2 else yearRank(it, year, names) == 0 }
         if (ofYear.isEmpty()) return variants
         val exact = if (names.isEmpty()) emptyList() else ofYear.filter { hasName(it, names) }
         return exact.ifEmpty { ofYear }
