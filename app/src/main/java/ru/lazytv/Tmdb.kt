@@ -184,6 +184,9 @@ object Tmdb {
         val overview: String = "",
         /** A film shown again in the cinemas of Russia years after its premiere: the date of that run ("yyyy-MM-dd"); empty otherwise. */
         val cinemaDate: String = "",
+        /** The title in the app language and the English one (from the translations): a second line for a card whose original title is in another script. */
+        val title: String = "",
+        val englishTitle: String = "",
     )
 
     /** An actor of the cast: the TMDB id of the person page, the name, the photo path and the role played. */
@@ -268,7 +271,7 @@ object Tmdb {
     fun details(context: Context, id: Long, tv: Boolean): Details {
         val kind = if (tv) "tv" else "movie"
         val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
-        val extra = if (tv) "credits,content_ratings,images" else "credits,release_dates,images"
+        val extra = if (tv) "credits,content_ratings,images,translations" else "credits,release_dates,images,translations"
         val langCode = language.take(2).lowercase()
         val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language&append_to_response=$extra&include_image_language=$langCode,en,null"))
         fun names(key: String): List<String> {
@@ -357,6 +360,10 @@ object Tmdb {
                 next.str("name"), next.str("air_date"),
             ).filter { it.isNotEmpty() }.joinToString(" • ")
         }
+        val englishTitle = o.optJSONObject("translations")?.optJSONArray("translations")?.let { a ->
+            (0 until a.length()).map { a.getJSONObject(it) }.firstOrNull { it.str("iso_639_1") == "en" }?.optJSONObject("data")
+                ?.let { d -> d.str("title").ifEmpty { d.str("name") } }
+        }.orEmpty()
         val images = o.optJSONObject("images")
         val backdropList = mutableListOf<String>()
         val mainBackdrop = o.str("backdrop_path")
@@ -390,6 +397,7 @@ object Tmdb {
             o.optInt("number_of_seasons"), mainBackdrop, nextEpisode, castPeople,
             o.str("poster_path"), uniqueDirectors, distinctBackdrops,
             allPosters, allBackdrops, o.str("overview"), cinemaDate,
+            o.str("title").ifEmpty { o.str("name") }, englishTitle,
         )
     }
 

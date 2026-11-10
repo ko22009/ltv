@@ -671,7 +671,11 @@ class DetailsActivity : Activity() {
         }
         // the same title in another script (hindi, japanese...) is shown twice; a russian one equal to the title is a plain repeat and goes
         val repeatsRussian = d.originalTitle.equals(name, true) && d.originalTitle.any { it in 'А'..'я' || it == 'ё' || it == 'Ё' }
-        if (d.originalTitle.isNotEmpty() && !repeatsRussian) original.text = d.originalTitle.uppercase()
+// the title in the other script: the line shows the Russian (or English) name of the film when there is one, else the repeat
+        val second = if (d.originalTitle.equals(name, true) && !repeatsRussian)
+            listOf(d.title, d.englishTitle).firstOrNull { it.isNotEmpty() && !it.equals(name, true) } ?: d.originalTitle
+        else d.originalTitle
+        if (second.isNotEmpty() && !repeatsRussian) original.text = second.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
         if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
         if (mobile) {
