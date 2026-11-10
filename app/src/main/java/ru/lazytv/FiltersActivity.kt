@@ -52,9 +52,9 @@ class FiltersActivity : Activity() {
         if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(24))
         page.background = android.graphics.drawable.GradientDrawable().apply {
             setColor(0xFF101216.toInt())
-            cornerRadius = px(12).toFloat()
+            cornerRadius = if (isMobileUi()) 0f else px(12).toFloat() // a whole page on a phone, a panel on a TV
         }
-        root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { val gap = px(if (isMobileUi()) 4 else 40); setMargins(gap, gap, gap, gap) })
+        root.addView(page, FrameLayout.LayoutParams(-1, -1).apply { val gap = if (isMobileUi()) 0 else px(40); setMargins(gap, gap, gap, gap) })
         backBtn = backButton(this, scale) { onBackPressed() }
         heading = text("", if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
