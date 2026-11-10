@@ -1065,7 +1065,12 @@ class DetailsActivity : Activity() {
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
-        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(8), 0, dp(12)) })
+        // on a phone the heading is the same as "О фильме" above it (18) and stands close under the facts; the TV keeps its large one
+        block.addView(
+            if (mobile) text("В ролях", 18f, bold = true).apply { setPadding(0, 0, 0, dp(10)) }
+            else text("В ролях", 22f, bold = true).apply { setPadding(0, dp(8), 0, dp(12)) },
+            LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) },
+        )
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(96)
@@ -1091,6 +1096,8 @@ class DetailsActivity : Activity() {
                             row.getChildAt(index + step)?.requestFocus()
                             true
                         }
+                        // the cast is the last block: down stays here (the page would otherwise creep a little further by itself)
+                        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> true
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
                             // only the focus moves: the ScrollView itself brings the focused director into view by the smallest step
                             // (a scroll to the very top flew the page past the director)
@@ -1102,6 +1109,13 @@ class DetailsActivity : Activity() {
                 }
             }
             if (firstCastCard == null) firstCastCard = card
+            // on the TV the cursor reaching the cast scrolls the page to its very end at once, not by the step that just shows the card
+            if (!mobile) card.setOnFocusChangeListener { _, has ->
+                if (has) pageScroll.post {
+                    val content = pageScroll.getChildAt(0) ?: return@post
+                    pageScroll.smoothScrollTo(0, (content.height - pageScroll.height).coerceAtLeast(0))
+                }
+            }
             // initials on a calm teal circle sit under the photo: they show while it loads and for an actor who has none
             val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
             val photo = FrameLayout(this).apply {
