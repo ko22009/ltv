@@ -128,7 +128,8 @@ class MainFragment : Fragment() {
         railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
         railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        val railLogo = Logo.create(ctx, textSizeSp = 9f, color = NAV_INACTIVE_COLOR).apply {
+        // the same as on the app icon: white letters and the teal arc under them
+        val railLogo = Logo.create(ctx, textSizeSp = 9f, color = Color.WHITE, arcColor = 0xFF00EBC3.toInt()).apply {
             isFocusable = false
             isClickable = false
         }
