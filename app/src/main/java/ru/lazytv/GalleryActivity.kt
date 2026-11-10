@@ -172,7 +172,10 @@ class GalleryActivity : Activity() {
                     val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
                     if (Math.abs(ev.x - tapX) < slop && Math.abs(ev.y - tapY) < slop) {
                         // left half is always "back", right half "forward", for posters too: the arrows stand left and right in both modes
-                        if (drawnPicture().contains(ev.x, ev.y)) nextPicture()
+                        val shown = drawnPicture()
+                        // the free band above a poster belongs to the cross only: a tap there turns nothing
+                        if (posterMode && ev.y < shown.top) return@setOnTouchListener true
+                        if (shown.contains(ev.x, ev.y)) nextPicture()
                         else {
                             val to = selectedIndex + if (ev.x < v.width / 2f) -1 else 1
                             if (to in backdrops.indices) showImage(to)
