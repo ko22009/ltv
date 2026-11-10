@@ -49,7 +49,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
             ellipsize = android.text.TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_VERTICAL
             minHeight = px(CHIP_HEIGHT)
-            setPadding(px(18), px(8), px(18), px(8))
+            setPadding(px(18), px(5), px(18), px(5))
             isFocusable = true
             isFocusableInTouchMode = !activity.isMobileUi()
             isClickable = true
@@ -60,7 +60,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
                 onPick(index)
             }
         }
-        rows.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(6) })
+        rows.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(3) })
         if (index == current || (first == null && current !in items.indices)) first = row
     }
     panel.addView(ScrollView(activity).apply { addView(rows) }, LinearLayout.LayoutParams(-1, -2))
