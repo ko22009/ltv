@@ -11,7 +11,8 @@ object FavoriteTorrents {
     fun all(context: Context): List<Torrent> {
         val array = runCatching { JSONArray(Settings.string(context, KEY, "[]")) }.getOrDefault(JSONArray())
         return (0 until array.length()).map { array.getJSONObject(it) }.map {
-            Torrent(it.optString("title"), it.optString("size"), it.optInt("seeds"), it.optInt("leeches"), it.optString("magnet"), it.optString("source"))
+            // records saved before the separator became a comma still carry " • "
+            Torrent(it.optString("title").replace(" • ", ", "),it.optString("size"), it.optInt("seeds"), it.optInt("leeches"), it.optString("magnet"), it.optString("source"))
         }
     }
 
