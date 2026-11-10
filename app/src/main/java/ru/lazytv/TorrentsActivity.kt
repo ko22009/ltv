@@ -62,6 +62,8 @@ class TorrentsActivity : Activity() {
     private var preloading = false
     // the "TorrServe is not installed" card is shown once per screen, the address line keeps the message
     private var hintShown = false
+    /** Opened from the bookmarks with a magnet: no page of torrents is shown, only the preload; the screen closes after it. */
+    private var direct = false
 
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
         text = value
@@ -193,6 +195,9 @@ class TorrentsActivity : Activity() {
                 name, intent.getStringExtra("size").orEmpty(), intent.getIntExtra("seeds", 0),
                 intent.getIntExtra("leeches", 0), directMagnet, intent.getStringExtra("source").orEmpty(),
             )
+            direct = true
+            root.visibility = View.INVISIBLE
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             loading.visibility = View.GONE
             all = listOf(torrent)
             select(null)
@@ -448,7 +453,7 @@ class TorrentsActivity : Activity() {
         view.title.text = name
         view.file.text = torrent.title.substringBefore(" / ")
         view.info.text = "Подключение к TorrServe…"
-        dialog = AlertDialog.Builder(this).setView(view.root).setOnCancelListener { preloading = false }.create().also {
+        dialog = AlertDialog.Builder(this).setView(view.root).setOnCancelListener { preloading = false; if (direct) finish() }.create().also {
             it.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             it.show()
         }
@@ -466,7 +471,7 @@ class TorrentsActivity : Activity() {
                                     preloading = true
                                     val v = PreloadView()
                                     v.title.text = name
-                                    dialog = AlertDialog.Builder(this).setView(v.root).setOnCancelListener { preloading = false }.create().also { d ->
+                                    dialog = AlertDialog.Builder(this).setView(v.root).setOnCancelListener { preloading = false; if (direct) finish() }.create().also { d ->
                                         d.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); d.show()
                                     }
                                     preload(hash, videos[which], name, torrent.source, v)
@@ -483,6 +488,10 @@ class TorrentsActivity : Activity() {
                         status.text = if (offline) "TorrServe не отвечает по адресу $address"
                         else "TorrServe: ${Errors.explain(e)}"
                         if (offline) showMissingTorrServe(address)
+                        else if (direct) {
+                            Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
+                            finish()
+                        }
                     }
                 }
         }.start()
@@ -494,7 +503,7 @@ class TorrentsActivity : Activity() {
      * so the user gets a card with the download page and the way to point LazyTV at another device.
      */
     private fun showMissingTorrServe(address: String) {
-        if (hintShown || isFinishing) return
+        if ((hintShown && !direct) || isFinishing) return
         hintShown = true
         val sameDevice = address.startsWith("127.") || address.startsWith("localhost")
         val where = if (sameDevice) "На этом устройстве он не установлен или не запущен."
@@ -508,8 +517,15 @@ class TorrentsActivity : Activity() {
             .setMessage(message)
             .setPositiveButton("Скачать TorrServe") { _, _ -> downloadTorrServe() }
             .setNeutralButton("Указать адрес") { _, _ -> askTorrServeAddress() }
-            .setNegativeButton("Закрыть", null)
+            .setNegativeButton("Закрыть") { _, _ -> if (direct) finish() }
+            .setOnCancelListener { if (direct) finish() }
             .show()
+    }
+
+    // back from the player or from the preload: a screen that was only a doorway for a bookmark closes
+    override fun onRestart() {
+        super.onRestart()
+        if (direct) finish()
     }
 
     /** A field for the address right on this screen: the settings are one long list, finding it there is slow. */
