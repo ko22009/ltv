@@ -823,24 +823,26 @@ class DetailsActivity : Activity() {
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
-        block.addView(text("В РОЛЯХ", 18f).apply { setPadding(0, dp(14), 0, dp(8)) })
+        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(20), 0, dp(10)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
-        val photoSize = dp(92)
+        val photoSize = dp(96)
+        val line = maxOf(1, dp(1))
         firstCastCard = null
         people.forEachIndexed { index, person ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setPadding(dp(12), dp(12), dp(12), dp(12))
                 isFocusable = true
                 isClickable = true
+                // a card with a thin outline of the theme; under the cursor it fills with the indigo of the app and the outline turns light
                 background = StateListDrawable().apply {
                     addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(FOCUS_FILL); cornerRadius = dp(6).toFloat()
+                        setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat(); setStroke(line * 2, 0xFFA5B4FC.toInt())
                     })
                     addState(intArrayOf(), GradientDrawable().apply {
-                        setColor(0x33000000); cornerRadius = dp(6).toFloat()
+                        setColor(0xFF161920.toInt()); cornerRadius = dp(14).toFloat(); setStroke(line, 0xFF2E3445.toInt())
                     })
                 }
                 setOnClickListener {
@@ -881,13 +883,22 @@ class DetailsActivity : Activity() {
                     .transition(DrawableTransitionOptions.withCrossFade()).into(image)
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
-            card.addView(text(person.name, 14f).apply {
-                gravity = Gravity.CENTER; maxLines = 2; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(6), 0, 0)
-            }, LinearLayout.LayoutParams(dp(112), -2))
-            if (person.role.isNotEmpty()) card.addView(text(person.role, 12f, 0xFF94A3B8.toInt()).apply {
-                gravity = Gravity.CENTER; maxLines = 2
-            }, LinearLayout.LayoutParams(dp(112), -2))
-            row.addView(card, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })
+            // the name on the left with a small arrow: the card leads to the page of the person
+            val nameLine = LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(text(person.name, 15f, bold = true).apply { maxLines = 2 }, LinearLayout.LayoutParams(0, -2, 1f))
+                addView(ImageView(this@DetailsActivity).apply {
+                    setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply {
+                        setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                    })
+                }, LinearLayout.LayoutParams(dp(20), dp(20)).apply { leftMargin = dp(2) })
+            }
+            card.addView(nameLine, LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(10) })
+            if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, 0xFF94A3B8.toInt()).apply {
+                maxLines = 2
+            }, LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(2) })
+            // all the cards of the row are as tall as the tallest one
+            row.addView(card, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = dp(10) })
         }
         val scroll = android.widget.HorizontalScrollView(this)
         scroll.isHorizontalScrollBarEnabled = false
