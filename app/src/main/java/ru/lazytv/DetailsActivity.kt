@@ -828,9 +828,13 @@ class DetailsActivity : Activity() {
             row.setPadding(0, dp(8), 0, dp(8))
             row.addView(text(caption, m(17, 15).toFloat(), 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(m(160, 120)), -2))
             if (value.isBlank()) {
-                row.addView(View(this).apply {
-                    background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }
-                }, LinearLayout.LayoutParams(dp(140), dp(18)))
+                // a grey bar of the height the filled value will have (one line of the value text; the director is a tile),
+                // so the rows do not move when the details come
+                val bar = text(" ", 18f, Color.WHITE)
+                bar.background = android.graphics.drawable.InsetDrawable(
+                    GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }, 0, dp(3), 0, dp(3))
+                if (caption == "Режиссёр") bar.minimumHeight = dp(if (mobile) 44 else 40)
+                row.addView(bar, LinearLayout.LayoutParams(dp(140), -2))
             } else if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
                 val cards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val cardViews = mutableListOf<View>()

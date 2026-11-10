@@ -211,6 +211,12 @@ class PlayerActivity : Activity() {
         root.addView(view, FrameLayout.LayoutParams(-1, -1))
         bufferSpinner = Spinner(this, dp(64))
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
+        // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
+        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val at = IntArray(2)
+            root.getLocationOnScreen(at)
+            bufferSpinner.translationY = resources.displayMetrics.heightPixels / 2f - (at[1] + root.height / 2f)
+        }
 
         val touchOverlay = PlayerTouchOverlay(
             context = this,
