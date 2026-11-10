@@ -76,13 +76,18 @@ class PlayerActivity : Activity() {
     private var player: ExoPlayer? = null
     private var resumeWhenOnline = false
     private lateinit var waitingDots: View
+    private var bufferEmpty = false
     private fun showWaiting(offline: Boolean) {
         if (!::waitingDots.isInitialized) return
-        waitingDots.visibility = if (offline) View.VISIBLE else View.GONE
-        if (offline) bufferSpinner.visibility = View.GONE
+        waitingDots.visibility = if (offline || bufferEmpty) View.VISIBLE else View.GONE
+        bufferSpinner.visibility = View.GONE
     }
     private val onlineListener: (Boolean) -> Unit = { online ->
         showWaiting(!online)
+        // the notice comes as soon as the network is lost, not only when the player fails (it can play on from its buffer for a while)
+        if (!online && !isFinishing) {
+            Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
+        }
         if (online && resumeWhenOnline && !isFinishing) {
             resumeWhenOnline = false
             player?.let { it.prepare(); it.play() }
@@ -276,7 +281,9 @@ class PlayerActivity : Activity() {
 
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
-                bufferSpinner.visibility = if (state == Player.STATE_BUFFERING && Connectivity.online) View.VISIBLE else View.GONE
+                // the buffer is empty: the same circle with dots as without internet (no separate rotating arc over the video)
+                bufferEmpty = state == Player.STATE_BUFFERING
+                showWaiting(!Connectivity.online)
                 updateSeekColors()
                 if (state == Player.STATE_ENDED) {
                     clearPosition()

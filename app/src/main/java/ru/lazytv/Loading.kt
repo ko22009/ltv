@@ -60,7 +60,7 @@ class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFFFFFFF
 
 /** A dark circle with three white dots that light up one after another: shown over the video while there is no internet. */
 class WaitingDots(context: Context, private val size: Int) : View(context) {
-    private val plate = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = OVERLAY_DENSE }
+    private val plate = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = OVERLAY_SOFT }
     private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
     private var phase = 0f
     private val animator = ValueAnimator.ofFloat(0f, 3f).apply {

@@ -68,7 +68,7 @@ class PlayerTouchOverlay(
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
             background = GradientDrawable().apply {
-                setColor(OVERLAY_DENSE)
+                setColor(OVERLAY_SOFT)
                 cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat()
             }
             visibility = View.GONE
@@ -108,7 +108,7 @@ class PlayerTouchOverlay(
         // the big play / pause sign that flashes in the middle after a double tap
         pauseSign = ImageView(context).apply {
             setPadding(dp(16), dp(16), dp(16), dp(16))
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_DENSE) }
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_SOFT) }
             visibility = View.GONE
         }
         addView(pauseSign, LayoutParams(dp(84), dp(84), Gravity.CENTER))
@@ -128,7 +128,7 @@ class PlayerTouchOverlay(
         setPadding(dp(24), dp(16), dp(24), dp(16))
         background = GradientDrawable().apply {
             // a neutral dark plate, the same as the drag sign
-            setColor(OVERLAY_DENSE)
+            setColor(OVERLAY_SOFT)
             cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat()
         }
         visibility = View.GONE
