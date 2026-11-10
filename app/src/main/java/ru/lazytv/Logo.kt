@@ -119,7 +119,7 @@ class BottomGlowView(context: Context) : View(context) {
         val h = height.toFloat()
         val shader = android.graphics.RadialGradient(
             0f, 0f, 1f,
-            intArrayOf(0xF200EBC3.toInt(), 0x9000EBC3.toInt(), 0x3000EBC3, 0x0000EBC3),
+            intArrayOf(0xA000EBC3.toInt(), 0x5C00EBC3, 0x2000EBC3, 0x0000EBC3),
             floatArrayOf(0f, 0.35f, 0.7f, 1f),
             android.graphics.Shader.TileMode.CLAMP,
         )
