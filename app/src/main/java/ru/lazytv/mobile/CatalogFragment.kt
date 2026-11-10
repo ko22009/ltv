@@ -101,8 +101,11 @@ class CatalogFragment : Fragment() {
         if (_binding != null && signature != CatalogFilter.signature(requireContext(), category.id)) startOver()
     }
 
+    private var quietRetries = 0
+
     private fun startOver() {
         loadJob?.cancel()
+        quietRetries = 0
         val ctx = requireContext()
         signature = CatalogFilter.signature(ctx, category.id)
         renderButtons()
@@ -138,6 +141,14 @@ class CatalogFragment : Fragment() {
                     loadNext()
                 }
             }.onFailure {
+                // the first start: the block bypass is still being picked, the first request may fail; ask again quietly before blaming the network
+                if (Errors.isNetwork(it) && adapter.itemCount == 0 && quietRetries < 2) {
+                    quietRetries++
+                    b.loadingIndicator.visibility = View.VISIBLE
+                    kotlinx.coroutines.delay(3000)
+                    loadNext()
+                    return@onFailure
+                }
                 finished = true
                 if (adapter.itemCount == 0) {
                     b.messageText.text = Errors.explain(it)
