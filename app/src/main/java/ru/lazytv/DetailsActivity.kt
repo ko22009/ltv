@@ -162,7 +162,7 @@ class DetailsActivity : Activity() {
             banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(10); rightMargin = dp(10) })
             bannerDots = LinearLayout(this).apply { gravity = Gravity.CENTER; visibility = View.GONE }
             banner.addView(bannerDots, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply { bottomMargin = dp(10) })
-            stage.addView(banner, FrameLayout.LayoutParams(-1, dp(178)).apply { topMargin = dp(68); leftMargin = dp(16); rightMargin = dp(16) })
+            stage.addView(banner, FrameLayout.LayoutParams(-1, dp(178)).apply { topMargin = dp(12); leftMargin = dp(16); rightMargin = dp(16) })
         } else {
             stage.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
         }
@@ -191,8 +191,9 @@ class DetailsActivity : Activity() {
             contentDescription = "Назад"
             setOnClickListener { finish() }
         }
-        stage.addView(back, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.START or Gravity.TOP).apply {
-            topMargin = dp(m(32, 12)); leftMargin = dp(m(64, 12))
+        // on a phone the back button stands on the banner itself, in its upper left corner
+        stage.addView(back, FrameLayout.LayoutParams(dp(m(56, 48)), dp(m(56, 48)), Gravity.START or Gravity.TOP).apply {
+            topMargin = dp(m(32, 22)); leftMargin = dp(m(64, 26))
         })
 
         val bar = LinearLayout(this)
@@ -456,7 +457,7 @@ class DetailsActivity : Activity() {
             scroll.addView(LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 clipChildren = false
-                addView(stage, LinearLayout.LayoutParams(-1, dp(246)))
+                addView(stage, LinearLayout.LayoutParams(-1, dp(190)))
                 addView(info, LinearLayout.LayoutParams(-1, -2))
             })
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
