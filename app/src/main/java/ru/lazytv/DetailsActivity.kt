@@ -393,7 +393,19 @@ class DetailsActivity : Activity() {
             val titles = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 // no extra font padding above and below the lines: a tall script (devanagari) otherwise pushes the title and the button down past the poster
-                titleView = text(name, 24f, bold = true).apply { includeFontPadding = false }
+                titleView = text(name, 24f, bold = true).apply {
+                    includeFontPadding = false
+                    // one line, so the block by the poster keeps its height; a long title opens whole in a window on a tap
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    setOnClickListener {
+                        android.app.AlertDialog.Builder(this@DetailsActivity)
+                            .setTitle(text)
+                            .setMessage(original.text.toString().takeIf { it.isNotEmpty() && it != DASH } ?: "")
+                            .setPositiveButton("Закрыть", null)
+                            .show()
+                    }
+                }
                 addView(titleView)
                 addView(original)
                 genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false; setPadding(0, dp(5), 0, 0) }
