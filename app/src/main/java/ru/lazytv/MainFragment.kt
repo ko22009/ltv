@@ -899,6 +899,7 @@ class SettingsSectionPresenter : Presenter() {
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(290), dp(124))
+        tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
         val texts = LinearLayout(parent.context)
@@ -924,7 +925,6 @@ class SettingsSectionPresenter : Presenter() {
         val texts = tile.tag as Pair<TextView, TextView>
         // the grey description is unreadable on the focus colour, so it turns white with the focus
         fun paint(focused: Boolean) {
-            tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000)
             texts.second.setTextColor(if (focused) Color.WHITE else 0xFF94A3B8.toInt())
         }
         paint(tile.isFocused)
@@ -942,6 +942,7 @@ class FavoriteEpisodePresenter : Presenter() {
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(190))
+        tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
         val texts = LinearLayout(parent.context)
@@ -965,8 +966,6 @@ class FavoriteEpisodePresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val favorite = item as FavoriteEpisode
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) FOCUS_FILL else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val texts = tile.tag as Triple<TextView, TextView, TextView>
         texts.first.text = favorite.seriesTitle
@@ -983,6 +982,7 @@ class TorrentCardPresenter : Presenter() {
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
         tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(180))
+        tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
         val texts = LinearLayout(parent.context)
@@ -1000,8 +1000,6 @@ class TorrentCardPresenter : Presenter() {
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val torrent = item as Torrent
         val tile = holder.view as FrameLayout
-        tile.setBackgroundColor(if (tile.isFocused) FOCUS_FILL else 0x33000000)
-        tile.setOnFocusChangeListener { _, focused -> tile.setBackgroundColor(if (focused) FOCUS_FILL else 0x33000000) }
         @Suppress("UNCHECKED_CAST")
         val pair = tile.tag as Pair<TextView, TextView>
         pair.first.text = torrent.title
