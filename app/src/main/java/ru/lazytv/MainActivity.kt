@@ -17,6 +17,12 @@ class MainActivity : FragmentActivity() {
         (supportFragmentManager.findFragmentById(android.R.id.content) as? MainFragment)?.permissionsResult(requestCode, permissions, grantResults)
     }
 
+    /** The first key of the remote ends the "opening" of the app: until then the system may have put the focus on a button by itself. */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (event.action == android.view.KeyEvent.ACTION_DOWN) userSteered = true
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (!DeviceType.isTv(this)) {
@@ -73,3 +79,7 @@ class MainActivity : FragmentActivity() {
         const val RESUME_PLAY = "resume_play"
     }
 }
+
+/** Set by the first key press of the remote since the app started; the pages read it to tell their own opening from the user's moves. */
+@Volatile
+var userSteered = false

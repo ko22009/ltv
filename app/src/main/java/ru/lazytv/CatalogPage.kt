@@ -191,16 +191,19 @@ class CatalogPageFragment : Fragment() {
     }
 
     /**
-     * Gives the focus to the grid when nobody has it. A button that already has it keeps it: whoever reached the buttons
-     * before the cards stood did it on purpose (or was put there by the menu), and the cards must not pull the focus away.
-     * The menu or another page keeps theirs too.
+     * Gives the focus to the grid when nobody has it, or when a button has it only because the app has just opened (no key
+     * pressed yet). A button the user came to keeps the focus: the cards must not pull it away. The menu or another page
+     * keeps theirs too.
      * Repeated after the next layout and the frame that follows it: on a fresh page the grid is not laid out yet, the
      * first request does nothing and the system then focuses the first button by itself.
      */
     private fun claimGrid(force: Boolean = false) {
         fun take(always: Boolean = false) {
             val held = activity?.currentFocus
-            if (always || held == null) grid.requestFocus()
+            // a button holds the focus either because the system put it there when the app opened (nobody has pressed a key yet:
+            // the first card must be active once the films stand) or because the user came there: that one stays
+            val onButton = listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }
+            if (always || held == null || (onButton && !userSteered)) grid.requestFocus()
         }
         // [force]: the user pressed "right" or OK on the menu, the focus sits on the menu item and must leave it; the
         // delayed repeats below stay careful so they do not pull the focus back after the user has gone to the menu
