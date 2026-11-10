@@ -433,15 +433,18 @@ class DetailsActivity : Activity() {
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
                 minimumHeight = dp(166)
                 addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
-                // one split button: teal "Смотреть" on the left, the dark bookmark tile on the right, no gap between
-                fun half(color: Int, left: Boolean) = GradientDrawable().apply {
-                    setColor(color)
+                // one split button, no gap: "Смотреть" on a dark plate (a little lighter) and the bookmark tile on a darker one;
+                // teal only under the cursor or the finger
+                fun half(rest: Int, left: Boolean) = StateListDrawable().apply {
                     val r = dp(14).toFloat()
-                    cornerRadii = if (left) floatArrayOf(r, r, 0f, 0f, 0f, 0f, r, r) else floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
+                    val radii = if (left) floatArrayOf(r, r, 0f, 0f, 0f, 0f, r, r) else floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
+                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadii = radii })
+                    addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadii = radii })
+                    addState(intArrayOf(), GradientDrawable().apply { setColor(rest); cornerRadii = radii })
                 }
                 addView(LinearLayout(this@DetailsActivity).apply {
-                    watchButton.background = half(FOCUS_FILL, left = true)
-                    favorite.background = half(0xFF1C2029.toInt(), left = false)
+                    watchButton.background = half(0xFF272C36.toInt(), left = true)
+                    favorite.background = half(PLATE_FILL, left = false)
                     addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(favorite, LinearLayout.LayoutParams(dp(48), dp(44)))
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
