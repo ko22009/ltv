@@ -337,16 +337,14 @@ class DetailsActivity : Activity() {
         posterView.showPoster(posterPath, posterSpinner)
         val posterBox = FrameLayout(this).apply {
             // a tap enlarges the poster in the gallery layer; the TV poster is not focusable, so only the phone uses it
-            if (mobile) {
-                setOnClickListener { openPosters() }
-                // rounded corners, as on the poster cards of the lists
-                outlineProvider = object : android.view.ViewOutlineProvider() {
-                    override fun getOutline(view: View, outline: android.graphics.Outline) {
-                        outline.setRoundRect(0, 0, view.width, view.height, dp(10).toFloat())
-                    }
+            if (mobile) setOnClickListener { openPosters() }
+            // rounded corners on the phone and on the TV, the same as the poster cards of the lists
+            outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(m(12, 10)).toFloat())
                 }
-                clipToOutline = true
             }
+            clipToOutline = true
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             // on a phone a magnifier in the upper right corner tells that a tap enlarges the poster
