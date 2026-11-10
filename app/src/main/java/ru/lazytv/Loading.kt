@@ -128,6 +128,8 @@ fun ImageView.showPoster(
             cancelPosterLoad(spinner)
             setTag(R.id.tag_poster_url, null)
             if (retryCount < 2) {
+                // the spinner goes on turning until the last try has failed
+                if (drawable == null) spinner?.visibility = View.VISIBLE
                 val nextRetry = retryCount + 1
                 val retryTask = Runnable {
                     setTag(R.id.tag_retry_task, null)
@@ -137,8 +139,10 @@ fun ImageView.showPoster(
                 postDelayed(retryTask, 1200L * nextRetry)
             } else {
                 failedPosters[path] = System.currentTimeMillis()
+                // only the last failure ends with the stub; while a retry is coming the plate stays empty, so the stub does not flash
+                setImageResource(stub)
             }
-            return false
+            return true
         }
         override fun onResourceReady(resource: android.graphics.drawable.Drawable, model: Any, target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
                                      dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean): Boolean {
@@ -151,10 +155,10 @@ fun ImageView.showPoster(
     }
     fun fromNetwork() {
         networkStarted = System.currentTimeMillis()
+        if (drawable == null) spinner?.visibility = View.VISIBLE
         glide.load(url)
             .format(com.bumptech.glide.load.DecodeFormat.PREFER_RGB_565)
             .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-            .error(stub)
             .listener(done)
             .into(this)
     }

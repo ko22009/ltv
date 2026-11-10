@@ -58,6 +58,7 @@ class MobileTitleAdapter(
             // the same plate as on the TV and on the poster of the title card
             val d = binding.root.resources.displayMetrics.density
             RatingBadge.style(binding.cardRating, 12f * d, (8 * d).toInt(), (4 * d).toInt())
+            binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (36 * d).toInt()))
         }
 
         fun bind(title: Title) {
@@ -83,7 +84,7 @@ class MobileTitleAdapter(
             }
 
             // Poster
-            binding.cardPoster.showPoster(title.poster)
+            binding.cardPoster.showPoster(title.poster, binding.cardSpinnerHolder)
             // a title marked watched is dimmed, as on the TV cards
             binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
 

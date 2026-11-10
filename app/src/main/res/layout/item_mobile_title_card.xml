@@ -29,6 +29,17 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:src="@drawable/no_poster" />
 
+            <!-- the app spinner (added in the adapter) while the poster is coming -->
+            <FrameLayout
+                android:id="@+id/cardSpinnerHolder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/cardPoster"
+                app:layout_constraintEnd_toEndOf="@id/cardPoster"
+                app:layout_constraintStart_toStartOf="@id/cardPoster"
+                app:layout_constraintTop_toTopOf="@id/cardPoster" />
+
             <TextView
                 android:id="@+id/cardCinemaBadge"
                 android:layout_width="wrap_content"
