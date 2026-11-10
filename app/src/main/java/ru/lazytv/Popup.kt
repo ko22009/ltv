@@ -53,8 +53,8 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
             isFocusable = true
             isFocusableInTouchMode = !activity.isMobileUi()
             isClickable = true
-            // the current choice is the outlined plate (like the active season), not a tick
-            background = if (index == current) activeShape(scale, 0xFF1C2029.toInt(), radius = 6f) else focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
+            // the current choice is the light plate (like the active season), not a tick
+            styleChoice(this, this, index == current, scale, restText = Color.WHITE)
             setOnClickListener {
                 dialog.dismiss()
                 onPick(index)

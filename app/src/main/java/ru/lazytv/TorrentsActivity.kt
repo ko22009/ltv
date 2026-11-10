@@ -335,14 +335,10 @@ class TorrentsActivity : Activity() {
         }
         view.isFocusable = true
         view.isClickable = true
-        view.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
-            addState(intArrayOf(), GradientDrawable().apply {
-                setColor(0x66000000); cornerRadius = px(3).toFloat()
-                // the chosen source is outlined like the active season ("ghost"), the focus fills it
-                if (active) setStroke(px(2), FOCUS_FILL)
-            })
-        }
+        // the chosen source is the light plate like the active season; the focus fills it with the indigo
+        styleChoice(view, view, active, scale, plate = 0x66000000, restText = Color.WHITE)
+        // a dark icon on the light plate (the white one would vanish there); the cursor turns the plate indigo, the icon white again
+        if (icon != null && active) view.compoundDrawables[0]?.setColorFilter(ACTIVE_TEXT, android.graphics.PorterDuff.Mode.SRC_IN)
         view.setOnClickListener { action() }
         // keep the focused chip inside the visible part of the single-row slider
         view.setOnFocusChangeListener { _, focused ->

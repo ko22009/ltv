@@ -305,27 +305,9 @@ class EpisodesActivity : Activity() {
         }
     }
 
-    /**
-     * A season chip has three looks: resting (the dark plate, grey caption), active (a light plate, dark caption: it is
-     * seen at once which season is open) and under the cursor (the indigo of the app, white caption).
-     */
-    private fun styleSeasonChip(chip: View, active: Boolean) {
-        val radius = px(10).toFloat()
-        chip.background = android.graphics.drawable.StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = radius })
-            addState(intArrayOf(), GradientDrawable().apply {
-                setColor(if (active) 0xFFE2E8F0.toInt() else 0xFF1C2029.toInt()); cornerRadius = radius
-            })
-        }
-        // the caption follows the state of the chip, which is the one that takes the focus
-        chip.findViewWithTag<TextView>("caption").apply {
-            isDuplicateParentStateEnabled = true
-            setTextColor(android.content.res.ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                intArrayOf(Color.WHITE, if (active) 0xFF101216.toInt() else 0xFF94A3B8.toInt()),
-            ))
-        }
-    }
+    /** A season chip: the common look of the chosen one among equals (see [styleChoice]). */
+    private fun styleSeasonChip(chip: View, active: Boolean) =
+        styleChoice(chip, chip.findViewWithTag<TextView>("caption"), active, scale)
 
     private fun back(): View = backButton
     private fun activeSeasonChip(): View =

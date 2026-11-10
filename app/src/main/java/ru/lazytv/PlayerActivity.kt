@@ -710,12 +710,10 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
-    /** Repaints the episode strip: the current episode is filled like the active season on the series page, the focused one is indigo. */
+    /** Repaints the episode strip: the current episode is the light plate like the active season on the series page, the focused one is indigo. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
-            val active = index == queueIndex
-            view.setTextColor(if (active) Color.WHITE else 0xFFCBD5E1.toInt())
-            view.background = if (active) activeShape(scale, 0x55000000) else focusShape(scale, 0x55000000, radius = 6f)
+            styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = 0xFFCBD5E1.toInt())
         }
     }
 

@@ -42,15 +42,38 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
 /** The one colour of every focus and selection highlight in the app (menu, tiles, buttons, rows, chips). */
 val FOCUS_FILL = 0xFF4338CA.toInt()
 
-/** The active item ("ghost"): the usual plate of its kind ([normal]) with a solid indigo outline; the focus turns it into the filled indigo. */
-fun activeShape(scale: Float, normal: Int, radius: Float = 6f) = android.graphics.drawable.StateListDrawable().apply {
-    fun shape(color: Int, outline: Boolean) = android.graphics.drawable.GradientDrawable().apply {
-        setColor(color)
-        cornerRadius = radius * scale
-        if (outline) setStroke(maxOf(2, (2f * scale).toInt()), FOCUS_FILL)
+/** The plate of the chosen item among equals (the open season, the playing episode, the picked source, the current choice in a list). */
+const val ACTIVE_PLATE = 0xFFE2E8F0.toInt()
+/** The caption on [ACTIVE_PLATE]: the colour of the page. */
+const val ACTIVE_TEXT = 0xFF101216.toInt()
+
+/**
+ * The one look of "the chosen one among equals": resting it is the usual [plate] with the [restText] caption, the chosen
+ * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the indigo [FOCUS_FILL]
+ * with a white caption. [text] is the caption view (the item itself or its child); the chip takes the focus, the caption follows it.
+ */
+fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = 0xFF1C2029.toInt(), restText: Int = 0xFF94A3B8.toInt()) {
+    val corner = radius * scale
+    view.background = android.graphics.drawable.StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = corner })
+        addState(intArrayOf(), android.graphics.drawable.GradientDrawable().apply { setColor(if (active) ACTIVE_PLATE else plate); cornerRadius = corner })
     }
-    addState(intArrayOf(android.R.attr.state_focused), shape(FOCUS_FILL, false))
-    addState(intArrayOf(), shape(normal, true))
+    if (text == null) return
+    if (text !== view && !text.isDuplicateParentStateEnabled) {
+        // the parent starts to pass its state down to a child only if the child had the flag when it was added: add it again
+        val parent = text.parent as? ViewGroup
+        if (parent != null) {
+            val at = parent.indexOfChild(text)
+            val params = text.layoutParams
+            parent.removeViewAt(at)
+            text.isDuplicateParentStateEnabled = true
+            parent.addView(text, at, params)
+        } else text.isDuplicateParentStateEnabled = true
+    }
+    text.setTextColor(android.content.res.ColorStateList(
+        arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+        intArrayOf(Color.WHITE, if (active) ACTIVE_TEXT else restText),
+    ))
 }
 
 fun chipButton(context: Context, scale: Float, caption: String, icon: String? = null): LinearLayout {
