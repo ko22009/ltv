@@ -190,11 +190,23 @@ class GalleryActivity : Activity() {
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
         }
-        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = dp(24); rightMargin = dp(16) })
+        // above the right arrow, in the strip beside the frame, centred over the arrow: it does not lie on the picture
+        phoneCounter.setPadding(dp(10), dp(4), dp(10), dp(4))
+        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.CENTER_VERTICAL).apply { rightMargin = dp(8); bottomMargin = dp(110) })
         arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
         arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
-        root.addView(arrowLeft, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.START).apply { leftMargin = side + dp(8) })
-        root.addView(arrowRight, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.END).apply { rightMargin = side + dp(8) })
+        // the round arrow is small to look at, but the tap zone around it is wide and tall: a thumb does not miss when turning the picture
+        fun zone(arrow: View, gravity: Int, step: Int) {
+            arrow.isClickable = false
+            val box = FrameLayout(this).apply {
+                isClickable = true
+                setOnClickListener { val to = selectedIndex + step; if (to in 0 until backdrops.size) showImage(to) }
+                addView(arrow, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
+            }
+            root.addView(box, FrameLayout.LayoutParams(dp(88), dp(200), Gravity.CENTER_VERTICAL or gravity))
+        }
+        zone(arrowLeft, Gravity.START, -1)
+        zone(arrowRight, Gravity.END, 1)
     }
 
     private fun updatePhoneChrome() {
