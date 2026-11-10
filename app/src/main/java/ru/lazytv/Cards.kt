@@ -17,8 +17,10 @@ import android.widget.TextView
  * The height of a title card is fixed (poster + the plate under it), and the skeleton and the "show all" tile take the same:
  * a row is as tall as its tallest card, so a tile or a card that is a few pixels taller makes the rows below jump while it scrolls in and out.
  */
-const val TITLE_POSTER_HEIGHT = 300f
-const val TITLE_INFO_HEIGHT = 100f
+const val TITLE_POSTER_HEIGHT = 316f
+/** The top block is the header line (the year and the runtime) and the poster under it; the header takes this much of TITLE_POSTER_HEIGHT. */
+const val TITLE_HEADER_HEIGHT = 34f
+const val TITLE_INFO_HEIGHT = 84f
 /** Corner of the card, the skeleton and the "show all" tile: the same rounding everywhere. */
 const val TITLE_CARD_RADIUS = 12f
 const val CARD_SCALE = 0.82f
@@ -163,12 +165,15 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         includeFontPadding = false
     }
 
-    /** "2008 · 2 ч 32 мин": the last line of the plate under the poster, grey; off the poster, so it never fights with the picture. */
+    /** "2008 · 2 ч 32 мин": the header line of the card above the poster, grey on the same plate as the text under it; off the poster, so it never fights with the picture. */
     private val year = TextView(context).apply {
         setTextColor(0xFF94A3B8.toInt())
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         maxLines = 1
         includeFontPadding = false
+        gravity = Gravity.CENTER_VERTICAL
+        setBackgroundColor(0xFF1E222A.toInt())
+        setPadding(px(16f), 0, px(16f), 0)
     }
 
     private val genre = TextView(context).apply {
@@ -199,8 +204,26 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1E222A.toInt())
         setPadding(px(16f), px(12f), px(16f), px(10f))
         addView(name, LayoutParams(-1, -2))
-        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(5f) })
-        addView(year, LayoutParams(-1, -2).apply { topMargin = px(5f) })
+        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(6f) })
+    }
+
+    /** The poster with its marks: the rating, the "watched" tick, "В КИНО", the selection veil. */
+    private val posterFrame = android.widget.FrameLayout(context).apply {
+        addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
+        addView(posterSpinner, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.CENTER))
+        addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
+        addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
+            topMargin = px(10f)
+            rightMargin = px(10f)
+        })
+        addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
+            bottomMargin = px(10f)
+            rightMargin = px(10f)
+        })
+        addView(cinema, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
+            topMargin = px(10f)
+            leftMargin = px(10f)
+        })
     }
 
     init {
@@ -214,22 +237,11 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        addView(android.widget.FrameLayout(context).apply {
-            addView(poster, android.widget.FrameLayout.LayoutParams(-1, -1))
-            addView(posterSpinner, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.CENTER))
-            addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
-            addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
-                topMargin = px(10f)
-                rightMargin = px(10f)
-            })
-            addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
-                bottomMargin = px(10f)
-                rightMargin = px(10f)
-            })
-            addView(cinema, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
-                topMargin = px(10f)
-                leftMargin = px(10f)
-            })
+        // the top block: a header line with the year and the runtime, then the poster; together they are TITLE_POSTER_HEIGHT tall
+        addView(LinearLayout(context).apply {
+            orientation = VERTICAL
+            addView(year, LayoutParams(-1, px(TITLE_HEADER_HEIGHT)))
+            addView(posterFrame, LayoutParams(-1, 0, 1f))
         }, LayoutParams(-1, px(TITLE_POSTER_HEIGHT)))
         addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
@@ -252,7 +264,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     // the poster and the text plate are dimmed, the card itself and the tick badge are not
     private fun dim(value: Float, animated: Boolean) {
-        for (part in listOf<View>(poster, info, rating)) {
+        for (part in listOf<View>(poster, info, rating, year)) {
             if (animated) part.animate().alpha(value).setDuration(150).start() else part.alpha = value
         }
     }
