@@ -86,7 +86,9 @@ class PlayerActivity : Activity() {
     // the dots only while nothing plays: an empty buffer or a stopped player; offline with a buffer left shows nothing
     private fun showWaiting() {
         if (!::waitingDots.isInitialized) return
-        val show = bufferEmpty || resumeWhenOnline
+        // buffering with more than ~1.5 s already loaded ahead is not "buffer ran out" (the player can report it while it loads on)
+        val runOut = bufferEmpty && (player?.let { it.bufferedPosition - it.currentPosition < 1500 } ?: true)
+        val show = runOut || resumeWhenOnline
         // the notice comes when the buffer has run out without a network, once per stall
         if (show && waitingDots.visibility != View.VISIBLE && !Connectivity.online && !isFinishing) {
             Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
@@ -160,6 +162,7 @@ class PlayerActivity : Activity() {
             }
             updateSeekColors()
             updatePauseBadge()
+            showWaiting()
             handler.postDelayed(this, 500)
         }
     }
