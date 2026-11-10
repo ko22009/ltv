@@ -258,10 +258,10 @@ class GalleryActivity : Activity() {
         val top = maxOf(imageAt[1] - rootAt[1] + drawn.top, 0f) + inset
         phoneCounter.translationX = right - phoneCounter.width
         phoneCounter.translationY = top
-        // a tall poster leaves a free band above it: the cross stands about in the middle of that band, not under the status bar
+        // a tall poster leaves a free band above it: the cross stands exactly in the middle of that band
         if (posterMode && ::closeZone.isInitialized) {
             val band = imageAt[1] - rootAt[1] + drawn.top
-            closeZone.translationY = maxOf(0f, band * 0.62f - dp(48) - dp(2))
+            closeZone.translationY = maxOf(0f, band * 0.5f - dp(48) - dp(2))
         }
     }
 
