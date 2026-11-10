@@ -486,15 +486,16 @@ class PlayerActivity : Activity() {
         val progressColor = Color.WHITE
         // as the season buttons of the design system: the light plate at rest, the teal of the focus under the cursor
         // as the season buttons of the design system: the light plate at rest, the dark teal of the focus under the cursor
-        val thumbColor = if (seek.isFocused) cursorFill(this) else ACTIVE_PLATE
+        // under the cursor the thumb is a black dot inside a whitish halo (the cursor colour is now light and would vanish on the bar)
+        val thumbColor = if (seek.isFocused) ON_FOCUS else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
         // the same size at rest (the plate is clear) so the bar does not shift when the focus comes
         val halo = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
-            // the halo is off for now (the owner wants to see the thumb without it); on: the light plate at 40%
+            // under the cursor: the whitish halo round the thumb (the light plate at about 55%); at rest it is clear
             if (SEEK_HALO && seek.isFocused) {
-                setColor(0x66E2E8F0)
+                setColor(0x8CF1F5F9.toInt())
             } else setColor(Color.TRANSPARENT)
         }
         val dot = android.graphics.drawable.GradientDrawable().apply {
@@ -1321,4 +1322,4 @@ class PlayerActivity : Activity() {
 }
 
 /** Whether the thumb of the player shows a plate round it under the cursor. */
-private const val SEEK_HALO = false
+private const val SEEK_HALO = true
