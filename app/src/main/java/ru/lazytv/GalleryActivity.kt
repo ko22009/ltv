@@ -159,10 +159,24 @@ class GalleryActivity : Activity() {
         val width = resources.displayMetrics.widthPixels - 2 * side
         // the gallery lies over the card as a dimmed layer; the frame keeps its own shape
         root.background = android.graphics.drawable.ColorDrawable(0xF0101216.toInt())
-        // a tap on the picture shows the next one (after the last one the first); a tap beside it does nothing:
-        // the gallery (covers and posters alike) closes only with the cross and Back
+        // a tap on the picture shows the next one (after the last one the first); a tap beside it turns the picture the way of
+        // that side: on the left one back, on the right one forward; the gallery closes only with the cross and Back
         val nextPicture = { if (backdrops.size > 1) showImage((selectedIndex + 1) % backdrops.size) }
-        root.setOnClickListener { }
+        var tapX = 0f
+        var tapY = 0f
+        root.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { tapX = ev.x; tapY = ev.y }
+                android.view.MotionEvent.ACTION_UP -> {
+                    val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
+                    if (Math.abs(ev.x - tapX) < slop && Math.abs(ev.y - tapY) < slop) {
+                        val to = selectedIndex + if (ev.x < v.width / 2f) -1 else 1
+                        if (to in backdrops.indices) showImage(to)
+                    }
+                }
+            }
+            true
+        }
         mainImage.scaleType = ImageView.ScaleType.FIT_CENTER
         mainImage.adjustViewBounds = true
         mainImage.setOnClickListener { nextPicture() }
