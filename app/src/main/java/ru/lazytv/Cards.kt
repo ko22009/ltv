@@ -17,7 +17,7 @@ import android.widget.TextView
  * The height of a title card is fixed (poster + the plate under it), and the skeleton and the "show all" tile take the same:
  * a row is as tall as its tallest card, so a tile or a card that is a few pixels taller makes the rows below jump while it scrolls in and out.
  */
-const val TITLE_POSTER_HEIGHT = 300f
+const val TITLE_POSTER_HEIGHT = 360f
 const val TITLE_INFO_HEIGHT = 100f
 /** Corner of the card, the skeleton and the "show all" tile: the same rounding everywhere. */
 const val TITLE_CARD_RADIUS = 12f
