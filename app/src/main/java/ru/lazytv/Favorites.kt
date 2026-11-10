@@ -67,10 +67,11 @@ object Favorites {
     }
 
     /** Fills in the poster of a record saved before the card knew it (the folder of the record stays). */
-    private fun setPoster(context: Context, id: Long, tv: Boolean, poster: String) {
+    private fun fill(context: Context, filled: Title) {
         val list = records(context)
-        if (list.none { it.second.id == id && it.second.tv == tv && it.second.poster == null }) return
-        save(context, list.map { (folder, t) -> if (t.id == id && t.tv == tv && t.poster == null) folder to t.copy(poster = poster) else folder to t })
+        save(context, list.map { (folder, t) ->
+            if (t.id == filled.id && t.tv == filled.tv) folder to t.copy(poster = t.poster ?: filled.poster, genre = t.genre.ifEmpty { filled.genre }) else folder to t
+        })
     }
 
     /**
@@ -78,14 +79,15 @@ object Favorites {
      * The posters are asked for once, saved into the record and returned; call it off the main thread.
      */
     fun withPosters(context: Context, titles: List<Title>): List<Title> {
-        if (titles.none { it.poster == null }) return titles
+        if (titles.none { it.poster == null || it.genre.isEmpty() }) return titles
         return titles.map { title ->
-            if (title.poster != null) return@map title
-            val poster = runCatching { Tmdb.detailsCached(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
-            if (poster.isNotEmpty()) {
-                setPoster(context, title.id, title.tv, poster)
-                title.copy(poster = poster)
-            } else title
+            if (title.poster != null && title.genre.isNotEmpty()) return@map title
+            // the genres line of the card (two names, as in the lists) is missing in records saved before it was kept
+            val poster = if (title.poster == null) runCatching { Tmdb.detailsCached(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty() else ""
+            val genre = if (title.genre.isEmpty()) runCatching { Tmdb.rowInfo(context, title.id, title.tv) }.getOrNull()?.genres.orEmpty().take(2).joinToString(", ") else ""
+            val filled = title.copy(poster = title.poster ?: poster.ifEmpty { null }, genre = title.genre.ifEmpty { genre })
+            if (filled != title) fill(context, filled)
+            filled
         }
     }
 }

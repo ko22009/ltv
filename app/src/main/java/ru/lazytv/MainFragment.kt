@@ -605,6 +605,9 @@ class MainFragment : Fragment() {
         }
     }.apply {
         selectEffectEnabled = dimOthers
+        // Leanback clips every card of a row to its own tiny rounded rectangle, which squares off the rounding of the cards
+        enableChildRoundedCorners(false)
+        shadowEnabled = false
     }
 
     private fun pageRows(dimOthers: Boolean) = ClassPresenterSelector()
@@ -1090,7 +1093,8 @@ class TitledRowsFragment : RowsSupportFragment() {
             val maxShift = titleLayout.height.takeIf { it > 0 } ?: headerHeight
             val vh = grid.findViewHolderForAdapterPosition(0)
             val shift = if (vh != null) {
-                (headerHeight - vh.itemView.top).coerceAtLeast(0)
+                // a dead zone: the small shift of the rows when the selection moves down must not nudge the caption
+                (headerHeight - vh.itemView.top - (24 * scale).toInt()).coerceAtLeast(0)
             } else {
                 maxShift
             }
