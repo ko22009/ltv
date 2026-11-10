@@ -139,7 +139,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     /** The mark of a card chosen for deletion (edit mode of the history): an indigo veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
-        setBackgroundColor(0x994F46E5.toInt())
+        setBackgroundColor((ACCENT and 0x00FFFFFF) or 0x99000000.toInt())
         visibility = View.GONE
         // a square of its own: the icon is drawn by width, a stretched view would cut it
         addView(ImageView(context).apply {

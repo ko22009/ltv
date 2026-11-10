@@ -119,7 +119,7 @@ class PlayerTouchOverlay(
         typeface = Typeface.DEFAULT_BOLD
         setPadding(dp(24), dp(14), dp(24), dp(14))
         background = GradientDrawable().apply {
-            setColor(0xB34338CA.toInt())
+            setColor((FOCUS_FILL and 0x00FFFFFF) or 0xB3000000.toInt())
             cornerRadius = dp(24).toFloat()
         }
         visibility = View.GONE

@@ -1,6 +1,7 @@
 package ru.lazytv.mobile
 
 import android.content.Intent
+import ru.lazytv.ACCENT
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -58,7 +59,7 @@ class CatalogFragment : Fragment() {
             }
         })
 
-        binding.swipeRefresh.setColorSchemeColors(0xFF6366F1.toInt())
+        binding.swipeRefresh.setColorSchemeColors(ACCENT)
         binding.swipeRefresh.setProgressBackgroundColorSchemeColor(0xFF1E222A.toInt())
         binding.swipeRefresh.setOnRefreshListener { startOver() }
 

@@ -41,6 +41,9 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
 /** The one colour of every focus and selection highlight in the app (menu, tiles, buttons, rows, chips). */
 val FOCUS_FILL = 0xFF4338CA.toInt()
 
+/** The second and last indigo: the bright one (active item of the phone menu, rims, refresh circle, the veil of a picked card). */
+val ACCENT = 0xFF6366F1.toInt()
+
 /** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, indigo under focus. */
 fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
 
