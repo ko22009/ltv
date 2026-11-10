@@ -298,7 +298,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         year0 = title.year
         runtime0 = 0
         genre.text = title.genre
-        genre.visibility = if (title.genre.isEmpty()) View.GONE else View.VISIBLE
+        // the line keeps its place while empty: a saved record gets the genre a moment later and the year below must not jump
+        genre.visibility = if (title.genre.isEmpty()) View.INVISIBLE else View.VISIBLE
         showYear()
         val ratingLabel = RatingBadge.label(title.rating)
         rating.text = ratingLabel
