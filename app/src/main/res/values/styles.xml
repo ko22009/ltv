@@ -4,6 +4,9 @@
         <item name="android:windowSplashScreenBackground">#101216</item>
         <!-- the pages start near the top edge: Leanback leaves 167dp there for its title bar, which is not used -->
         <item name="browseRowsMarginTop">28dp</item>
+        <!-- on a phone the bars of the system take the colour of the page instead of the grey-green of the system theme -->
+        <item name="android:statusBarColor">#101216</item>
+        <item name="android:navigationBarColor">#101216</item>
     </style>
     <style name="Theme.LazyTV.Guided" parent="@style/Theme.Leanback.GuidedStep">
         <item name="android:windowBackground">#101216</item>
