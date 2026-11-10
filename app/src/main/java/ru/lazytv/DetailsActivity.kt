@@ -131,8 +131,26 @@ class DetailsActivity : Activity() {
             // the number of the frame in the corner and the dots at the bottom
             banner.background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = dp(18).toFloat() }
             banner.clipToOutline = true
-            banner.isClickable = true
-            banner.setOnClickListener { openGallery() }
+            // a tap opens the gallery, a swipe turns the frame
+            val swipe = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: android.view.MotionEvent) = true
+                override fun onSingleTapUp(e: android.view.MotionEvent): Boolean { openGallery(); return true }
+                override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+                    val dx = e2.x - (e1?.x ?: return false)
+                    if (Math.abs(dx) < dp(50) || Math.abs(vx) < Math.abs(vy)) return false
+                    stepBackdrop(if (dx < 0) 1 else -1)
+                    return true
+                }
+            })
+            var downX = 0f
+            var downY = 0f
+            banner.setOnTouchListener { v, ev ->
+                if (ev.action == android.view.MotionEvent.ACTION_DOWN) { downX = ev.x; downY = ev.y }
+                // a sideways move belongs to the banner, an up-down one still scrolls the page
+                else if (ev.action == android.view.MotionEvent.ACTION_MOVE && Math.abs(ev.x - downX) > Math.abs(ev.y - downY) + dp(8))
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
+                swipe.onTouchEvent(ev)
+            }
             banner.addView(ImageView(this).apply {
                 setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(0xCCFFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
                 contentDescription = "Галерея"
@@ -649,7 +667,21 @@ class DetailsActivity : Activity() {
     private val backdropTick = object : Runnable {
         override fun run() {
             if (isFinishing || isDestroyed || backdrops.size < 2) return
-            val next = (backdropIndex + 1) % backdrops.size
+            showBackdropAt((backdropIndex + 1) % backdrops.size)
+            backdropHandler.postDelayed(this, 20_000L)
+        }
+    }
+
+    /** Swipe on the phone banner: a step to the next or the previous frame; the 20 second timer starts over. */
+    private fun stepBackdrop(step: Int) {
+        if (backdrops.size < 2) return
+        showBackdropAt((backdropIndex + step + backdrops.size) % backdrops.size)
+        backdropHandler.removeCallbacks(backdropTick)
+        backdropHandler.postDelayed(backdropTick, 20_000L)
+    }
+
+    private fun showBackdropAt(next: Int) {
+        run {
             val url = backdrops[next]
             Glide.with(this@DetailsActivity).load(url).centerCrop()
                 .transition(DrawableTransitionOptions.withCrossFade())
@@ -668,7 +700,6 @@ class DetailsActivity : Activity() {
                 }).into(backdrop)
             val ahead = backdrops[(next + 1) % backdrops.size]
             Glide.with(applicationContext).load(ahead).preload()
-            backdropHandler.postDelayed(this, 20_000L)
         }
     }
 
