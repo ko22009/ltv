@@ -573,9 +573,10 @@ class TorrentsActivity : Activity() {
     /** Preload card: title, stage, file, peers/seeds/speed/size, buffer line and a progress bar. */
     private inner class PreloadView {
         val title = label("", 18f, Color.WHITE, true)
-        val file = label("", 16f, Color.WHITE)
-        val info = label("", 14f, TEXT_SECONDARY)
-        val buffer = label("", 14f, TEXT_SECONDARY)
+        // fixed number of lines for every text: the card keeps its height while the numbers change (a wrapping line made it jump)
+        val file = label("", 16f, Color.WHITE).apply { setLines(2); ellipsize = android.text.TextUtils.TruncateAt.MIDDLE }
+        val info = label("", 14f, TEXT_SECONDARY).apply { setLines(2) }
+        val buffer = label("", 14f, TEXT_SECONDARY).apply { setLines(1); ellipsize = android.text.TextUtils.TruncateAt.END }
         val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
             // the white line of the player and the spinners
@@ -596,7 +597,9 @@ class TorrentsActivity : Activity() {
         }
 
         fun update(s: TorrentStat) {
-            info.text = "Пиры ${s.activePeers}/${s.totalPeers}   Сиды ${s.seeders}   Скорость ${"%.1f".format(s.speed * 8 / 1_000_000)} Мбит/с" +
+            // two short lines, each fits a phone card without wrapping
+            info.text = "Пиры ${s.activePeers}/${s.totalPeers}   Сиды ${s.seeders}\n" +
+                "Скорость ${"%.1f".format(s.speed * 8 / 1_000_000)} Мбит/с" +
                 (if (s.size > 0) "   Размер ${"%.1f".format(s.size / 1_073_741_824.0)} ГБ" else "")
             if (s.preloadSize > 0) {
                 val percent = s.preloaded * 100.0 / s.preloadSize
