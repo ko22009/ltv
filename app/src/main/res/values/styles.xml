@@ -8,8 +8,8 @@
     </style>
     <!-- the progress bar of the player: the halo around the focused thumb takes the colour of the focus instead of grey -->
     <style name="PlayerSeekOverlay">
-        <!-- no translucent halo round the thumb under the cursor: the focused thumb is coloured in code (theme indigo) -->
-        <item name="android:colorControlHighlight">@android:color/transparent</item>
+        <!-- the halo round the thumb under the cursor: the indigo of the focus, denser than before so it is not pale -->
+        <item name="android:colorControlHighlight">#A04338CA</item>
     </style>
     <!-- the filters lie over the list as a panel: the window is transparent, the catalogue stays behind it, dimmed -->
     <style name="Theme.LazyTV.Filters" parent="@style/Theme.LazyTV">
