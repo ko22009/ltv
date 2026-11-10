@@ -130,7 +130,7 @@ class DetailsActivity : Activity() {
         if (mobile) {
             // on a phone the banner is a rounded card under the back button: a gallery icon in the middle,
             // the number of the frame in the corner and the dots at the bottom
-            banner.background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = dp(18).toFloat() }
+            banner.background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
             banner.clipToOutline = true
             // a tap opens the gallery, a swipe turns the frame
             val swipe = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {

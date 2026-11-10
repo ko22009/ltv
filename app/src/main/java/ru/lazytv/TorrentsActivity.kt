@@ -601,7 +601,7 @@ class TorrentsActivity : Activity() {
         val root = LinearLayout(this@TorrentsActivity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(18), px(24), px(18))
-            background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = px(4).toFloat() }
+            background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             if (!isMobileUi()) minimumWidth = px(620)
             addView(title)
             addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFF94A3B8.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })

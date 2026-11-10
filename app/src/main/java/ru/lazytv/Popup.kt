@@ -27,7 +27,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
     val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(px(24), px(20), px(24), px(20))
-        background = GradientDrawable().apply { setColor(0xFF12151C.toInt()); cornerRadius = px(10).toFloat() }
+        background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
     }
     panel.addView(TextView(activity).apply {
         text = title

@@ -16,7 +16,9 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.leanback.widget.GuidedAction
+import ru.lazytv.PLATE_FILL
 import ru.lazytv.SettingsScreen
+import ru.lazytv.TITLE_CARD_RADIUS
 import ru.lazytv.backButton
 import ru.lazytv.calmBackground
 import ru.lazytv.showChoice
@@ -83,7 +85,7 @@ class MobileSettingsScreen : SettingsScreen() {
         return LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(px(14), px(12), px(14), px(12))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = px(8).toFloat() }
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
             if (trailing != null) addView(trailing, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
             if (onClick != null) {
