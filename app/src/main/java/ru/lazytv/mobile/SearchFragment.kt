@@ -192,6 +192,7 @@ class SearchFragment : Fragment() {
         super.onResume()
         // the history changes while the cards are opened: redraw the idle state only when nothing is typed
         if (_binding != null && binding.searchInput.text.isNullOrBlank()) showIdle()
+        else if (_binding != null) adapter.refreshWatched()
     }
 
     override fun onDestroyView() {

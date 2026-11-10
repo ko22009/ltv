@@ -100,6 +100,8 @@ class CatalogFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         if (_binding != null && signature != CatalogFilter.signature(requireContext(), category.id)) startOver()
+        // a title marked watched on its own screen comes back dimmed in the grid at once
+        else if (_binding != null) adapter.refreshWatched()
     }
 
     private var quietRetries = 0

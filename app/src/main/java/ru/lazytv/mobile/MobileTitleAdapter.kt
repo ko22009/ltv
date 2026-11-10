@@ -11,6 +11,8 @@ import ru.lazytv.Watched
 import ru.lazytv.databinding.ItemMobileTitleCardBinding
 import ru.lazytv.showPoster
 
+private const val PAYLOAD_WATCHED = "watched"
+
 class MobileTitleAdapter(
     private val onItemClick: (Title) -> Unit
 ) : RecyclerView.Adapter<MobileTitleAdapter.TitleViewHolder>() {
@@ -48,6 +50,15 @@ class MobileTitleAdapter(
         holder.bind(items[position])
     }
 
+    /** Only the watched dimming is redrawn: a title was marked on its own screen, the posters stay as they are. */
+    fun refreshWatched() {
+        if (items.isNotEmpty()) notifyItemRangeChanged(0, items.size, PAYLOAD_WATCHED)
+    }
+
+    override fun onBindViewHolder(holder: TitleViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains(PAYLOAD_WATCHED)) holder.bindWatched(items[position]) else super.onBindViewHolder(holder, position, payloads)
+    }
+
     override fun getItemCount(): Int = items.size
 
     inner class TitleViewHolder(
@@ -59,6 +70,11 @@ class MobileTitleAdapter(
             val d = binding.root.resources.displayMetrics.density
             RatingBadge.style(binding.cardRating, 12f * d, (8 * d).toInt(), (4 * d).toInt())
             binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (ru.lazytv.SPINNER_CARD * d).toInt()))
+        }
+
+        /** A title marked watched is dimmed, as on the TV cards. */
+        fun bindWatched(title: Title) {
+            binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
         }
 
         fun bind(title: Title) {
@@ -85,8 +101,7 @@ class MobileTitleAdapter(
 
             // Poster
             binding.cardPoster.showPoster(title.poster, binding.cardSpinnerHolder)
-            // a title marked watched is dimmed, as on the TV cards
-            binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
+            bindWatched(title)
 
             // Click listener
             binding.cardRipple.setOnLongClickListener(onItemLongClick?.let { handler -> View.OnLongClickListener { handler(title); true } })
