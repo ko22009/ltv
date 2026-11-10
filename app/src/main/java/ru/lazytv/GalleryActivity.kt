@@ -99,6 +99,7 @@ class GalleryActivity : Activity() {
         header.addView(backBtn, LinearLayout.LayoutParams(dp(56), dp(56)))
         header.addView(titleBox, LinearLayout.LayoutParams(-2, -2))
         root.addView(header, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
+        if (mobile) setupPhoneChrome()
 
         emptyView = TextView(this).apply {
             text = "В галерее нет обложек"
@@ -143,6 +144,85 @@ class GalleryActivity : Activity() {
         }
     }
 
+    private val mobile by lazy { isMobileUi() }
+    private lateinit var phoneCounter: TextView
+    private lateinit var phoneDots: LinearLayout
+    private lateinit var arrowLeft: View
+    private lateinit var arrowRight: View
+
+    /** Phone look: a close cross, "1 / 5" on top, the frame as a rounded card with round arrows, dots below, swipe to turn. */
+    private fun setupPhoneChrome() {
+        header.visibility = View.GONE
+        headerVisible = false
+        val side = dp(16)
+        val width = resources.displayMetrics.widthPixels - 2 * side
+        mainImage.scaleType = ImageView.ScaleType.CENTER_CROP
+        mainImage.setOnClickListener(null)
+        mainImage.isClickable = false
+        mainImage.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+            }
+        }
+        mainImage.clipToOutline = true
+        mainImage.layoutParams = FrameLayout.LayoutParams(width, width * 9 / 16, Gravity.CENTER)
+
+        fun round(icon: String, size: Int, pad: Int, fill: Int, action: () -> Unit) = ImageView(this).apply {
+            setImageDrawable(PathDrawable(icon))
+            setPadding(pad, pad, pad, pad)
+            background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(fill) }
+            setOnClickListener { action() }
+        }
+        root.addView(round(MenuIcons.CLOSE, dp(44), dp(8), Color.TRANSPARENT) { finish() }.apply { contentDescription = "Закрыть" },
+            FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END).apply { topMargin = dp(24); rightMargin = dp(16) })
+        phoneCounter = TextView(this).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
+            setTextColor(Color.WHITE)
+            setPadding(dp(16), dp(6), dp(16), dp(6))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
+        }
+        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(32) })
+        arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
+        arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
+        root.addView(arrowLeft, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.START).apply { leftMargin = side + dp(8) })
+        root.addView(arrowRight, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.END).apply { rightMargin = side + dp(8) })
+        phoneDots = LinearLayout(this).apply { gravity = Gravity.CENTER }
+        root.addView(phoneDots, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(90) })
+    }
+
+    private fun updatePhoneChrome() {
+        if (!mobile || !::phoneCounter.isInitialized) return
+        phoneCounter.text = "${selectedIndex + 1} / ${backdrops.size}"
+        arrowLeft.alpha = if (selectedIndex > 0) 1f else 0.3f
+        arrowRight.alpha = if (selectedIndex < backdrops.size - 1) 1f else 0.3f
+        phoneDots.removeAllViews()
+        for (i in backdrops.indices) {
+            phoneDots.addView(View(this).apply {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(if (i == selectedIndex) Color.WHITE else 0x55FFFFFF)
+                }
+            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { leftMargin = dp(6); rightMargin = dp(6) })
+        }
+    }
+
+    private val swipe by lazy {
+        android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+                val dx = e2.x - (e1?.x ?: return false)
+                if (Math.abs(dx) < dp(60) || Math.abs(vx) < Math.abs(vy)) return false
+                if (dx < 0 && selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1)
+                else if (dx > 0 && selectedIndex > 0) showImage(selectedIndex - 1)
+                return true
+            }
+        })
+    }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        if (mobile) swipe.onTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun imageUrl(path: String): String =
         if (path.startsWith("http")) path else "https://image.tmdb.org/t/p/w1280$path"
 
@@ -181,6 +261,7 @@ class GalleryActivity : Activity() {
         val path = backdrops[index]
 
         counterView.text = "${index + 1} из ${backdrops.size}"
+        updatePhoneChrome()
 
         val prev = mainImage.drawable
         showImageSpinner()
@@ -209,6 +290,7 @@ class GalleryActivity : Activity() {
     }
 
     private fun toggleHeader() {
+        if (mobile) return
         headerVisible = !headerVisible
         header.visibility = if (headerVisible) View.VISIBLE else View.GONE
         if (headerVisible) root.requestFocus()
