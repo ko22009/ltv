@@ -488,7 +488,7 @@ class DetailsActivity : Activity() {
         // the page shows three lines (the height of the grey bars that stand in for it); the whole text opens in a window on a tap
         overviewView.maxLines = 3
         overviewView.ellipsize = android.text.TextUtils.TruncateAt.END
-        if (mobile) overviewView.setOnClickListener {
+        fun showFullOverview() {
             if (overviewView.text.isNotEmpty()) {
                 android.app.AlertDialog.Builder(this@DetailsActivity)
                     .setTitle(name)
@@ -497,7 +497,19 @@ class DetailsActivity : Activity() {
                     .show()
             }
         }
+        if (mobile) overviewView.setOnClickListener { showFullOverview() }
+        // the sign that the text opens: a "read in full" link with a chevron under the three lines
+        moreRow = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = if (rawOverview.isEmpty()) View.GONE else View.VISIBLE
+            setOnClickListener { showFullOverview() }
+            addView(text("Читать полностью", 15f, 0xFFCBD5E1.toInt(), bold = true))
+            addView(ImageView(this@DetailsActivity).apply {
+                setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply { setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
+            }, LinearLayout.LayoutParams(dp(22), dp(22)))
+        }
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
+        if (mobile) info.addView(moreRow, LinearLayout.LayoutParams(-2, dp(32)))
         if (!mobile) {
             // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
             if (rawOverview.isEmpty()) {
@@ -512,6 +524,7 @@ class DetailsActivity : Activity() {
             info.addView(table)
             // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
             if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
+            if (rawOverview.isEmpty()) info.addView(skeletonBar(dp(140), dp(18), dp(7)), info.indexOfChild(moreRow) + 1)
             if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(15), dp(8)), info.indexOfChild(overviewView) + 1) }
             // the cast block, as the details will fill it
             info.addView(skeletonBar(-1, dp(150), dp(24)))
@@ -556,6 +569,8 @@ class DetailsActivity : Activity() {
     }
 
     /** True until the details come: the table shows all its rows, an unknown value as a grey bar. */
+    private lateinit var moreRow: LinearLayout
+
     private var tablePending = true
 
     private val skeletonTexts = mutableListOf<TextView>()
@@ -630,6 +645,7 @@ class DetailsActivity : Activity() {
         }
         if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
+        if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
         if (mobile) {
             genresLine.text = d.genres.joinToString(", ")
             val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
