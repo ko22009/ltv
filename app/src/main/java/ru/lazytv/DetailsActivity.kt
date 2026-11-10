@@ -240,16 +240,16 @@ class DetailsActivity : Activity() {
             isClickable = false
         }
         if (mobile) watchButton.apply {
-            // a wide pill in the accent colour of the app with the caption
+            // a wide button in the accent colour of the app with the caption; the corner is the same as the bookmark tile beside it (14 dp)
             text = "Смотреть"
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             typeface = Typeface.DEFAULT_BOLD
             compoundDrawablePadding = dp(10)
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(FOCUS_FILL); cornerRadius = dp(22).toFloat()
+                    setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat()
                 })
-                addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(22).toFloat() })
+                addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat() })
             }
             // the icon stays next to the caption: padding puts the pair in the middle of the wide button
             addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
@@ -300,9 +300,9 @@ class DetailsActivity : Activity() {
         seen.putIcon(seenIcon())
         bar.addView(seen)
         // thin line between the captioned actions of the phone
-        fun divider() { if (mobile) bar.addView(View(this).apply { setBackgroundColor(0x22FFFFFF) }, LinearLayout.LayoutParams(1, dp(32))) }
+        fun divider() { if (mobile) bar.addView(View(this).apply { setBackgroundColor(0xFF2A2E37.toInt()) }, LinearLayout.LayoutParams(dp(1).coerceAtLeast(1), dp(32))) }
         divider()
-        val torrentButton = button(MenuIcons.DOWNLOAD, if (mobile) "Скачать" else "Торрент", labeled = mobile) { openTorrents(name) }.apply {
+        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент", labeled = mobile) { openTorrents(name) }.apply {
             nextFocusUpId = back.id
             // the cursor is on the button: the torrent search starts now, not after the press
             setOnFocusChangeListener { _, has -> if (has) startTorrentSearch(name) }
@@ -332,7 +332,7 @@ class DetailsActivity : Activity() {
                         true
                     } else true
                 } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
-                    val target = firstDirectorLink ?: (if (overviewView.text.isNotEmpty()) overviewView else firstCastCard)
+                    val target = (if (overviewView.text.isNotEmpty()) overviewView else null) ?: firstDirectorLink ?: firstCastCard
                     target?.requestFocus() ?: false
                 } else if (btn === watchButton && (code == android.view.KeyEvent.KEYCODE_DPAD_CENTER || code == android.view.KeyEvent.KEYCODE_ENTER)) {
                     if (event.isLongPress || event.repeatCount == 15) {
@@ -402,13 +402,6 @@ class DetailsActivity : Activity() {
                     // one line, so the block by the poster keeps its height; a long title opens whole in a window on a tap
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                    setOnClickListener {
-                        android.app.AlertDialog.Builder(this@DetailsActivity)
-                            .setTitle(text)
-                            .setMessage(original.text.toString().takeIf { it.isNotEmpty() && it != DASH } ?: "")
-                            .setPositiveButton("Закрыть", null)
-                            .show()
-                    }
                 }
                 addView(titleView)
                 addView(original)
@@ -424,12 +417,33 @@ class DetailsActivity : Activity() {
                 }
                 addView(genresLine)
                 addView(metaLine)
+                // a tap on any line of the block opens all of them whole in a window, but only when some line is cut ("...") on screen
+                val lines = listOf(titleView, original, genresLine, metaLine)
+                val tapOpensWhole = View.OnClickListener {
+                    fun cut(v: android.widget.TextView) = v.layout?.let { l -> l.lineCount > 0 && l.getEllipsisCount(l.lineCount - 1) > 0 } ?: false
+                    if (lines.none { cut(it) }) return@OnClickListener
+                    val rest = lines.drop(1).map { it.text.toString() }.filter { it.isNotEmpty() && it != DASH }
+                    android.app.AlertDialog.Builder(this@DetailsActivity)
+                        .setTitle(titleView.text)
+                        .setMessage(rest.joinToString("\n\n"))
+                        .setPositiveButton("Закрыть", null)
+                        .show()
+                }
+                lines.forEach { it.setOnClickListener(tapOpensWhole) }
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
                 minimumHeight = dp(162)
                 addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
+                // one split button: teal "Смотреть" on the left, the dark bookmark tile on the right, no gap between
+                fun half(color: Int, left: Boolean) = GradientDrawable().apply {
+                    setColor(color)
+                    val r = dp(14).toFloat()
+                    cornerRadii = if (left) floatArrayOf(r, r, 0f, 0f, 0f, 0f, r, r) else floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
+                }
                 addView(LinearLayout(this@DetailsActivity).apply {
+                    watchButton.background = half(FOCUS_FILL, left = true)
+                    favorite.background = half(0xFF1C2029.toInt(), left = false)
                     addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
-                    addView(favorite, LinearLayout.LayoutParams(dp(44), dp(44)).apply { leftMargin = dp(8) })
+                    addView(favorite, LinearLayout.LayoutParams(dp(48), dp(44)))
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
             }
             val head = LinearLayout(this).apply {
@@ -449,8 +463,8 @@ class DetailsActivity : Activity() {
         table.setPadding(0, dp(14), 0, dp(14))
         fillTable(table, factRows(baseRows.map { if (it.first == RELEASE) it.first to "" else it }))
         if (!mobile) {
+            // the TV page reads: titles, the description, then the facts (the table is added below the description)
             info.addView(original)
-            info.addView(table)
         }
 
         val rawOverview = intent.getStringExtra("overview").orEmpty()
@@ -492,7 +506,7 @@ class DetailsActivity : Activity() {
                             scroll.smoothScrollBy(0, dp(110))
                             true
                         } else {
-                            firstCastCard?.requestFocus() ?: false
+                            (firstDirectorLink ?: firstCastCard)?.requestFocus() ?: false
                         }
                     }
                     android.view.KeyEvent.KEYCODE_DPAD_UP -> {
@@ -500,7 +514,7 @@ class DetailsActivity : Activity() {
                             scroll.smoothScrollBy(0, -dp(110))
                             true
                         } else {
-                            (firstDirectorLink ?: watchButton).requestFocus()
+                            watchButton.requestFocus()
                             true
                         }
                     }
@@ -533,7 +547,11 @@ class DetailsActivity : Activity() {
                 setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply { setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
             }, LinearLayout.LayoutParams(dp(22), dp(22)))
         }
-        info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
+        info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply {
+            if (mobile) topMargin = dp(8)
+            // on the TV the text has 12 dp of padding for the focus border: the border goes out to the left so the text lines up with the title
+            else { leftMargin = -dp(12); topMargin = dp(10) }
+        })
         if (mobile) info.addView(moreRow, LinearLayout.LayoutParams(-2, dp(32)))
         if (!mobile) {
             // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
@@ -541,6 +559,7 @@ class DetailsActivity : Activity() {
                 overviewView.visibility = View.GONE
                 repeat(3) { info.addView(skeletonBar(-1, dp(18), dp(10))) }
             }
+            info.addView(table)
             info.addView(skeletonBar(-1, dp(150), dp(24)))
         }
         // on a phone the description comes first, then the facts under the heading "О фильме"
@@ -569,10 +588,14 @@ class DetailsActivity : Activity() {
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         } else {
             // air under the last block (the cast cards): the page ends above the screen edge, not at it
-            info.setPadding(0, 0, 0, dp(32))
+            // 12 dp of room on the left: the focus border of the description (which sticks out to the left) is not cut by the scroll
+            info.setPadding(dp(16), 0, 0, dp(32))
+            // without this the padding itself clips the border that sticks out to the left
+            info.clipToPadding = false
+            info.clipChildren = false
             scroll.addView(info)
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
-                topMargin = dp(444); leftMargin = dp(389); rightMargin = dp(64)
+                topMargin = dp(444); leftMargin = dp(389 - 16); rightMargin = dp(64)
             })
         }
 
@@ -819,6 +842,15 @@ class DetailsActivity : Activity() {
                         isFocusable = true
                         isClickable = true
                         background = personCardBackground(scale)
+                        if (mobile) {
+                            // on a phone the director is a tile like the bookmark button: the same plate, corner and height
+                            background = StateListDrawable().apply {
+                                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat() })
+                                addState(intArrayOf(), GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(14).toFloat() })
+                            }
+                            typeface = Typeface.DEFAULT
+                            minimumHeight = dp(44)
+                        }
                         setOnClickListener {
                             startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                                 .putExtra("id", dir.id).putExtra("name", dir.name))
@@ -832,12 +864,15 @@ class DetailsActivity : Activity() {
                                     true
                                 }
                                 android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                                    pageScroll?.smoothScrollTo(0, 0)
-                                    watchButton.requestFocus()
+                                    // the description stands above the facts: up goes to it, without it to the buttons
+                                    if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView.requestFocus()
+                                    else {
+                                        pageScroll?.smoothScrollTo(0, 0)
+                                        watchButton.requestFocus()
+                                    }
                                     true
                                 }
-                                android.view.KeyEvent.KEYCODE_DPAD_DOWN ->
-                                    (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else firstCastCard)?.requestFocus() ?: false
+                                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> firstCastCard?.requestFocus() ?: false
                                 else -> false
                             }
                         }
@@ -855,11 +890,9 @@ class DetailsActivity : Activity() {
             } else if (caption == "Рейтинг" && value != DASH) {
                 val ratingVal = value.replace(',', '.').toDoubleOrNull()
                 val color = if (ratingVal != null && ratingVal < 6.0) 0x99FFFFFF.toInt() else Color.WHITE
-                row.addView(text("★ $value", 18f, color).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
+                row.addView(text("★ $value", 18f, color), LinearLayout.LayoutParams(0, -2, 1f))
             } else {
-                val valueView = text(value, 18f, Color.WHITE).apply {
-                    if (caption in listOf(RELEASE, "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
-                }
+                val valueView = text(value, 18f, Color.WHITE)
                 row.addView(valueView, LinearLayout.LayoutParams(0, -2, 1f))
             }
             table.addView(row)
@@ -1008,6 +1041,12 @@ class DetailsActivity : Activity() {
         }
     }
 
+    /** TV: the request in onCreate comes before the window is shown and can be lost; with no focus anywhere the cursor goes to "Смотреть". */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && !isMobileUi() && currentFocus == null && ::watchButton.isInitialized) watchButton.requestFocus()
+    }
+
     override fun onPause() {
         super.onPause()
         backdropHandler.removeCallbacks(backdropTick)
@@ -1023,7 +1062,7 @@ class DetailsActivity : Activity() {
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
-        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(20), 0, dp(10)) })
+        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(6), 0, dp(10)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(96)
@@ -1032,10 +1071,11 @@ class DetailsActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
+                // tight: the text column is as wide as the photo plus a little, the plate holds no more air than that
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 isFocusable = true
                 isClickable = true
-                background = personCardBackground(scale)
+                background = personCardBackground(scale, outline = false)  // the cast cards: the plate without the resting outline (a trial)
                 setOnClickListener {
                     startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                         .putExtra("id", person.id).putExtra("name", person.name))
@@ -1051,7 +1091,7 @@ class DetailsActivity : Activity() {
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
                             // ScrollView does not scroll back when focus leaves it upwards, so bring the facts back into view
                             pageScroll.smoothScrollTo(0, 0)
-                            (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else (firstDirectorLink ?: watchButton)).requestFocus()
+                            (firstDirectorLink ?: (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else null) ?: watchButton).requestFocus()
                             true
                         }
                         else -> false
@@ -1074,11 +1114,12 @@ class DetailsActivity : Activity() {
                     .transition(DrawableTransitionOptions.withCrossFade()).into(image)
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
-            card.addView(text(person.name, 15f, bold = true).apply { maxLines = 2 },
-                LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(10) })
+            // one line each: with two-line names and roles the tallest card made all the others tall, with empty space under the text
+            card.addView(text(person.name, 15f, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
+                LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
             if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, 0xFF94A3B8.toInt()).apply {
-                maxLines = 2
-            }, LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(2) })
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(2) })
             // all the cards of the row are as tall as the tallest one
             row.addView(card, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = dp(10) })
         }

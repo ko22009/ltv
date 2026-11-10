@@ -14,6 +14,7 @@ fun outlinedCardBackground(
     radius: Int = 14,
     fill: Int = 0xFF161920.toInt(),
     line: Int = 0xFF232836.toInt(),
+    outline: Boolean = true,
 ): StateListDrawable {
     fun dp(value: Int) = (value * scale).toInt()
     val width = maxOf(1, dp(1))
@@ -22,10 +23,10 @@ fun outlinedCardBackground(
             setColor(FOCUS_FILL); cornerRadius = dp(radius).toFloat(); setStroke(width, FOCUS_FILL)
         })
         addState(intArrayOf(), GradientDrawable().apply {
-            setColor(fill); cornerRadius = dp(radius).toFloat(); setStroke(width, line)
+            setColor(fill); cornerRadius = dp(radius).toFloat(); if (outline) setStroke(width, line)
         })
     }
 }
 
 /** The card of a person (an actor, a director) as on the title card; the whole block is in docs/design-system.md. */
-fun personCardBackground(scale: Float) = outlinedCardBackground(scale)
+fun personCardBackground(scale: Float, outline: Boolean = true) = outlinedCardBackground(scale, outline = outline)

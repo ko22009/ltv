@@ -163,7 +163,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         includeFontPadding = false
     }
 
-    /** "2008 · 2 ч 32 мин": the last line of the plate under the poster, white; off the poster, so it never fights with the picture. */
+    /** "2008, 2 ч 32 мин": the last line of the plate under the poster, white; off the poster, so it never fights with the picture. */
     private val year = TextView(context).apply {
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
@@ -321,7 +321,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private fun showYear() {
-        year.text = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(" · ")
+        year.text = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(", ")
     }
 }
 
