@@ -162,15 +162,20 @@ class PlayerTouchOverlay(
         override fun onDown(e: MotionEvent): Boolean = true
     })
 
+    /** The finger went down in the strip at the top or bottom edge of the screen: such a touch never starts a drag. */
+    private var edgeStart = false
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
                 dragMode = DRAG_NONE
+                // a swipe that starts at the very top (the device shade) or bottom (the home gesture) is the system's, not a volume or brightness drag
+                edgeStart = event.y < dp(40) || event.y > height - dp(32)
             }
             MotionEvent.ACTION_MOVE -> {
-                if (dragMode == DRAG_NONE) {
+                if (dragMode == DRAG_NONE && !edgeStart) {
                     val dx = Math.abs(event.x - downX)
                     val dy = Math.abs(event.y - downY)
                     // a mostly vertical move beyond the touch slop starts the drag at once (no long dead zone, no giving up on a slightly slanted finger)
