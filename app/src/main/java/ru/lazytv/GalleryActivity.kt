@@ -182,8 +182,15 @@ class GalleryActivity : Activity() {
             background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(fill) }
             setOnClickListener { action() }
         }
-        root.addView(round(MenuIcons.CLOSE, dp(44), dp(8), Color.TRANSPARENT) { finish() }.apply { contentDescription = "Закрыть" },
-            FrameLayout.LayoutParams(dp(44), dp(44), Gravity.TOP or Gravity.END).apply { topMargin = dp(24); rightMargin = dp(16) })
+        // the cross is small to look at, the tap zone around it is wide (the corner of the screen), like the arrows
+        val closeZone = FrameLayout(this).apply {
+            isClickable = true
+            contentDescription = "Закрыть"
+            setOnClickListener { finish() }
+            addView(round(MenuIcons.CLOSE, dp(44), dp(8), Color.TRANSPARENT) { }.apply { isClickable = false },
+                FrameLayout.LayoutParams(dp(44), dp(44), Gravity.CENTER))
+        }
+        root.addView(closeZone, FrameLayout.LayoutParams(dp(96), dp(96), Gravity.TOP or Gravity.END).apply { topMargin = dp(2) })
         phoneCounter = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setTextColor(Color.WHITE)
