@@ -82,7 +82,9 @@ class PlayerActivity : Activity() {
     private fun updatePauseBadge() {
         if (!::pauseBadge.isInitialized || !::overlay.isInitialized) return
         val paused = player?.let { !it.playWhenReady && it.playbackState == Player.STATE_READY } == true
-        pauseBadge.visibility = if (paused && overlay.visibility != View.VISIBLE) View.VISIBLE else View.GONE
+        // a TV remote keeps the controls open on pause, so the sign stays in the middle with them; a phone shows it when they hide
+        val controlsOk = DeviceType.isTv(this) || overlay.visibility != View.VISIBLE
+        pauseBadge.visibility = if (paused && controlsOk) View.VISIBLE else View.GONE
     }
     // the dots only while nothing plays: an empty buffer or a stopped player; offline with a buffer left shows nothing
     private fun showWaiting() {
