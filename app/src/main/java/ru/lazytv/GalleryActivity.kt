@@ -199,17 +199,19 @@ class GalleryActivity : Activity() {
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
         }
-        // the same plate as the rating on the poster cards, in the lower right corner of the picture (the part of it on the screen)
-        RatingBadge.style(phoneCounter, 14f * resources.displayMetrics.density, dp(10), dp(5))
+        // the same counter as on the banner of the title card: the same plate and the same place, in the upper right corner of the picture
+        phoneCounter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        phoneCounter.setPadding(dp(12), dp(4), dp(12), dp(4))
+        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
         root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
         val placeCounter = {
             val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
             val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
-            val inset = dp(8)
+            val inset = dp(10)
             val right = minOf(imageAt[0] - rootAt[0] + mainImage.width, root.width) - inset
-            val bottom = minOf(imageAt[1] - rootAt[1] + mainImage.height, root.height) - inset
+            val top = maxOf(imageAt[1] - rootAt[1], 0) + inset
             phoneCounter.translationX = (right - phoneCounter.width).toFloat()
-            phoneCounter.translationY = (bottom - phoneCounter.height).toFloat()
+            phoneCounter.translationY = top.toFloat()
         }
         mainImage.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         phoneCounter.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
