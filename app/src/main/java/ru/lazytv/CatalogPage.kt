@@ -142,8 +142,10 @@ class CatalogPageFragment : Fragment() {
                 val step = if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
                 val next = visible.getOrNull(visible.indexOf(view) + step)
                 if (next != null) next.requestFocus()
-                // right of the last button there is nothing to go to; left of the first the menu opens as usual
-                next != null || step > 0
+                // left of the first button the menu opens: the platform search would pick a card of the grid below
+                else if (step < 0) (parentFragment as? MainFragment)?.focusMenu()
+                // right of the last button there is nothing to go to
+                true
             } else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
                 if (cards.size() > 0 && !skeletons) grid.requestFocus()
                 true
