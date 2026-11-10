@@ -59,7 +59,7 @@ class FiltersActivity : Activity() {
         heading = text("", if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
-        header.addView(backBtn, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+        header.addView(backBtn, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
         header.addView(heading)
         page.addView(header)
         body = FrameLayout(this)

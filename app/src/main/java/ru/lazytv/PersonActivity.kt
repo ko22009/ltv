@@ -58,7 +58,7 @@ class PersonActivity : Activity() {
         val title = label(fallbackName, if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
-        header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+        header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
         header.addView(title)
         page.addView(header)
 
@@ -82,7 +82,7 @@ class PersonActivity : Activity() {
                 loading.visibility = View.GONE
                 result.onSuccess { person ->
                     title.text = person.name
-                    page.addView(info(person), LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) })
+                    page.addView(info(person), LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(16) })
                     // from the cards the focus search skips a button that sits off their column: Up goes to it by hand
                     val reach: View = readMore ?: back
                     if (person.credits.isEmpty()) {
@@ -159,7 +159,7 @@ class PersonActivity : Activity() {
         // initials on a calm teal plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(PLACEHOLDER_FROM, PLACEHOLDER_TO))
                 .apply { cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             clipToOutline = true
             addView(label(initials, 40f, TEXT_SECONDARY).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))

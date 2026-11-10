@@ -84,14 +84,14 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus && listening) cancelListening()
         }
-        addView(mic, LayoutParams(px(56), px(56)).apply { rightMargin = px(14) })
+        addView(mic, LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
 
         input.setSingleLine()
         input.hint = "Поиск"
         // on the teal focused plate the grey hint is hard to read: it turns almost white there
         input.setHintTextColor(android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-            intArrayOf(0xCCFFFFFF.toInt(), 0xFF64748B.toInt())
+            intArrayOf(0xCCFFFFFF.toInt(), TEXT_DIM)
         ))
         input.setTextColor(0xFFF1F5F9.toInt())
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)

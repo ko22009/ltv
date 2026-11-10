@@ -76,6 +76,14 @@ val PAGE_COVER: Int get() = LazyApp.res.getColor(R.color.page_cover, null)
 /** The lighter grey of secondary text (a description, the rest of a name); one place, no number in the code. */
 const val TEXT_SECONDARY = 0xFFCBD5E1.toInt()
 
+/** Other named greys: the light text of a description, the dim text of a watched row, the bottom of the page gradient, the dark half of the watch button, the poster placeholder gradient. */
+val TEXT_LIGHT: Int get() = ACTIVE_PLATE
+const val TEXT_DIM = 0xFF64748B.toInt()
+const val PAGE_BOTTOM = 0xFF0E1014.toInt()
+const val WATCH_PLATE = 0xFF272C36.toInt()
+const val PLACEHOLDER_FROM = 0xFF283048.toInt()
+const val PLACEHOLDER_TO = 0xFF181D2A.toInt()
+
 /** The muted grey of captions and inactive icons. */
 val TEXT_MUTED: Int get() = LazyApp.res.getColor(R.color.text_muted, null)
 

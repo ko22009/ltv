@@ -53,7 +53,7 @@ class TitlesGridActivity : Activity() {
         val back = backButton(this, scale) { finish() }
         val header = LinearLayout(this)
         header.gravity = Gravity.CENTER_VERTICAL
-        header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+        header.addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
         header.addView(label(more.title, if (isMobileUi()) 24f else 34f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
         page.addView(header)
         message = label("", 16f, TEXT_SECONDARY).apply {

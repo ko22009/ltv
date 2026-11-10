@@ -52,7 +52,7 @@ class SettingsActivity : FragmentActivity() {
         val back = backButton(this, scale) { finish() }
         val header = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
             addView(TextView(this@SettingsActivity).apply {
                 text = "Помощь"
                 setTextColor(Color.WHITE)
@@ -128,11 +128,11 @@ class SettingsActivity : FragmentActivity() {
                 }
             }
             cards.add(card)
-            cardsList.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(10) })
+            cardsList.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(12) })
         }
         scroll.addView(cardsList)
         // air between the back button row and the first card
-        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(20) })
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(16) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         back.setOnKeyListener { _, code, event ->

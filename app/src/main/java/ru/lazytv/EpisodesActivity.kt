@@ -103,7 +103,7 @@ class EpisodesActivity : Activity() {
         }
         val header = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(20) })
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
             addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
         }
         page.addView(header)
@@ -124,7 +124,7 @@ class EpisodesActivity : Activity() {
         val fixButton = actionButton().apply { visibility = View.GONE }
         errorRow.addView(geoButton, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
         errorRow.addView(fixButton, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
-        page.addView(errorRow, LinearLayout.LayoutParams(-2, px(56)).apply { topMargin = px(6) })
+        page.addView(errorRow, LinearLayout.LayoutParams(-2, px(56)).apply { topMargin = px(8) })
         actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
         // the buttons keep the height of the season chips and stand at the top of the band, close to the seasons
@@ -147,7 +147,7 @@ class EpisodesActivity : Activity() {
             visibility = View.GONE
             addView(seasonRow)
         }
-        page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(54)).apply { topMargin = px(6) })
+        page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(54)).apply { topMargin = px(8) })
         // no extra margin: the buttons sit centred in the 56 band, so the gap to the seasons above is 10
         page.addView(actions, LinearLayout.LayoutParams(-1, px(56)))
         list = ListView(this)
@@ -201,7 +201,7 @@ class EpisodesActivity : Activity() {
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
         body.addView(loading, FrameLayout.LayoutParams(-1, -1))
         // a small gap under the buttons row: the first episode no longer touches the voice-over button
-        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(10) })
+        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(12) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         back.requestFocus()
@@ -308,7 +308,7 @@ class EpisodesActivity : Activity() {
                     }
                 }
             }
-            seasonRow.addView(chip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(10) })
+            seasonRow.addView(chip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
         }
     }
 
@@ -382,7 +382,7 @@ class EpisodesActivity : Activity() {
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there
-        card.addView(label(shown, 16f, 0).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
+        card.addView(label(shown, 16f, 0).apply { setTextColor(whiteWhenSelected(if (watched) TEXT_DIM else Color.WHITE)) },
             LinearLayout.LayoutParams(0, -2, 1f))
         if (watched) card.addView(label("✓", 16f, 0).apply { setPadding(px(4), 0, px(8), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
         val holder = object : FrameLayout(this) {

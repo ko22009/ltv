@@ -109,7 +109,7 @@ class TorrentsActivity : Activity() {
         }
         val header = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(14) })
+            addView(back, LinearLayout.LayoutParams(px(56), px(56)).apply { rightMargin = px(16) })
             addView(bar, LinearLayout.LayoutParams(0, px(56), 1f))
         }
         page.addView(header, LinearLayout.LayoutParams(-1, px(56)))
@@ -132,7 +132,7 @@ class TorrentsActivity : Activity() {
         chipsScroll.isHorizontalScrollBarEnabled = false
         chipsScroll.isFocusable = false
         chipsScroll.addView(chips, android.widget.FrameLayout.LayoutParams(-2, -1))
-        page.addView(chipsScroll, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(14) })
+        page.addView(chipsScroll, LinearLayout.LayoutParams(-1, px(44)).apply { topMargin = px(16) })
         options = LinearLayout(this)
         options.orientation = LinearLayout.HORIZONTAL
         if (isMobileUi()) {
@@ -168,7 +168,7 @@ class TorrentsActivity : Activity() {
         val body = FrameLayout(this)
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
         body.addView(loading, FrameLayout.LayoutParams(-1, -1))
-        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(10) })
+        page.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(12) })
         // opened from a title card: its poster stands to the left of the list
         val poster = intent.getStringExtra("poster")
         if (poster == null || isMobileUi()) root.addView(page, FrameLayout.LayoutParams(-1, -1))
@@ -377,7 +377,7 @@ class TorrentsActivity : Activity() {
                 else -> false
             }
         }
-        parent.addView(view, LinearLayout.LayoutParams(-2, px(44)).apply { rightMargin = px(10) })
+        parent.addView(view, LinearLayout.LayoutParams(-2, px(44)).apply { rightMargin = px(12) })
     }
 
     /** One row: Russian title (bold), original title and release, source; on the right size, seeds and leeches. */

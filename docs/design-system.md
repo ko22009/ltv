@@ -52,6 +52,8 @@
 
 Тёмные полупрозрачные плашки поверх картинки или видео: `OVERLAY_SOFT` (`#66000000`: кнопка назад, строки поверх видео), `OVERLAY_LIGHT` (`#99000000`: круглые кнопки, счётчик, значок метки), `OVERLAY_DENSE` (`#CC000000`: рейтинг, подпись карточки, значки плеера); `PAGE_COVER` (`#F0101216`) закрывает страницу целиком (галерея, «Нет интернета»). Других прозрачностей не писать. Всё в `colors.xml`.
 
+Серые тексты и фоны по именам из `CatalogButtons.kt`: `TEXT_LIGHT`, `TEXT_SECONDARY`, `TEXT_MUTED`, `TEXT_DIM`, `PAGE_BOTTOM`, `WATCH_PLATE`, `PLACEHOLDER_FROM`/`PLACEHOLDER_TO`. Отступы и в XML (`padding`, `margin`) только из шкалы. Новый цвет или число сначала искать в этом списке.
+
 Два радиуса и больше никаких: 12 (`TITLE_CARD_RADIUS`) и 6 (`SMALL_RADIUS`: кнопки, чипы, скелетоны, маленькие плашки). Круглое и овальное (счётчик, значки плеера) берёт 12. Отступы (`setPadding`, `setMargins`) берутся из шкалы 4, 8, 12, 16, 24, 32; другие числа (2, 3, 5, 6, 10, 14, 18, 20) не писать.
 
 Цвета, которые нужны и в XML, и в коде, лежат один раз в `res/values/colors.xml` (`plate_fill`, `backdrop_plate`, `page_bg`, `text_muted`, `accent_light`, `touch_fill`, `focus_fill`); код читает их через `PLATE_FILL`, `BACKDROP_PLATE`, `PAGE_BG`, `TEXT_MUTED`, `ACTIVE_PLATE`, `TOUCH_FILL`, `FOCUS_FILL` (`CatalogButtons.kt`; светлый серый текст `TEXT_SECONDARY` только в коде), XML через `@color/...`. Новый общий цвет заводить там же, числом не писать. Страницы на телефоне открываются и закрываются сдвигом вбок (`res/anim/page_*`, `LazyApp.kt`), плеер без анимации.

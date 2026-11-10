@@ -170,15 +170,15 @@ class DetailsActivity : Activity() {
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_LIGHT) }
                 contentDescription = "Галерея"
-            }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(10); bottomMargin = dp(10) })
+            }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(12); bottomMargin = dp(12) })
             bannerCounter = text("", 14f).apply {
                 setPadding(dp(12), dp(4), dp(12), dp(4))
                 background = GradientDrawable().apply { setColor(OVERLAY_LIGHT); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
                 visibility = View.GONE
             }
-            banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(10); rightMargin = dp(10) })
+            banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(12); rightMargin = dp(12) })
             bannerDots = LinearLayout(this).apply { gravity = Gravity.CENTER; visibility = View.GONE }
-            banner.addView(bannerDots, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply { bottomMargin = dp(10) })
+            banner.addView(bannerDots, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply { bottomMargin = dp(12) })
             stage.addView(banner, FrameLayout.LayoutParams(-1, dp(178)).apply { topMargin = dp(12); leftMargin = dp(16); rightMargin = dp(16) })
         } else {
             stage.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
@@ -305,7 +305,7 @@ class DetailsActivity : Activity() {
         seen.putIcon(seenIcon())
         bar.addView(seen)
         // thin line between the captioned actions of the phone
-        fun divider() { if (mobile) bar.addView(View(this).apply { setBackgroundColor(0xFF2A2E37.toInt()) }, LinearLayout.LayoutParams(dp(1).coerceAtLeast(1), dp(32))) }
+        fun divider() { if (mobile) bar.addView(View(this).apply { setBackgroundColor(PLATE_LINE) }, LinearLayout.LayoutParams(dp(1).coerceAtLeast(1), dp(32))) }
         divider()
         val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент", labeled = mobile) { openTorrents(name) }.apply {
             nextFocusUpId = back.id
@@ -373,7 +373,7 @@ class DetailsActivity : Activity() {
                 setImageDrawable(PathDrawable(MenuIcons.SEARCH_ICON).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
                 setPadding(dp(8), dp(8), dp(8), dp(8))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_LIGHT) }
-            }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(6); rightMargin = dp(6) })
+            }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(8); rightMargin = dp(8) })
             // the same label as on the cards: the film is in the cinemas now or comes soon
             val mark = Cinema.caption(currentTitle.id, currentTitle.tv)
             if (mark != null) {
@@ -416,7 +416,7 @@ class DetailsActivity : Activity() {
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 }
                 skeletonText(genresLine, dp(170))
-                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply {
+                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, TEXT_LIGHT).apply {
                     includeFontPadding = false; setPadding(0, dp(4), 0, 0)
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 }
@@ -444,7 +444,7 @@ class DetailsActivity : Activity() {
                     addState(intArrayOf(), GradientDrawable().apply { setColor(rest); cornerRadii = radii })
                 }
                 addView(LinearLayout(this@DetailsActivity).apply {
-                    watchButton.background = half(0xFF272C36.toInt(), left = true)
+                    watchButton.background = half(WATCH_PLATE, left = true)
                     favorite.background = half(PLATE_FILL, left = false)
                     addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
                     addView(favorite, LinearLayout.LayoutParams(dp(48), dp(44)))
@@ -452,7 +452,7 @@ class DetailsActivity : Activity() {
             }
             val head = LinearLayout(this).apply {
                 setPadding(0, dp(16), 0, 0)
-                addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
+                addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(16) })
                 // the block is lifted by 4 dp (the capital letters of the title stand at the poster's upper edge) and is 4 dp taller (its minimum
                 // height), so the button ends exactly at the poster's lower edge
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = -dp(4) })
@@ -474,7 +474,7 @@ class DetailsActivity : Activity() {
         }
 
         val rawOverview = intent.getStringExtra("overview").orEmpty()
-        overviewView = text(rawOverview, 18f, 0xFFE2E8F0.toInt()).apply {
+        overviewView = text(rawOverview, 18f, TEXT_LIGHT).apply {
             setLineSpacing(0f, 1.25f)
             // the description takes the focus only on the TV (so the remote can scroll it); on a phone it is plain text of the page
             if (!mobile) {
@@ -539,7 +539,7 @@ class DetailsActivity : Activity() {
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply {
             if (mobile) topMargin = dp(8)
             // on the TV the text has 12 dp of padding for the focus border: the border goes out to the left so the text lines up with the title
-            else { leftMargin = -dp(12); topMargin = dp(10) }
+            else { leftMargin = -dp(12); topMargin = dp(12) }
         })
         if (mobile) info.addView(moreRow, LinearLayout.LayoutParams(-2, dp(32)))
         if (!mobile) {
@@ -1096,7 +1096,7 @@ class DetailsActivity : Activity() {
             // initials on a calm teal circle sit under the photo: they show while it loads and for an actor who has none
             val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
             val photo = FrameLayout(this).apply {
-                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
+                background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(PLACEHOLDER_FROM, PLACEHOLDER_TO))
                     .apply { shape = GradientDrawable.OVAL }
                 // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
@@ -1113,9 +1113,9 @@ class DetailsActivity : Activity() {
                 LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
             if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, TEXT_MUTED).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-            }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(2) })
+            }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(4) })
             // all the cards of the row are as tall as the tallest one
-            row.addView(card, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = dp(10) })
+            row.addView(card, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = dp(12) })
         }
         val scroll = android.widget.HorizontalScrollView(this)
         scroll.isHorizontalScrollBarEnabled = false

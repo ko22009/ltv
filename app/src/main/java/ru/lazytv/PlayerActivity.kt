@@ -549,18 +549,18 @@ class PlayerActivity : Activity() {
         buttons.gravity = Gravity.CENTER_VERTICAL
         buttons.setPadding(0, dp(16), 0, 0)
         buttons.addView(round(MenuIcons.REPLAY10) { seekByStep(-10_000L) },
-            LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(18) })
+            LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(16) })
         playPause = round(MenuIcons.PAUSE, true) { togglePlay() }
-        buttons.addView(playPause, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(18) })
+        buttons.addView(playPause, LinearLayout.LayoutParams(dp(68), dp(68)).apply { rightMargin = dp(16) })
         buttons.addView(round(MenuIcons.FORWARD10) { seekByStep(10_000L) },
             LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(32) })
-        buttons.addView(round(MenuIcons.ASPECT) { cycleAspect() }, LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+        buttons.addView(round(MenuIcons.ASPECT) { cycleAspect() }, LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(12) })
         buttons.addView(round(MenuIcons.AUDIO_TRACK) { trackDialog(C.TRACK_TYPE_AUDIO, "Звуковая дорожка") },
-            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(12) })
         buttons.addView(round(MenuIcons.SUBTITLES) { trackDialog(C.TRACK_TYPE_TEXT, "Субтитры") },
-            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(12) })
         buttons.addView(round(MenuIcons.GEAR) { qualityAndSpeedDialog() },
-            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(10) })
+            LinearLayout.LayoutParams(dp(52), dp(52)).apply { rightMargin = dp(12) })
         buttons.addView(round(MenuIcons.LINK) { changeSourceDialog() },
             LinearLayout.LayoutParams(dp(52), dp(52)))
         bottom.addView(buttons)
@@ -589,7 +589,7 @@ class PlayerActivity : Activity() {
                     setOnClickListener { switchTo(index, toast = false) }
                 }
                 episodeViews.add(button)
-                episodeButtons.addView(button, LinearLayout.LayoutParams(-2, dp(46)).apply { rightMargin = dp(10) })
+                episodeButtons.addView(button, LinearLayout.LayoutParams(-2, dp(46)).apply { rightMargin = dp(12) })
             }
             updateEpisodeButtons()
             val scroll = android.widget.HorizontalScrollView(this)

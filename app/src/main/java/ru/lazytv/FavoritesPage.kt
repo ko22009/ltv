@@ -190,7 +190,7 @@ class FavoritesPageFragment : Fragment() {
     private fun addHeader(text: String, pad: Int, scale: Float) {
         content.addView(TextView(requireContext()).apply {
             this.text = text
-            setTextColor(0xFF8A93A3.toInt())
+            setTextColor(TEXT_MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
             setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
         })

@@ -212,7 +212,7 @@ class GalleryActivity : Activity() {
             addView(round(MenuIcons.CLOSE, dp(44), dp(8), Color.TRANSPARENT) { }.apply { isClickable = false },
                 FrameLayout.LayoutParams(dp(44), dp(44), Gravity.CENTER))
         }
-        root.addView(closeZone, FrameLayout.LayoutParams(dp(96), dp(96), Gravity.TOP or Gravity.END).apply { topMargin = dp(2) })
+        root.addView(closeZone, FrameLayout.LayoutParams(dp(96), dp(96), Gravity.TOP or Gravity.END).apply { topMargin = dp(4) })
         phoneCounter = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setTextColor(Color.WHITE)
