@@ -344,12 +344,12 @@ fun formatRuntime(minutes: Int): String = when {
  * the top one is the room plus the card's own margin.
  */
 private const val GRID_EDGE_SIDE = 20
-/** The grid's top padding: the room the enlarged card grows into above the first row. */
-private const val GRID_EDGE_TOP = 14
+/** The grid's top padding: the room the enlarged card grows into above the first row (it grows by 14%, about 24 dp up). With the gap below it is 28, as the cards always started. */
+private const val GRID_EDGE_TOP = 26
 /** The grid's bottom padding: the focused card of the last visible row grows down into it (the card grows by 14%, about 24 dp at its height), so the page does not cut it. */
 private const val GRID_EDGE_BOTTOM = 28
 /** The grid starts this much below the header, so a scrolling list is cut with a gap instead of sticking to it. */
-private const val GRID_TOP_GAP = 14
+private const val GRID_TOP_GAP = 2
 
 /**
  * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
