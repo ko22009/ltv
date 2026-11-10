@@ -161,7 +161,7 @@ class GalleryActivity : Activity() {
         // the gallery lies over the card as a dimmed layer; the frame keeps its own shape
         root.background = android.graphics.drawable.ColorDrawable(PAGE_COVER)
         // a tap on the picture shows the next one (after the last one the first); a tap beside it turns the picture the way of
-        // that side: on the left (posters: above) one back, on the right (below) one forward; the gallery closes only with the cross and Back
+        // that side: on the left one back, on the right one forward; the gallery closes only with the cross and Back
         val nextPicture = { if (backdrops.size > 1) showImage((selectedIndex + 1) % backdrops.size) }
         var tapX = 0f
         var tapY = 0f
@@ -171,8 +171,8 @@ class GalleryActivity : Activity() {
                 android.view.MotionEvent.ACTION_UP -> {
                     val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
                     if (Math.abs(ev.x - tapX) < slop && Math.abs(ev.y - tapY) < slop) {
-                        // covers lie sideways (left and right of the picture), posters stand upright (above and below it)
-                        val back = if (posterMode) ev.y < v.height / 2f else ev.x < v.width / 2f
+                        // left half is always "back", right half "forward", for posters too: the arrows stand left and right in both modes
+                        val back = ev.x < v.width / 2f
                         val to = selectedIndex + if (back) -1 else 1
                         if (to in backdrops.indices) showImage(to)
                     }
