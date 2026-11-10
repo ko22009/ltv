@@ -609,15 +609,10 @@ class DetailsActivity : Activity() {
                 val cards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val cardViews = mutableListOf<View>()
                 linkedDirectors.forEachIndexed { idx, dir ->
-                    // the same card as the cast (outline, indigo under the cursor, a small arrow), but the name only
+                    // the same card as the cast (outline, indigo under the cursor), but the name only
                     val card = text(dir.name, 16f, Color.WHITE, bold = true).apply {
                         gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(14), dp(8), dp(10), dp(8))
-                        setCompoundDrawables(null, null, PathDrawable(MenuIcons.CHEVRON_RIGHT).apply {
-                            setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-                            setBounds(0, 0, dp(20), dp(20))
-                        }, null)
-                        compoundDrawablePadding = dp(4)
+                        setPadding(dp(14), dp(8), dp(14), dp(8))
                         isFocusable = true
                         isClickable = true
                         background = personCardBackground()
@@ -888,17 +883,8 @@ class DetailsActivity : Activity() {
                     .transition(DrawableTransitionOptions.withCrossFade()).into(image)
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
-            // the name on the left with a small arrow: the card leads to the page of the person
-            val nameLine = LinearLayout(this).apply {
-                gravity = Gravity.CENTER_VERTICAL
-                addView(text(person.name, 15f, bold = true).apply { maxLines = 2 }, LinearLayout.LayoutParams(0, -2, 1f))
-                addView(ImageView(this@DetailsActivity).apply {
-                    setImageDrawable(PathDrawable(MenuIcons.CHEVRON_RIGHT).apply {
-                        setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-                    })
-                }, LinearLayout.LayoutParams(dp(20), dp(20)).apply { leftMargin = dp(2) })
-            }
-            card.addView(nameLine, LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(10) })
+            card.addView(text(person.name, 15f, bold = true).apply { maxLines = 2 },
+                LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(10) })
             if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, 0xFF94A3B8.toInt()).apply {
                 maxLines = 2
             }, LinearLayout.LayoutParams(dp(124), -2).apply { topMargin = dp(2) })
