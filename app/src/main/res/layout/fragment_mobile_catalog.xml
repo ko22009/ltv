@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#101216">
 
-    <!-- the filters and the basket (reset) on the left, the sort on the right edge: nothing runs off the screen -->
+    <!-- the filters, the basket (reset) and the sort are pressed to the right edge: nothing runs off the screen -->
     <LinearLayout
         android:id="@+id/categoriesScroll"
         android:layout_width="0dp"
@@ -20,6 +20,11 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/filterButton"
@@ -50,11 +55,6 @@
             app:textStartPadding="0dp"
             android:visibility="gone" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
         <com.google.android.material.chip.Chip
             android:id="@+id/sortButton"
             style="@style/Widget.LazyMobile.Chip"
@@ -73,6 +73,7 @@
         android:maxLines="2"
         android:paddingStart="16dp"
         android:paddingTop="2dp"
+        android:paddingBottom="8dp"
         android:paddingEnd="16dp"
         android:textColor="#94A3B8"
         android:textSize="13sp"
@@ -96,7 +97,7 @@
             android:layout_height="match_parent"
             android:clipToPadding="false"
             android:paddingStart="8dp"
-            android:paddingTop="8dp"
+            android:paddingTop="0dp"
             android:paddingEnd="8dp"
             android:paddingBottom="16dp" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

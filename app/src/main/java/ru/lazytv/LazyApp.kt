@@ -19,12 +19,14 @@ class LazyApp : Application() {
                 }
             }
             override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity) }
-            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity); OfflineCover.resumed(activity) }
+            override fun onActivityPaused(activity: Activity) { OfflineCover.paused(activity) }
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
         })
+        Connectivity.init(this)
+        OfflineCover.start()
         RemoteConfig.init(this)
         Cinema.init(this)
         DpiBypass.enabled = Settings.bool(this, Settings.AUTO_BYPASS)

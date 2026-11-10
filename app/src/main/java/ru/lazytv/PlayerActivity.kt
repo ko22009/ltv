@@ -74,6 +74,13 @@ class PlayerActivity : Activity() {
     private fun dp(value: Int) = (value * scale).toInt()
 
     private var player: ExoPlayer? = null
+    private var resumeWhenOnline = false
+    private val onlineListener: (Boolean) -> Unit = { online ->
+        if (online && resumeWhenOnline && !isFinishing) {
+            resumeWhenOnline = false
+            player?.let { it.prepare(); it.play() }
+        }
+    }
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var url: String
     private lateinit var view: PlayerView
@@ -173,6 +180,7 @@ class PlayerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Connectivity.listen(onlineListener)
         if (!DeviceType.isTv(this)) {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
@@ -233,6 +241,12 @@ class PlayerActivity : Activity() {
             override fun onPlayerError(error: PlaybackException) {
                 android.util.Log.w("LazyTV", "player error: " + error.errorCodeName, error)
                 if (releasing || isFinishing) return
+                // the connection dropped: no error dialog, the playback goes on from the same place when the network is back
+                if (!Connectivity.online) {
+                    resumeWhenOnline = true
+                    Toast.makeText(this@PlayerActivity, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
+                    return
+                }
                 showErrorDialog(error)
             }
 
@@ -1165,6 +1179,7 @@ class PlayerActivity : Activity() {
         super.onStop()
         errorDialog?.dismiss()
         errorDialog = null
+        Connectivity.unlisten(onlineListener)
         save()
         releasing = true
         handler.removeCallbacksAndMessages(null)
