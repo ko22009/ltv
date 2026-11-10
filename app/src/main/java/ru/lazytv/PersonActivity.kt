@@ -85,7 +85,7 @@ class PersonActivity : Activity() {
                 loading.visibility = View.GONE
                 result.onSuccess { person ->
                     title.text = person.name
-                    page.addView(info(person))
+                    page.addView(info(person), LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) })
                     // from the cards the focus search skips a button that sits off their column: Up goes to it by hand
                     val reach: View = readMore ?: back
                     if (person.credits.isEmpty()) {
@@ -93,7 +93,8 @@ class PersonActivity : Activity() {
                         reach.requestFocus()
                         return@onSuccess
                     }
-                    page.addView(label("ФИЛЬМОГРАФИЯ", 18f).apply { setPadding(0, px(14), 0, 0) })
+                    // the heading looks like «В ролях» on the title card
+                    page.addView(label("Фильмография", 22f, bold = true).apply { setPadding(0, px(20), 0, px(4)) })
                     if (isMobileUi()) {
                         // the same cards as the films page of the phone (rating on the poster), not the TV cards
                         val list = androidx.recyclerview.widget.RecyclerView(this).apply {
@@ -155,11 +156,15 @@ class PersonActivity : Activity() {
     private fun info(person: Tmdb.PersonPage): View {
         val band = LinearLayout(this)
         band.orientation = LinearLayout.HORIZONTAL
-        band.setPadding(0, px(14), 0, 0)
+        // the band is a card of the same look as the people cards of the title card (not focusable: only the resting outline shows)
+        band.background = personCardBackground(scale)
+        band.setPadding(px(14), px(14), px(14), px(14))
         // initials on a calm indigo plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
+                .apply { cornerRadius = px(10).toFloat() }
+            clipToOutline = true
             addView(label(initials, 40f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
