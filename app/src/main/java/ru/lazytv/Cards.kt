@@ -165,8 +165,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     /** "2008 · 2 ч 32 мин" in the lower left corner of the poster: the same plate as the rating on the right. */
     private val year = TextView(context).apply {
-        RatingBadge.style(this, 15f * scale, px(10f), px(4f))
-        typeface = Typeface.DEFAULT
+        RatingBadge.style(this, 16f * scale, px(10f), px(5f))
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         maxLines = 1
         visibility = View.GONE
     }
@@ -189,7 +189,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     /** The rating plate in the lower right corner of the poster (the same look as everywhere); hidden when TMDB has no rating. */
     private val rating = TextView(context).apply {
-        RatingBadge.style(this, 15f * scale, px(10f), px(4f))
+        RatingBadge.style(this, 16f * scale, px(10f), px(5f))
         visibility = View.GONE
     }
 
@@ -323,7 +323,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private fun showYear() {
-        val line = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(" · ")
+        // short form on the plate ("2ч 36м"): the two plates must fit the width of the poster side by side
+        val line = listOf(year0, formatRuntime(runtime0).replace(" ч", "ч").replace(" мин", "м")).filter { it.isNotEmpty() }.joinToString(" · ")
         year.text = line
         year.visibility = if (line.isEmpty()) View.GONE else View.VISIBLE
     }
