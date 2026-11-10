@@ -83,11 +83,7 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
         }
         tile.elevation = 0f
         val linkIcon = PathDrawable(MenuIcons.LINK).apply {
-            setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-        }
-        tile.setOnFocusChangeListener { _, focused ->
-            linkIcon.setColorFilter(if (focused) Color.WHITE else 0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-            linkIcon.invalidateSelf()
+            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
         }
         tile.addView(ImageView(context).apply { setImageDrawable(linkIcon) }, LinearLayout.LayoutParams(px(64f), px(64f)))
         // only the name of the row, as written over it

@@ -365,13 +365,13 @@ class EpisodesActivity : Activity() {
             line = if (watched) 0xFF1B1F2A.toInt() else 0xFF232836.toInt(),
         )
         if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, 0)
-            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) 0xFFA5B4FC.toInt() else 0xFF94A3B8.toInt())) })
+            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else 0xFF94A3B8.toInt())) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there
         card.addView(label(shown, 19f, 0, true).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
             LinearLayout.LayoutParams(0, -2, 1f))
-        if (watched) card.addView(label("✓", 20f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(0xFFA5B4FC.toInt())) })
+        if (watched) card.addView(label("✓", 20f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }

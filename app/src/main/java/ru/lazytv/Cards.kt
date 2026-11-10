@@ -124,7 +124,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** The "watched" mark in the corner of the poster: a bright tick on a dark disc, it is never dimmed. */
     private val badge = ImageView(context).apply {
         setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
-            setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
         })
         setPadding(px(4f), px(4f), px(4f), px(4f))
         background = GradientDrawable().apply {
@@ -144,7 +144,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         // a square of its own: the icon is drawn by width, a stretched view would cut it
         addView(ImageView(context).apply {
             setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
-                setColorFilter(0xFFA5B4FC.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
             })
         }, android.widget.FrameLayout.LayoutParams(px(72f), px(72f), Gravity.CENTER))
     }

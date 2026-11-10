@@ -403,7 +403,7 @@ class PlayerActivity : Activity() {
         val thumbColor = when {
             isPending -> 0xFF94A3B8.toInt()
             seek.isFocused -> FOCUS_FILL
-            else -> 0xFFA5B4FC.toInt()
+            else -> Color.WHITE
         }
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)

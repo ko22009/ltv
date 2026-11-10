@@ -273,7 +273,7 @@ class FiltersActivity : Activity() {
     private fun GridLayout.addCaption(caption: String) {
         val colSpec = GridLayout.spec(0, columnCount, GridLayout.FILL, 1f)
         val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
-        addView(text(caption, 16f, 0xFFA5B4FC.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
+        addView(text(caption, 16f, 0xFFFFFFFF.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
             GridLayout.LayoutParams(rowSpec, colSpec).apply {
                 width = 0
                 height = FrameLayout.LayoutParams.WRAP_CONTENT

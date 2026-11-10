@@ -166,7 +166,7 @@ class PersonActivity : Activity() {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
                 .apply { cornerRadius = px(10).toFloat() }
             clipToOutline = true
-            addView(label(initials, 40f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
+            addView(label(initials, 40f, 0xFFCBD5E1.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
             if (!person.photo.isNullOrEmpty()) {

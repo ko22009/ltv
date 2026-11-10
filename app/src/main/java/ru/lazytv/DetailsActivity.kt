@@ -870,7 +870,7 @@ class DetailsActivity : Activity() {
                     .apply { shape = GradientDrawable.OVAL }
                 // the round outline of the background cuts the photo into a circle
                 clipToOutline = true
-                addView(text(initials, 30f, 0xFFA5B4FC.toInt()).apply { gravity = Gravity.CENTER },
+                addView(text(initials, 30f, 0xFFCBD5E1.toInt()).apply { gravity = Gravity.CENTER },
                     FrameLayout.LayoutParams(-1, -1))
                 val image = ImageView(this@DetailsActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
                 addView(image, FrameLayout.LayoutParams(-1, -1))

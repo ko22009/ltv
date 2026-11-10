@@ -398,7 +398,7 @@ class TorrentsActivity : Activity() {
         numbers.orientation = LinearLayout.VERTICAL
         numbers.gravity = Gravity.END
         numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
-        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFA5B4FC.toInt()))
+        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFCBD5E1.toInt()))
         numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFEF9A9A.toInt()))
         card.addView(numbers, LinearLayout.LayoutParams(px(if (isMobileUi()) 80 else 110), -2))
 
@@ -608,7 +608,7 @@ class TorrentsActivity : Activity() {
             background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = px(4).toFloat() }
             if (!isMobileUi()) minimumWidth = px(620)
             addView(title)
-            addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFFA5B4FC.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
+            addView(label("ПРЕДЗАГРУЗКА", 14f, 0xFF94A3B8.toInt(), true).apply { setPadding(0, px(8), 0, px(4)) })
             addView(file)
             addView(info.apply { setPadding(0, px(6), 0, 0) })
             addView(buffer)
