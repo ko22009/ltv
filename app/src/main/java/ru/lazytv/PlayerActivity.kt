@@ -391,13 +391,13 @@ class PlayerActivity : Activity() {
 
     private fun updateSeekColors() {
         if (!::seek.isInitialized) return
-        // theme indigo in every state (the grey of buffering and seeking is gone): the vivid indigo of the track,
-        // the dark indigo of the focus under the cursor
+        // the colours of the loading spinner (Loading.kt): vivid indigo arc on a faint white track, in every state
         val progressColor = 0xFF6366F1.toInt()
-        val thumbColor = if (seek.isFocused) FOCUS_FILL else 0xFF6366F1.toInt()
+        val thumbColor = 0xFF6366F1.toInt()
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
-        seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x4464748B.toInt())
+        seek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x33FFFFFF)
+        seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x4DFFFFFF)
     }
 
     private fun buildOverlay(name: String, meta: String): View {
