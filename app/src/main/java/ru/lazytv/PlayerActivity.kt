@@ -415,6 +415,8 @@ class PlayerActivity : Activity() {
         // the same size in both states, so the bar does not jump when the focus comes; the track is not split at the thumb,
         // so the line runs under the clear plate and no gap shows round the dot at rest
         seek.splitTrack = false
+        // the system focus highlight would draw one more ring round the plate
+        seek.defaultFocusHighlightEnabled = false
         seek.thumb = android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
             setLayerSize(0, dp(40), dp(40))
             setLayerSize(1, dp(18), dp(18))
