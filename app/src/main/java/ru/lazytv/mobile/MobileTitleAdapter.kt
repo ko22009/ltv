@@ -63,7 +63,7 @@ class MobileTitleAdapter(
 
             // Rating
             if (title.rating.isNotEmpty() && title.rating != "0.0") {
-                binding.cardRating.text = title.rating
+                binding.cardRating.text = "★ ${title.rating}"
                 binding.cardRating.visibility = View.VISIBLE
             } else {
                 binding.cardRating.visibility = View.GONE

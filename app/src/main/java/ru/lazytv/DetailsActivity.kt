@@ -105,7 +105,8 @@ class DetailsActivity : Activity() {
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
             // the year stands here until the details arrive with the full date
             RELEASE to intent.getStringExtra("year").orEmpty(),
-            "Рейтинг" to shownRating,
+            // on a phone the rating stands on the poster corner instead
+            "Рейтинг" to if (mobile) "" else shownRating,
         )
 
         val root = FrameLayout(this)
@@ -341,7 +342,7 @@ class DetailsActivity : Activity() {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
                 setTextColor(Color.WHITE)
                 typeface = Typeface.DEFAULT_BOLD
-                background = GradientDrawable().apply { setColor(0xB3101216.toInt()); cornerRadius = dp(10).toFloat() }
+                setBackgroundResource(R.drawable.bg_rating_pill)
                 setPadding(dp(8), dp(3), dp(8), dp(3))
             }, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(6); bottomMargin = dp(6) })
             // the same label as on the cards: the film is in the cinemas now or comes soon
