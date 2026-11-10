@@ -159,9 +159,10 @@ class GalleryActivity : Activity() {
         val width = resources.displayMetrics.widthPixels - 2 * side
         // the gallery lies over the card as a dimmed layer; the frame keeps its own shape
         root.background = android.graphics.drawable.ColorDrawable(0xF0101216.toInt())
-        // a tap on the picture shows the next one (after the last one the first); a tap beside it closes, as before
+        // a tap on the picture shows the next one (after the last one the first); a tap beside it does nothing:
+        // the gallery (covers and posters alike) closes only with the cross and Back
         val nextPicture = { if (backdrops.size > 1) showImage((selectedIndex + 1) % backdrops.size) }
-        root.setOnClickListener { finish() }
+        root.setOnClickListener { }
         mainImage.scaleType = ImageView.ScaleType.FIT_CENTER
         mainImage.adjustViewBounds = true
         mainImage.setOnClickListener { nextPicture() }
