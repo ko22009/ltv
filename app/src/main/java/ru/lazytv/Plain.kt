@@ -127,7 +127,7 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
  * A vertical grid of cards: the focus walks through the views by the arrows, the grid scrolls only as far as the focused card needs.
  * [onSelected] tells which position took the focus, [keyIntercept] sees the keys first (a page leads the arrows out of the grid by hand).
  */
-open class CardGridView(context: Context, private val columns: Int, private val gap: Int) : RecyclerView(context) {
+open class CardGridView(context: Context, private val columns: Int, private val gap: Int, private val hGap: Int = gap) : RecyclerView(context) {
     var onSelected: ((Int) -> Unit)? = null
     var keyIntercept: ((KeyEvent) -> Boolean)? = null
     private var chosen = 0
@@ -146,7 +146,7 @@ open class CardGridView(context: Context, private val columns: Int, private val 
         descendantFocusability = FOCUS_AFTER_DESCENDANTS
         addItemDecoration(object : ItemDecoration() {
             override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: State) {
-                outRect.set(gap / 2, gap / 2, gap / 2, gap / 2)
+                outRect.set(hGap / 2, gap / 2, hGap / 2, gap / 2)
             }
         })
     }

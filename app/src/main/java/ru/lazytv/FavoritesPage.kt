@@ -134,9 +134,7 @@ class FavoritesPageFragment : Fragment() {
         }
 
         // the same pitch as the grid of the catalog: five columns over the width of the page
-        val gap = (6 * scale).toInt()
-        val avail = scroll.width - pad - (20 * scale).toInt()
-        val pitch = (avail - 4 * gap) / 5 + gap
+        val pitch = tvGridPitch(scale)
 
         if (titles.isNotEmpty()) {
             val views = titles.map { title ->

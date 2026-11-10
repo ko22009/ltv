@@ -691,7 +691,7 @@ class SettingsPageFragment : Fragment() {
         }
         val gap = px(12)
         val side = px(20)
-        val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap)
+        val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap, titleCards = false)
         val gridWidth = COLUMNS * px(290) + (COLUMNS - 1) * gap + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
             setMargins(-side, px(2), 0, 0)

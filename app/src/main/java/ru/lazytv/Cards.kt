@@ -357,12 +357,23 @@ private const val GRID_TOP_GAP = 2
  * under the header instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where
  * the page's edge is.
  */
-fun titleCardGrid(context: Context, scale: Float, list: ItemList, columns: Int, spacing: Int = (6 * scale).toInt()): CardGridView {
+fun titleCardGrid(context: Context, scale: Float, list: ItemList, columns: Int, spacing: Int = (6 * scale).toInt(), titleCards: Boolean = true): CardGridView {
     // a touch screen has no cursor: no zoomed "active" card
     list.zoom = !context.isMobileUi()
     val side = (GRID_EDGE_SIDE * scale).toInt()
     // a vertical grid must not slide sideways under a mouse or a finger: the horizontal part of a drag is dropped
-    return object : CardGridView(context, columns, spacing) {
+    // [titleCards] false: tiles of another kind (settings) size their own cells
+    val tv = !context.isMobileUi() && titleCards
+    return object : CardGridView(context, columns, spacing, if (tv) 0 else spacing) {
+        // TV: the cards have a fixed width, so the grid is only as wide as its cells (card plus its small gap); a wider grid
+        // would stretch the cells and leave big horizontal gaps between the cards
+        override fun onMeasure(widthSpec: Int, heightSpec: Int) {
+            if (!tv) return super.onMeasure(widthSpec, heightSpec)
+            val wanted = columns * tvGridPitch(scale) + paddingLeft + paddingRight
+            val w = minOf(android.view.View.MeasureSpec.getSize(widthSpec), wanted)
+            super.onMeasure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY), heightSpec)
+        }
+
         private var downX = 0f
         private var downY = 0f
         private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
@@ -426,6 +437,12 @@ fun titleCardGrid(context: Context, scale: Float, list: ItemList, columns: Int, 
         })
     }
 }
+
+/**
+ * Width of one cell of a TV card grid: the card (240 units) plus a gap equal to the vertical one between rows
+ * (the card's top and bottom margins, 12 + 12 units, and the grid spacing, 6 units).
+ */
+fun tvGridPitch(scale: Float) = (240f * scale * CARD_SCALE + (24f * CARD_SCALE + 6f) * scale).toInt()
 
 /** Layout of [titleCardGrid] in a vertical page: the side room and the top gap go outside the page's padding, the cards stay on its edge. */
 fun titleGridParams(scale: Float) = LinearLayout.LayoutParams(-1, 0, 1f).apply {
