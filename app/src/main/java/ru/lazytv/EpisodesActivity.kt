@@ -142,7 +142,8 @@ class EpisodesActivity : Activity() {
             addView(seasonRow)
         }
         page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
-        page.addView(actions, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
+        // no extra margin: the buttons sit centred in the 56 band, so the gap to the seasons above is already 12
+        page.addView(actions, LinearLayout.LayoutParams(-1, px(56)))
         list = ListView(this)
         list.divider = null
         list.selector = ColorDrawable(Color.TRANSPARENT)
