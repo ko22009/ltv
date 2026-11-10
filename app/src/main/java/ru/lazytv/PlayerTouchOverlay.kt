@@ -93,14 +93,15 @@ class PlayerTouchOverlay(
             marginStart = dp(56)
         })
 
-        // Double-tap seek bubbles (-10s / +10s)
+        // Double-tap seek bubbles (-10s / +10s): about a fifth of the screen from the edge, so the bubble sits near the middle of its tap zone
+        val bubbleInset = (resources.displayMetrics.widthPixels * 0.2f).toInt()
         seekBubbleLeft = createSeekBubble("-10 сек")
         seekBubbleRight = createSeekBubble("+10 сек")
         addView(seekBubbleLeft, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START).apply {
-            marginStart = dp(60)
+            marginStart = bubbleInset
         })
         addView(seekBubbleRight, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END).apply {
-            marginEnd = dp(60)
+            marginEnd = bubbleInset
         })
 
         // the big play / pause sign that flashes in the middle after a double tap
