@@ -402,9 +402,9 @@ class PlayerActivity : Activity() {
         }
         val thumbColor = when {
             isPending -> 0xFF94A3B8.toInt()
-            // under the cursor the thumb is white and bright, at rest a little dimmer
-            seek.isFocused -> Color.WHITE
-            else -> 0xFFCBD5E1.toInt()
+            // theme colours only: the dark indigo of the focus under the cursor, the vivid indigo of the track at rest
+            seek.isFocused -> FOCUS_FILL
+            else -> 0xFF6366F1.toInt()
         }
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
