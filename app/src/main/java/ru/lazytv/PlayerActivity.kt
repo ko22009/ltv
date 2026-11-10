@@ -77,6 +77,7 @@ class PlayerActivity : Activity() {
     private var resumeWhenOnline = false
     private lateinit var waitingDots: View
     private var bufferEmpty = false
+    private var offlineNoticeShown = false
     private lateinit var touchOverlay: PlayerTouchOverlay
     /** The Back button in the top left of the controls: up from the progress bar lands on it. */
     private lateinit var playerBack: View
@@ -96,10 +97,13 @@ class PlayerActivity : Activity() {
         // buffering with more than ~1.5 s already loaded ahead is not "buffer ran out" (the player can report it while it loads on)
         val runOut = bufferEmpty && (player?.let { it.bufferedPosition - it.currentPosition < 1500 } ?: true)
         val show = runOut || resumeWhenOnline
-        // the notice comes when the buffer has run out without a network, once per stall
-        if (show && waitingDots.visibility != View.VISIBLE && !Connectivity.online && !isFinishing) {
+        // the notice comes when nothing plays (the buffer has run out, or the stream has not started yet) and there is no network:
+        // once per stall, also when the network drops while the dots are already there
+        if (show && !Connectivity.online && !offlineNoticeShown && !isFinishing) {
+            offlineNoticeShown = true
             Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
         }
+        if (!show || Connectivity.online) offlineNoticeShown = false
         waitingDots.visibility = if (show) View.VISIBLE else View.GONE
         updatePauseBadge()
         bufferSpinner.visibility = View.GONE
