@@ -116,7 +116,8 @@ class FavoritesPageFragment : Fragment() {
             text = "Закладки"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
-            setPadding(pad, (30 * scale).toInt(), 0, (6 * scale).toInt())
+            // the same distance from the title to the first card as on the pages of the catalog ("Фильмы", "Сериалы")
+            setPadding(pad, (30 * scale).toInt(), 0, (25 * scale).toInt())
         })
 
         titles = Favorites.all(ctx)
