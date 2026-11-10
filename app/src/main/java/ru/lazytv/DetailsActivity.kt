@@ -571,6 +571,14 @@ class DetailsActivity : Activity() {
     /** True until the details come: the table shows all its rows, an unknown value as a grey bar. */
     private lateinit var moreRow: LinearLayout
 
+    /** The details are in (or failed): a line that stays empty is taken out, so no blank gap is left where the data is missing. */
+    private fun dropEmpty(original: TextView) {
+        original.visibility = if (original.text.isEmpty()) View.GONE else View.VISIBLE
+        overviewView.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
+        if (::moreRow.isInitialized && overviewView.text.isEmpty()) moreRow.visibility = View.GONE
+        if (::genresLine.isInitialized) genresLine.visibility = if (genresLine.text.isEmpty()) View.GONE else View.VISIBLE
+    }
+
     private var tablePending = true
 
     private val skeletonTexts = mutableListOf<TextView>()
@@ -677,6 +685,7 @@ class DetailsActivity : Activity() {
             row.tag = "cast"
             info.addView(row)
         }
+        dropEmpty(original)
         galleryPosters = d.posters
         galleryBackdrops = d.allBackdrops
         startBackdrops(d.backdrops)
@@ -702,6 +711,7 @@ class DetailsActivity : Activity() {
                         // no details: the year of the list is all there is, shown as it is
                         tablePending = false
                         fillTable(table, baseRows)
+                        dropEmpty(original)
                     }
                 } else if (cached == null) {
                     onUi { applyDetails(d, name, baseRows, original, table, scroll) }
