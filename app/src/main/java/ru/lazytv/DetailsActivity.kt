@@ -467,6 +467,8 @@ class DetailsActivity : Activity() {
             })
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         } else {
+            // air under the last block (the cast cards): the page ends above the screen edge, not at it
+            info.setPadding(0, 0, 0, dp(32))
             scroll.addView(info)
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1).apply {
                 topMargin = dp(444); leftMargin = dp(389); rightMargin = dp(64)
