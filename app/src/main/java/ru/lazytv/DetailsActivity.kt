@@ -64,6 +64,11 @@ class DetailsActivity : Activity() {
         setPadding(dp(if (iconOnly) 16 else 12), 0, dp(if (iconOnly) 16 else 12), 0)
         setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
         compoundDrawablePadding = dp(if (iconOnly) 0 else 8)
+        // a left drawable sticks to the left edge of a wide button: the padding puts the lone icon in the middle
+        if (iconOnly) addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
+            val pad = (((r - l) - dp(22)) / 2).coerceAtLeast(0)
+            if (v.paddingLeft != pad) v.setPadding(pad, 0, pad, 0)
+        }
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
