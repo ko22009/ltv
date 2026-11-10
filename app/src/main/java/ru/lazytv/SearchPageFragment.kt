@@ -385,18 +385,17 @@ class SearchPageFragment : Fragment() {
     }
 
     private fun askClearRecent() {
-        android.app.AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("Очистить весь список?")
-            .setMessage("Недавно открытое будет удалено.")
-            .setPositiveButton("Очистить") { _, _ ->
+        // "Отмена" first: it takes the focus, so a stray press of OK on the remote deletes nothing
+        showMessage(requireActivity(), "Очистить весь список?", message = "Недавно открытое будет удалено.", buttons = listOf(
+            DialogButton("Отмена"),
+            DialogButton("Очистить") {
                 History.clear(requireContext())
                 picked.clear()
                 editing = false
                 showRecent()
                 input.requestFocus()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+            },
+        ))
     }
 
     // --- search history ------------------------------------------------------------------------

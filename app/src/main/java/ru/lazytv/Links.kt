@@ -1,7 +1,6 @@
 package ru.lazytv
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.util.TypedValue
@@ -34,7 +33,7 @@ object Links {
         val box = android.widget.LinearLayout(activity).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             gravity = Gravity.START
-            setPadding(px(24), 0, px(24), 0)
+            setPadding(0, 0, 0, 0)
             addView(TextView(activity).apply {
                 text = "Браузера на этом устройстве нет. Откройте ссылку на телефоне или компьютере и поставьте TorrServe оттуда."
                 setTextColor(0xFFCBD5E1.toInt())
@@ -51,10 +50,6 @@ object Links {
                 setPadding(0, px(14), 0, 0)
             })
         }
-        AlertDialog.Builder(activity)
-            .setTitle("Ссылка для загрузки")
-            .setView(box)
-            .setPositiveButton("Понятно", null)
-            .show()
+        showMessage(activity, "Ссылка для загрузки", content = box, buttons = listOf(DialogButton("Понятно")))
     }
 }

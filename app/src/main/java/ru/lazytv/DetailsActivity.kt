@@ -428,11 +428,7 @@ class DetailsActivity : Activity() {
                     fun cut(v: android.widget.TextView) = v.layout?.let { l -> l.lineCount > 0 && l.getEllipsisCount(l.lineCount - 1) > 0 } ?: false
                     if (lines.none { cut(it) }) return@OnClickListener
                     val rest = lines.drop(1).map { it.text.toString() }.filter { it.isNotEmpty() && it != DASH }
-                    android.app.AlertDialog.Builder(this@DetailsActivity)
-                        .setTitle(titleView.text)
-                        .setMessage(rest.joinToString("\n\n"))
-                        .setPositiveButton("Закрыть", null)
-                        .show()
+                    showText(this@DetailsActivity, titleView.text.toString(), rest.joinToString("\n\n"))
                 }
                 lines.forEach { it.setOnClickListener(tapOpensWhole) }
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
@@ -501,11 +497,7 @@ class DetailsActivity : Activity() {
             }
             setOnClickListener {
                 if (text.isNotEmpty()) {
-                    android.app.AlertDialog.Builder(this@DetailsActivity)
-                        .setTitle(name)
-                        .setMessage(text)
-                        .setPositiveButton("Закрыть", null)
-                        .show()
+                    showText(this@DetailsActivity, name.toString(), text)
                 }
             }
             setOnKeyListener { _, code, event ->
@@ -530,11 +522,7 @@ class DetailsActivity : Activity() {
         overviewView.ellipsize = android.text.TextUtils.TruncateAt.END
         fun showFullOverview() {
             if (overviewView.text.isNotEmpty()) {
-                android.app.AlertDialog.Builder(this@DetailsActivity)
-                    .setTitle(name)
-                    .setMessage(overviewView.text)
-                    .setPositiveButton("Закрыть", null)
-                    .show()
+                showText(this@DetailsActivity, name.toString(), overviewView.text)
             }
         }
         if (mobile) overviewView.setOnClickListener { showFullOverview() }

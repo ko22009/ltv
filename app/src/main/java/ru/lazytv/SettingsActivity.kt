@@ -371,18 +371,15 @@ open class SettingsScreen : Fragment() {
             setTextColor(Color.WHITE)
         }
         val box = FrameLayout(ctx).apply {
-            setPadding(px(20), px(8), px(20), 0)
             addView(input, FrameLayout.LayoutParams(-1, -2))
         }
-        android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle(row.title)
-            .setView(box)
-            .setPositiveButton("Сохранить") { _, _ ->
+        showMessage(requireActivity(), row.title, content = box, initialFocus = input, buttons = listOf(
+            DialogButton("Сохранить") {
                 saveText(row, input.text.toString().trim())
                 show(row)
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+            },
+            DialogButton("Отмена"),
+        ))
     }
 
     private fun saveText(row: SettingRow, typed: String) {
@@ -496,32 +493,31 @@ open class SettingsScreen : Fragment() {
             toast("Кэш источников очищен")
         }
         button("Очистить историю просмотров") {
-            android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
-                .setTitle("Очистить историю просмотров?")
-                .setMessage("Список недавно открытых фильмов и сериалов будет удалён.")
-                .setPositiveButton("Очистить") { _, _ ->
-                    History.clear(ctx)
-                    toast("История просмотров очищена")
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
+            // "Отмена" first: it takes the focus, so a stray press of OK on the remote deletes nothing
+            showMessage(requireActivity(), "Очистить историю просмотров?",
+                message = "Список недавно открытых фильмов и сериалов будет удалён.", buttons = listOf(
+                    DialogButton("Отмена"),
+                    DialogButton("Очистить") {
+                        History.clear(ctx)
+                        toast("История просмотров очищена")
+                    },
+                ))
         }
         button("Сбросить все настройки") {
-            android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
-                .setTitle("Сбросить все настройки?")
-                .setMessage("Закладки, история и отметки просмотра сохранятся.")
-                .setPositiveButton("Сбросить") { _, _ ->
-                    Settings.resetSettingsOnly(ctx)
-                    com.lmd.dpi.DpiBypass.enabled = true
-                    com.lmd.dpi.DpiBypass.appProxyAllowed = true
-                    com.lmd.dpi.DpiBypass.appProxyTorrentsAllowed = true
-                    com.lmd.dpi.DpiBypass.clearCache()
-                    com.lmd.dpi.DpiBypass.start(ctx.applicationInfo.nativeLibraryDir)
-                    toast("Настройки сброшены")
-                    activity?.finish()
-                }
-                .setNegativeButton("Отмена", null)
-                .show()
+            showMessage(requireActivity(), "Сбросить все настройки?",
+                message = "Закладки, история и отметки просмотра сохранятся.", buttons = listOf(
+                    DialogButton("Отмена"),
+                    DialogButton("Сбросить") {
+                        Settings.resetSettingsOnly(ctx)
+                        com.lmd.dpi.DpiBypass.enabled = true
+                        com.lmd.dpi.DpiBypass.appProxyAllowed = true
+                        com.lmd.dpi.DpiBypass.appProxyTorrentsAllowed = true
+                        com.lmd.dpi.DpiBypass.clearCache()
+                        com.lmd.dpi.DpiBypass.start(ctx.applicationInfo.nativeLibraryDir)
+                        toast("Настройки сброшены")
+                        activity?.finish()
+                    },
+                ))
         }
 
         section("О приложении")

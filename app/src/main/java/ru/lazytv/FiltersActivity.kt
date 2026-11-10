@@ -169,13 +169,9 @@ class FiltersActivity : Activity() {
         focusFirst(view)
     }
 
-    /** The system dialog with one choice of several captions, the current one marked; the pick closes it. */
+    /** The app's dialog with one choice of several captions, the current one marked; the pick closes it. */
     private fun pickLabel(title: String, labels: List<String>, current: Int, onPick: (Int) -> Unit) {
-        android.app.AlertDialog.Builder(this).setTitle(title)
-            .setSingleChoiceItems(labels.toTypedArray(), current) { dialog, which ->
-                dialog.dismiss()
-                onPick(which)
-            }.show()
+        showChoice(this, title, labels, current, onPick = onPick)
     }
 
     /** A dropdown of whole numbers, the current one marked; the pick closes it. */
@@ -186,38 +182,32 @@ class FiltersActivity : Activity() {
     private fun ratingText(): String =
         if (filter.ratingFrom == 1 && filter.ratingTo == 10) "любой" else "${filter.ratingFrom}–${filter.ratingTo}"
 
-    /** Two-step system modal to pick rating range: "от" (1..10 or reset), then "до" (from..10). */
+    /** Two-step dialog to pick rating range: "от" (reset, or 1..10), then "до" (from..10). */
     private fun pickRating(shown: TextView) {
         val numbers = (1..10).toList()
-        val labels = listOf("1  (любой)") + (2..10).map { it.toString() }
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Рейтинг от")
-            .setNeutralButton("Любой (1–10)") { _, _ ->
+        // the first row resets the range, the numbers follow it
+        val labels = listOf("Любой (1–10)") + numbers.map { if (it == 1) "1" else it.toString() }
+        val currentFrom = if (filter.ratingFrom == 1 && filter.ratingTo == 10) 0 else numbers.indexOf(filter.ratingFrom) + 1
+        showChoice(this, "Рейтинг от", labels, currentFrom) { whichFrom ->
+            if (whichFrom == 0) {
                 save(filter.copy(ratingFrom = 1, ratingTo = 10))
                 shown.text = ratingText()
+                return@showChoice
             }
-            .setSingleChoiceItems(labels.toTypedArray(), numbers.indexOf(filter.ratingFrom).coerceAtLeast(0)) { d1, whichFrom ->
-                d1.dismiss()
-                val fromVal = numbers[whichFrom]
-                if (fromVal == 10) {
-                    save(filter.copy(ratingFrom = 10, ratingTo = 10))
+            val fromVal = numbers[whichFrom - 1]
+            if (fromVal == 10) {
+                save(filter.copy(ratingFrom = 10, ratingTo = 10))
+                shown.text = ratingText()
+            } else {
+                val toNumbers = (fromVal..10).toList()
+                val toLabels = toNumbers.map { if (it == 10) "10  (без ограничений)" else it.toString() }
+                val currentToIdx = toNumbers.indexOf(filter.ratingTo.coerceAtLeast(fromVal))
+                showChoice(this, "Рейтинг до", toLabels, if (currentToIdx >= 0) currentToIdx else toNumbers.size - 1) { whichTo ->
+                    save(filter.copy(ratingFrom = fromVal, ratingTo = toNumbers[whichTo]))
                     shown.text = ratingText()
-                } else {
-                    val toNumbers = (fromVal..10).toList()
-                    val toLabels = toNumbers.map { if (it == 10) "10  (без ограничений)" else it.toString() }
-                    val currentToIdx = toNumbers.indexOf(filter.ratingTo.coerceAtLeast(fromVal))
-                    android.app.AlertDialog.Builder(this)
-                        .setTitle("Рейтинг до")
-                        .setSingleChoiceItems(toLabels.toTypedArray(), if (currentToIdx >= 0) currentToIdx else toNumbers.size - 1) { d2, whichTo ->
-                            d2.dismiss()
-                            val toVal = toNumbers[whichTo]
-                            save(filter.copy(ratingFrom = fromVal, ratingTo = toVal))
-                            shown.text = ratingText()
-                        }
-                        .show()
                 }
             }
-            .show()
+        }
     }
 
     private fun yearsText(): String = when {

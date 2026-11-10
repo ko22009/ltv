@@ -257,16 +257,12 @@ class CatalogPageFragment : Fragment() {
     private fun chooseSort() {
         val ctx = requireContext()
         val all = CatalogSort.values()
-        android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("Сортировка")
-            .setSingleChoiceItems(all.map { it.label }.toTypedArray(), all.indexOf(CatalogFilter.sort(ctx, category.id))) { dialog, which ->
-                CatalogFilter.saveSort(ctx, category.id, all[which])
-                dialog.dismiss()
-                signature = CatalogFilter.signature(ctx, category.id)
-                renderButtons()
-                startOver()
-            }
-            .show()
+        showChoice(requireActivity(), "Сортировка", all.map { it.label }, all.indexOf(CatalogFilter.sort(ctx, category.id))) { which ->
+            CatalogFilter.saveSort(ctx, category.id, all[which])
+            signature = CatalogFilter.signature(ctx, category.id)
+            renderButtons()
+            startOver()
+        }
     }
 
     /** The filters or the sort could have changed on their own screens: the list is built from the first page again. */

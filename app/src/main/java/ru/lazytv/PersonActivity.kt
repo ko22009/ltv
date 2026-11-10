@@ -200,9 +200,7 @@ class PersonActivity : Activity() {
             id = View.generateViewId()
             readMore = this
             setOnClickListener {
-                android.app.AlertDialog.Builder(this@PersonActivity)
-                    .setTitle(person.name).setMessage(person.biography)
-                    .setPositiveButton("Закрыть", null).show()
+                showText(this@PersonActivity, person.name, person.biography)
             }
         }, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = px(8) })
         band.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))

@@ -1,7 +1,6 @@
 package ru.lazytv
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -58,7 +57,7 @@ class TorrentsActivity : Activity() {
     private var source: String? = null
     /** The voice-over the list is narrowed to; empty means any. Not remembered: every title has its own ones. */
     private var voice = ""
-    private var dialog: AlertDialog? = null
+    private var dialog: android.app.Dialog? = null
     private var preloading = false
     // the "TorrServe is not installed" card is shown once per screen, the address line keeps the message
     private var hintShown = false
@@ -428,10 +427,7 @@ class TorrentsActivity : Activity() {
         view.title.text = name
         view.file.text = torrent.title.substringBefore(" / ")
         view.info.text = "Подключение к TorrServe…"
-        dialog = AlertDialog.Builder(this).setView(view.root).setOnCancelListener { preloading = false; if (direct) finish() }.create().also {
-            it.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            it.show()
-        }
+        dialog = showBare(this, view.root) { preloading = false; if (direct) finish() }
         Thread {
             runCatching { TorrServe.files(applicationContext, ExtraTorrents.magnetOf(torrent), name) }
                 .onSuccess { (hash, files) ->
@@ -441,16 +437,13 @@ class TorrentsActivity : Activity() {
                         else {
                             dialog?.dismiss()
                             preloading = false
-                            AlertDialog.Builder(this).setTitle("Файл для просмотра")
-                                .setItems(videos.map { it.path.substringAfterLast('/') }.toTypedArray()) { _, which ->
-                                    preloading = true
-                                    val v = PreloadView()
-                                    v.title.text = name
-                                    dialog = AlertDialog.Builder(this).setView(v.root).setOnCancelListener { preloading = false; if (direct) finish() }.create().also { d ->
-                                        d.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)); d.show()
-                                    }
-                                    preload(hash, videos[which], name, torrent.source, v)
-                                }.show()
+                            showChoice(this, "Файл для просмотра", videos.map { it.path.substringAfterLast('/') }, -1) { which ->
+                                preloading = true
+                                val v = PreloadView()
+                                v.title.text = name
+                                dialog = showBare(this, v.root) { preloading = false; if (direct) finish() }
+                                preload(hash, videos[which], name, torrent.source, v)
+                            }
                         }
                     }
                 }
@@ -487,14 +480,11 @@ class TorrentsActivity : Activity() {
             "Поставьте TorrServe на это устройство (APK ставится как обычное приложение) или, если он уже " +
             "работает на другом устройстве в сети (приставка, компьютер, NAS), укажите его адрес.\n\n" +
             "Сейчас в настройках указан $address."
-        AlertDialog.Builder(this)
-            .setTitle("TorrServe не установлен")
-            .setMessage(message)
-            .setPositiveButton("Скачать TorrServe") { _, _ -> downloadTorrServe() }
-            .setNeutralButton("Указать адрес") { _, _ -> askTorrServeAddress() }
-            .setNegativeButton("Закрыть") { _, _ -> if (direct) finish() }
-            .setOnCancelListener { if (direct) finish() }
-            .show()
+        showMessage(this, "TorrServe не установлен", message = message, buttons = listOf(
+            DialogButton("Скачать TorrServe") { downloadTorrServe() },
+            DialogButton("Указать адрес") { askTorrServeAddress() },
+            DialogButton("Закрыть") { if (direct) finish() },
+        ), onCancel = { if (direct) finish() })
     }
 
     // back from the player or from the preload: a screen that was only a doorway for a bookmark closes
@@ -514,23 +504,20 @@ class TorrentsActivity : Activity() {
         }
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(px(24), px(8), px(24), 0)
             addView(label("Например, 192.168.1.10:8090 (приставка или компьютер с TorrServe)", 13f, 0xFF94A3B8.toInt()))
             addView(input, LinearLayout.LayoutParams(-1, px(52)).apply { topMargin = px(8) })
         }
-        AlertDialog.Builder(this)
-            .setTitle("Адрес TorrServe")
-            .setView(box)
-            .setPositiveButton("Сохранить") { _, _ ->
+        showMessage(this, "Адрес TorrServe", content = box, initialFocus = input, buttons = listOf(
+            DialogButton("Сохранить") {
                 val address = input.text.toString().trim()
                     .removePrefix("http://").removePrefix("https://").trimEnd('/')
                     .ifEmpty { "127.0.0.1:8090" }
                 Settings.setString(this, Settings.TORRSERVE, address)
                 hintShown = false
                 status.text = "Адрес TorrServe: $address"
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+            },
+            DialogButton("Отмена"),
+        ))
     }
 
     private fun downloadTorrServe() = Links.open(this, TorrServe.DOWNLOAD)

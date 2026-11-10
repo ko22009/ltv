@@ -456,7 +456,7 @@ class MainFragment : Fragment() {
         Tmdb.visibleCategories(ctx).joinToString(",") { it.id } + "|" +
             Settings.string(ctx, Settings.LANGUAGE, "ru-RU")
 
-    private var clockDialog: android.app.AlertDialog? = null
+    private var clockDialog: android.app.Dialog? = null
 
     /**
      * A wrong device clock breaks every HTTPS request, so the warning is a window that cannot be closed with Back:
@@ -474,22 +474,15 @@ class MainFragment : Fragment() {
                     clockDialog?.dismiss()
                     clockDialog = null
                 } else if (clockDialog == null) {
-                    clockDialog = android.app.AlertDialog.Builder(host, android.R.style.Theme_Material_Dialog_Alert)
-                        .setTitle("Сбились дата и время")
-                        .setMessage(ClockCheck.MESSAGE)
-                        .setCancelable(true)
-                        .setPositiveButton("Настроить часы", null)
-                        .setNegativeButton("Пропустить") { d, _ -> d.dismiss() }
-                        .create().also { dialog ->
-                            dialog.setCanceledOnTouchOutside(true)
-                            dialog.show()
-                            // set after show(): the default handler would close the window on the button press
-                            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                                val flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(flags)) }
-                                    .onFailure { runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(flags)) } }
-                            }
-                        }
+                    clockDialog = showMessage(host, "Сбились дата и время", message = ClockCheck.MESSAGE, buttons = listOf(
+                        // stays open on the press: it goes away by itself once the clock is right
+                        DialogButton("Настроить часы", closes = false) {
+                            val flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(flags)) }
+                                .onFailure { runCatching { app.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(flags)) } }
+                        },
+                        DialogButton("Пропустить"),
+                    ))
                 }
             }
         }.start()
