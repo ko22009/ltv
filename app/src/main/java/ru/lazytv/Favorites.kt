@@ -18,11 +18,11 @@ enum class Folder(val key: String, val label: String) {
 
 private fun Title.toJson() = JSONObject().put("id", id).put("name", name).put("overview", overview)
     .put("poster", poster ?: "").put("tv", tv).put("year", year).put("rating", rating)
-    .put("backdrop", backdrop ?: "")
+    .put("backdrop", backdrop ?: "").put("genre", genre)
 
 private fun JSONObject.toTitle() = Title(getLong("id"), getString("name"), optString("overview"),
     optString("poster").ifEmpty { null }, optBoolean("tv"), optString("year"), optString("rating"),
-    backdrop = optString("backdrop").ifEmpty { null })
+    genre = optString("genre"), backdrop = optString("backdrop").ifEmpty { null })
 
 /**
  * Bookmarks kept on the device in the same preferences as the settings. Records saved before the folders

@@ -688,6 +688,7 @@ fun titleFrom(extras: Bundle) = Title(
     extras.getLong("id"), extras.getString("name").orEmpty(), extras.getString("overview").orEmpty(),
     extras.getString("poster"), extras.getBoolean("tv"), extras.getString("year").orEmpty(),
     extras.getString("rating").orEmpty(),
+    genre = extras.getString("genre").orEmpty(),
     backdrop = extras.getString("backdrop"),
 )
 
@@ -699,6 +700,7 @@ fun Title.toExtras() = Bundle().apply {
     putBoolean("tv", tv)
     putString("year", year)
     putString("rating", rating)
+    putString("genre", genre)
     putString("backdrop", backdrop)
 }
 
