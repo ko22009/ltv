@@ -60,7 +60,7 @@ class CatalogFragment : Fragment() {
         })
 
         binding.swipeRefresh.setColorSchemeColors(FOCUS_FILL)
-        binding.swipeRefresh.setProgressBackgroundColorSchemeColor(0xFF1E222A.toInt())
+        binding.swipeRefresh.setProgressBackgroundColorSchemeColor(ru.lazytv.PLATE_FILL)
         binding.swipeRefresh.setOnRefreshListener { startOver() }
 
         binding.filterButton.setOnClickListener {

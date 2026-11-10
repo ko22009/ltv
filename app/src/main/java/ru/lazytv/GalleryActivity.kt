@@ -168,7 +168,7 @@ class GalleryActivity : Activity() {
         mainImage.setOnClickListener { nextPicture() }
         mainImage.outlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(view: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
+                outline.setRoundRect(0, 0, view.width, view.height, dp(TITLE_CARD_RADIUS.toInt()).toFloat())
             }
         }
         mainImage.clipToOutline = true
@@ -200,7 +200,7 @@ class GalleryActivity : Activity() {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setTextColor(Color.WHITE)
             setPadding(dp(16), dp(6), dp(16), dp(6))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
         }
         // the same counter as on the banner of the title card: the same plate and the same place, in the upper right corner of the picture
         phoneCounter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)

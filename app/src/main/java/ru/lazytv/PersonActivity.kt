@@ -160,7 +160,7 @@ class PersonActivity : Activity() {
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))
-                .apply { cornerRadius = px(10).toFloat() }
+                .apply { cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             clipToOutline = true
             addView(label(initials, 40f, 0xFFCBD5E1.toInt()).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, -1))
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
