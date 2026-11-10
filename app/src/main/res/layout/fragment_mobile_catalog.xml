@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#101216">
 
-    <!-- the sort, then the filters (take the room that is left), then the basket (reset): its place is kept even when it is hidden: nothing runs off the screen -->
+    <!-- the sort, then the filters (take the room that is left), then the basket (reset): without filters it is dimmed and disabled: nothing runs off the screen -->
     <LinearLayout
         android:id="@+id/categoriesScroll"
         android:layout_width="0dp"
@@ -59,7 +59,8 @@
             app:iconEndPadding="4dp"
             app:textEndPadding="0dp"
             app:textStartPadding="0dp"
-            android:visibility="invisible" />
+            android:alpha="0.35"
+            android:enabled="false" />
     </LinearLayout>
 
     <TextView

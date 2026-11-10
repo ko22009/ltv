@@ -643,7 +643,7 @@ class DetailsActivity : Activity() {
     private fun withDashes(rows: List<Pair<String, String>>): List<Pair<String, String>> {
         val always = setOf(RELEASE, "Рейтинг", "Длительность", "Возраст", "Жанр", "Страна", "Режиссёр") + (if (currentTitle.tv) setOf("Сезонов") else emptySet())
         // no age rating known: the lowest one, as the owner asked
-        return rows.map { (caption, value) -> if (value.isBlank() && caption in always) caption to (if (caption == "Возраст") NO_AGE else DASH) else caption to value }
+        return rows.map { (caption, value) -> if (value.isBlank() && caption in always) caption to DASH else caption to value }
     }
 
     private fun factRows(base: List<Pair<String, String>>): List<Pair<String, String>> =
@@ -735,7 +735,7 @@ class DetailsActivity : Activity() {
             genresLine.text = d.genres.joinToString(", ")
             val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
             // a missing part is left out (the table below has its own row with a dash); a dash only when nothing is known
-            metaLine.text = listOf(year, d.age.ifBlank { NO_AGE }, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { DASH }
+            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { DASH }
         }
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
         // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
@@ -1358,5 +1358,3 @@ class DetailsActivity : Activity() {
 /** What stands where a fact of the card is not known. */
 private const val DASH = "–"
 
-/** The age rating shown when TMDB has none. */
-private const val NO_AGE = "0+"
