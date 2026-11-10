@@ -421,7 +421,8 @@ class DetailsActivity : Activity() {
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
-        fillTable(table, baseRows.map { if (it.first == RELEASE) it.first to "" else it })
+        fillTable(table, baseRows.map { if (it.first == RELEASE) it.first to "" else it } +
+            listOfNotNull("Длительность", if (intent.getBooleanExtra("tv", false)) "Сезонов" else null, "Возраст", "Жанр", "Страна", "Режиссёр").map { it to "" })
         if (!mobile) {
             info.addView(original)
             info.addView(table)
@@ -487,7 +488,6 @@ class DetailsActivity : Activity() {
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
         if (!mobile) {
             // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
-            repeat(5) { info.addView(skeletonBar(dp(420), dp(22), dp(17)), info.indexOfChild(table) + 1) }
             if (rawOverview.isEmpty()) {
                 overviewView.visibility = View.GONE
                 repeat(3) { info.addView(skeletonBar(-1, dp(18), dp(10))) }
@@ -501,8 +501,7 @@ class DetailsActivity : Activity() {
             // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
             if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
             if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(14), dp(10)), info.indexOfChild(overviewView) + 1) }
-            // five rows of the pitch of the fact rows (about 39), then the cast block, as the details will fill them
-            repeat(5) { info.addView(skeletonBar(-1, dp(22), dp(17))) }
+            // the cast block, as the details will fill it
             info.addView(skeletonBar(-1, dp(150), dp(24)))
         }
 
@@ -544,8 +543,8 @@ class DetailsActivity : Activity() {
         skeletons.add(this)
     }
 
-    /** True until the details bring the full release date: the date row shows a grey bar instead of the year alone. */
-    private var releasePending = true
+    /** True until the details come: the table shows all its rows, an unknown value as a grey bar. */
+    private var tablePending = true
 
     private val skeletonTexts = mutableListOf<TextView>()
 
@@ -604,7 +603,7 @@ class DetailsActivity : Activity() {
         d: Tmdb.Details, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
     ) {
         hideSkeletons()
-        releasePending = false
+        tablePending = false
         if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
             posterPath = d.poster
             posterView.showPoster(d.poster, posterSpinner)
@@ -673,7 +672,7 @@ class DetailsActivity : Activity() {
                     onUi {
                         hideBannerSpinner(); hideSkeletons()
                         // no details: the year of the list is all there is, shown as it is
-                        releasePending = false
+                        tablePending = false
                         fillTable(table, baseRows)
                     }
                 } else if (cached == null) {
@@ -705,8 +704,8 @@ class DetailsActivity : Activity() {
         table.removeAllViews()
         firstDirectorLink = null
         val linkedDirectors = directors.filter { it.id > 0L }
-        // the release date waits for its full form ("15 марта 2026"): until then its row is a grey bar, not the bare year
-        rows.filter { it.second.isNotBlank() || (it.first == RELEASE && releasePending) }.forEachIndexed { i, (caption, value) ->
+        // until the details come every row of the card stands with its caption and a grey bar for the value (no half-known year)
+        rows.filter { it.second.isNotBlank() || tablePending }.forEachIndexed { i, (caption, value) ->
             if (i > 0) table.addView(View(this).apply { setBackgroundColor(0x22FFFFFF) }, LinearLayout.LayoutParams(-1, 1))
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
