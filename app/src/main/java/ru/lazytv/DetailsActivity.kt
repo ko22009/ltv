@@ -247,7 +247,7 @@ class DetailsActivity : Activity() {
             compoundDrawablePadding = dp(10)
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(ACCENT); cornerRadius = dp(22).toFloat()
+                    setColor(FOCUS_FILL); cornerRadius = dp(22).toFloat()
                 })
                 addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(22).toFloat() })
             }
