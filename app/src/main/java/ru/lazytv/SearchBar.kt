@@ -88,7 +88,11 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
 
         input.setSingleLine()
         input.hint = "Поиск"
-        input.setHintTextColor(0xFF64748B.toInt())
+        // on the teal focused plate the grey hint is hard to read: it turns almost white there
+        input.setHintTextColor(android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+            intArrayOf(0xCCFFFFFF.toInt(), 0xFF64748B.toInt())
+        ))
         input.setTextColor(0xFFF1F5F9.toInt())
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
