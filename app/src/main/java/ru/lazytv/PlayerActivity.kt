@@ -913,6 +913,9 @@ class PlayerActivity : Activity() {
         overlay.visibility = if (visible) View.VISIBLE else View.GONE
         if (visible) {
             resetHideTimer()
+            // a mouse click or touch puts the window in touch mode, where a view takes the focus only if it allows it:
+            // without this the first request fails and the remote keys do nothing. Not on a phone: a tap must not leave a focus plate
+            if (!isMobileUi()) { seek.isFocusableInTouchMode = true; playPause.isFocusableInTouchMode = true }
             if (focusSeek) seek.requestFocus() else playPause.requestFocus()
         } else handler.removeCallbacks(hider)
     }
