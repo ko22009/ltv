@@ -47,6 +47,7 @@ class TitlesGridActivity : Activity() {
         more = MoreTile.from(intent)
         val root = FrameLayout(this)
         root.background = calmBackground()
+        barsLikeCalmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
         if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(8)) else page.setPadding(px(64), px(36), px(64), px(16))

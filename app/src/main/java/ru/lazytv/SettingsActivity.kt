@@ -29,6 +29,8 @@ class SettingsActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // the settings pages lie on calmBackground: the bars of the phone take its two ends
+        if (isMobileUi()) barsLikeCalmBackground()
         val section = intent.getStringExtra("section").orEmpty()
         if (section == "Помощь") {
             buildHelpScreen()

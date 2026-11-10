@@ -48,6 +48,7 @@ class PersonActivity : Activity() {
         super.onCreate(savedInstanceState)
         val root = FrameLayout(this)
         root.background = calmBackground()
+        barsLikeCalmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
         if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(8)) else page.setPadding(px(64), px(36), px(64), px(16))
