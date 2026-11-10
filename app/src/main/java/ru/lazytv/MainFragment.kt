@@ -128,6 +128,19 @@ class MainFragment : Fragment() {
         railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
         railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
+        // the glow of the app icon: it rises from the lower edge of the menu, the brightest at the edge, fading upwards and to the sides
+        val railGlow = View(ctx).apply {
+            isFocusable = false
+            isClickable = false
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
+                gradientRadius = 66 * scale
+                setGradientCenter(0.5f, 1f)
+                colors = intArrayOf(0xA000EBC3.toInt(), 0x4000EBC3, 0x0000EBC3)
+            }
+        }
+        railPanel.addView(railGlow, FrameLayout.LayoutParams(railWidth, (72 * scale).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
         // the same as on the app icon: white letters and the teal arc under them
         val railLogo = Logo.create(ctx, textSizeSp = 9f, color = Color.WHITE, arcColor = 0xFF00EBC3.toInt()).apply {
             isFocusable = false
