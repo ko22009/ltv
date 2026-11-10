@@ -257,6 +257,8 @@ class PlayerActivity : Activity() {
         handler.post(ticker)
         // on opening the focus stands on the progress bar: left and right rewind at once
         setControlsVisible(true, focusSeek = true)
+        // the window is not attached yet: the request above can fail, so it is repeated once the first frame is laid out
+        root.post { if (!isFinishing && overlay.visibility == View.VISIBLE && currentFocus == null) seek.requestFocus() }
     }
 
     /** Applies the default voice/subtitle preference from settings before the stream starts. */
@@ -944,6 +946,14 @@ class PlayerActivity : Activity() {
             if (overlay.visibility == View.VISIBLE) {
                 if (event.keyCode == KeyEvent.KEYCODE_BACK) {
                     setControlsVisible(false)
+                    return true
+                }
+                // nothing is focused (the first request came before the window was ready): the key goes to the progress bar
+                if (currentFocus == null && event.keyCode in KeyEvent.KEYCODE_DPAD_UP..KeyEvent.KEYCODE_DPAD_CENTER) {
+                    seek.requestFocus()
+                    if (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                        seekByStep(if (event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) 10_000L else -10_000L)
+                    } else if (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER) togglePlay()
                     return true
                 }
                 // up from the progress bar and down from the lowest row hide the panel
