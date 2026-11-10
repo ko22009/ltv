@@ -395,6 +395,8 @@ class DetailsActivity : Activity() {
                 genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { setPadding(0, dp(6), 0, 0) }
                 metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { setPadding(0, dp(6), 0, 0) }
                 addView(genresLine)
+                // grey bars stand where the genres will be until the details come
+                addView(skeletonBar(dp(150), dp(14), dp(8)))
                 addView(metaLine)
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
                 minimumHeight = dp(162)
@@ -486,6 +488,10 @@ class DetailsActivity : Activity() {
         if (mobile) {
             info.addView(text("О фильме", 20f, bold = true), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
             info.addView(table)
+            // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
+            if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
+            if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(14), dp(10)), info.indexOfChild(overviewView) + 1) }
+            repeat(4) { info.addView(skeletonBar(-1, dp(18), dp(14))) }
         }
 
         loadDetails(title, name, baseRows, original, table, scroll)
@@ -516,6 +522,21 @@ class DetailsActivity : Activity() {
     /** Phone only: the genres and the "year, age, length" lines to the right of the poster, filled when the details arrive. */
     private lateinit var genresLine: TextView
     private lateinit var metaLine: TextView
+
+    /** Phone card: grey placeholders for what the details have not brought yet; they all go when the details arrive or fail. */
+    private val skeletons = mutableListOf<View>()
+
+    private fun skeletonBar(width: Int, height: Int, top: Int): View = View(this).apply {
+        background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }
+        layoutParams = LinearLayout.LayoutParams(width, height).apply { topMargin = top }
+        skeletons.add(this)
+    }
+
+    private fun hideSkeletons() {
+        skeletons.forEach { it.visibility = View.GONE }
+        skeletons.clear()
+        if (::overviewView.isInitialized) overviewView.visibility = View.VISIBLE
+    }
 
     private var bannerSpinnerTask: Runnable? = null
 
@@ -555,6 +576,7 @@ class DetailsActivity : Activity() {
     private fun applyDetails(
         d: Tmdb.Details, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
     ) {
+        hideSkeletons()
         if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
             posterPath = d.poster
             posterView.showPoster(d.poster, posterSpinner)
@@ -620,7 +642,7 @@ class DetailsActivity : Activity() {
                 android.util.Log.i("LazyTV", "card: details ${System.currentTimeMillis() - cardStarted} ms")
                 originalTitle = d?.originalTitle.orEmpty()
                 if (d == null) {
-                    onUi { hideBannerSpinner() }
+                    onUi { hideBannerSpinner(); hideSkeletons() }
                 } else if (cached == null) {
                     onUi { applyDetails(d, name, baseRows, original, table, scroll) }
                 }
