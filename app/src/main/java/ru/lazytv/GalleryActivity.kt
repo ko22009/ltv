@@ -172,9 +172,11 @@ class GalleryActivity : Activity() {
                     val slop = android.view.ViewConfiguration.get(this).scaledTouchSlop
                     if (Math.abs(ev.x - tapX) < slop && Math.abs(ev.y - tapY) < slop) {
                         // left half is always "back", right half "forward", for posters too: the arrows stand left and right in both modes
-                        val back = ev.x < v.width / 2f
-                        val to = selectedIndex + if (back) -1 else 1
-                        if (to in backdrops.indices) showImage(to)
+                        if (drawnPicture().contains(ev.x, ev.y)) nextPicture()
+                        else {
+                            val to = selectedIndex + if (ev.x < v.width / 2f) -1 else 1
+                            if (to in backdrops.indices) showImage(to)
+                        }
                     }
                 }
             }
@@ -182,7 +184,8 @@ class GalleryActivity : Activity() {
         }
         mainImage.scaleType = ImageView.ScaleType.FIT_CENTER
         mainImage.adjustViewBounds = true
-        mainImage.setOnClickListener { nextPicture() }
+        // no click on the view itself: it can be wider than the picture it draws (empty bands at the sides), a tap there must count as "beside"
+        mainImage.isClickable = false
         mainImage.outlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(view: View, outline: android.graphics.Outline) {
                 outline.setRoundRect(0, 0, view.width, view.height, dp(TITLE_CARD_RADIUS.toInt()).toFloat())
@@ -241,6 +244,19 @@ class GalleryActivity : Activity() {
         }
         zone(arrowLeft, Gravity.START, -1)
         zone(arrowRight, Gravity.END, 1)
+    }
+
+    /** The picture as it is drawn (inside the view, FIT_CENTER), in the coordinates of the root. */
+    private fun drawnPicture(): android.graphics.RectF {
+        val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
+        val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
+        val r = android.graphics.RectF(0f, 0f, mainImage.width.toFloat(), mainImage.height.toFloat())
+        mainImage.drawable?.let { d ->
+            r.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+            mainImage.imageMatrix.mapRect(r)
+        }
+        r.offset((imageAt[0] - rootAt[0]).toFloat(), (imageAt[1] - rootAt[1]).toFloat())
+        return r
     }
 
     /** The counter sits in the upper right corner of the picture as it is drawn (not of the view, which can be wider), inside the screen. */
