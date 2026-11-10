@@ -70,11 +70,21 @@ class MobileTitleAdapter(
             val d = binding.root.resources.displayMetrics.density
             RatingBadge.style(binding.cardRating, 12f * d, (8 * d).toInt(), (4 * d).toInt())
             binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (ru.lazytv.SPINNER_CARD * d).toInt()))
+            // the same dark disc and white bookmark as on the TV cards
+            binding.cardFavorite.setImageDrawable(ru.lazytv.PathDrawable(ru.lazytv.MenuIcons.BOOKMARK).apply {
+                setColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+            })
+            binding.cardFavorite.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(ru.lazytv.OVERLAY_DENSE)
+            }
         }
 
-        /** A title marked watched is dimmed, as on the TV cards. */
+        /** A title marked watched is dimmed, as on the TV cards; a saved one wears the bookmark in the corner. */
         fun bindWatched(title: Title) {
-            binding.cardPoster.alpha = if (Watched.has(binding.root.context, title)) 0.45f else 1f
+            val context = binding.root.context
+            binding.cardPoster.alpha = if (Watched.has(context, title)) 0.45f else 1f
+            binding.cardFavorite.visibility = if (ru.lazytv.Favorites.contains(context, title)) View.VISIBLE else View.GONE
         }
 
         fun bind(title: Title) {

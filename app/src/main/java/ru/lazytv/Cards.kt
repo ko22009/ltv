@@ -136,6 +136,29 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         visibility = View.GONE
     }
 
+    /** The bookmark in the top right corner of the poster: the title is saved in the favorites. The watched tick moves left of it. */
+    private val fav = ImageView(context).apply {
+        setImageDrawable(PathDrawable(MenuIcons.BOOKMARK).apply {
+            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+        })
+        setPadding(px(7f), px(7f), px(7f), px(7f))
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(OVERLAY_DENSE)
+        }
+        visibility = View.GONE
+    }
+
+    private fun applyMarks() {
+        val title = shown ?: return
+        val saved = Favorites.contains(context, title)
+        fav.visibility = if (saved) View.VISIBLE else View.GONE
+        (badge.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let {
+            val margin = px(10f) + if (saved) px(42f) else 0
+            if (it.rightMargin != margin) { it.rightMargin = margin; badge.requestLayout() }
+        }
+    }
+
     /** "В КИНО" over the top left corner of the poster of a film that is in the cinemas now (not dimmed with the poster). */
     private val cinema = Cinema.label(context) { px(it) }
 
@@ -224,6 +247,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
                 topMargin = px(10f)
                 rightMargin = px(10f)
             })
+            addView(fav, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
+                topMargin = px(10f)
+                rightMargin = px(10f)
+            })
             addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
                 bottomMargin = px(10f)
                 rightMargin = px(10f)
@@ -263,7 +290,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     // and the growth alone tells where the cursor is
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-        if (gainFocus) onFocused?.invoke()
+        if (gainFocus) { onFocused?.invoke(); applyMarks() }
         dim(if (gainFocus) focusAlpha() else restAlpha(), true)
     }
 
@@ -294,6 +321,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         shownId = title.id
         shown = title
         applyWatched(title)
+        applyMarks()
         val mark = Cinema.caption(title.id, title.tv)
         cinema.text = mark.orEmpty()
         cinema.visibility = if (mark != null) View.VISIBLE else View.GONE

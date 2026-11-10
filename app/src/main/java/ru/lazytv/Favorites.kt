@@ -56,6 +56,20 @@ object Favorites {
 
     fun folderOf(context: Context, title: Title): Folder? = records(context).firstOrNull { same(it.second, title) }?.first
 
+    // the cards ask "is it saved?" for every title of a grid: the keys are parsed once per change of the stored list, not per card
+    private var cachedRaw: String? = null
+    private var cachedKeys: Set<String> = emptySet()
+
+    /** Whether the title is in the bookmarks (any folder); cheap enough to ask from every card. */
+    fun contains(context: Context, title: Title): Boolean {
+        val raw = Settings.string(context, KEY, "[]")
+        if (raw != cachedRaw) {
+            cachedKeys = records(context).map { "${it.second.id}:${it.second.tv}" }.toSet()
+            cachedRaw = raw
+        }
+        return "${title.id}:${title.tv}" in cachedKeys
+    }
+
     /** Puts the title into the folder (it leaves its previous one); null removes it from the bookmarks. */
     fun set(context: Context, title: Title, folder: Folder?) {
         val list = records(context).filter { !same(it.second, title) }.toMutableList()
