@@ -63,7 +63,7 @@ class GalleryActivity : Activity() {
         }
         root.addView(mainImage, FrameLayout.LayoutParams(-1, -1))
 
-        imageSpinner = Spinner(this, dp(48), Color.WHITE).apply {
+        imageSpinner = Spinner(this, dp(48)).apply {
             visibility = View.GONE
         }
         root.addView(imageSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))

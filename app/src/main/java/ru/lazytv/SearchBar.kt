@@ -45,7 +45,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     val mic = LinearLayout(activity)
     val input = EditText(activity)
     private val micIcon = ImageView(activity)
-    private val spinner = Spinner(activity, (24 * scale).toInt(), 0xFFCBD5E1.toInt()).apply {
+    private val spinner = Spinner(activity, (24 * scale).toInt()).apply {
         visibility = View.GONE
         isFocusable = false
         isClickable = false

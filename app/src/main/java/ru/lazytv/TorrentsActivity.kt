@@ -613,7 +613,12 @@ class TorrentsActivity : Activity() {
         val file = label("", 15f, Color.WHITE)
         val info = label("", 14f, 0xFFCBD5E1.toInt())
         val buffer = label("", 14f, 0xFFCBD5E1.toInt())
-        val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply { max = 1000 }
+        val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 1000
+            // the white line of the player and the spinners
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66FFFFFF)
+        }
         val root = LinearLayout(this@TorrentsActivity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(px(24), px(18), px(24), px(18))
