@@ -125,8 +125,8 @@ class BottomGlowView(context: Context) : View(context) {
         )
         // a unit circle stretched into the ellipse: wider than the strip, the centre just under the lower edge
         shader.setLocalMatrix(android.graphics.Matrix().apply {
-            postScale(w * 0.75f, h * 0.95f)
-            postTranslate(w / 2f, h * 1.05f)
+            postScale(w * 0.75f, h * 0.78f)
+            postTranslate(w / 2f, h * 1.12f)
         })
         paint.shader = shader
         canvas.drawRect(0f, 0f, w, h, paint)
