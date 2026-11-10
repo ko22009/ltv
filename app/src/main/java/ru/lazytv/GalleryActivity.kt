@@ -190,9 +190,9 @@ class GalleryActivity : Activity() {
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
         }
-        // above the right arrow, in the strip beside the frame, centred over the arrow: it does not lie on the picture
+        // the very bottom of the strip beside the frame: it does not lie on the picture
         phoneCounter.setPadding(dp(10), dp(4), dp(10), dp(4))
-        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.CENTER_VERTICAL).apply { rightMargin = dp(8); bottomMargin = dp(110) })
+        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(8); bottomMargin = dp(8) })
         arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
         arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
         // the round arrow is small to look at, but the tap zone around it is wide and tall: a thumb does not miss when turning the picture
