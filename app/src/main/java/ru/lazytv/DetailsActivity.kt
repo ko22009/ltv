@@ -334,6 +334,8 @@ class DetailsActivity : Activity() {
         posterSpinner = Spinner(this, dp(40))
         posterView.showPoster(posterPath, posterSpinner)
         val posterBox = FrameLayout(this).apply {
+            // a tap enlarges the poster in the gallery layer; the TV poster is not focusable, so only the phone uses it
+            if (mobile) setOnClickListener { openPosters() }
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             // on a phone the rating sits on the poster corner, as on the cards of the lists
@@ -647,6 +649,18 @@ class DetailsActivity : Activity() {
     private var firstDirectorLink: View? = null
     private var firstCastCard: View? = null
     private lateinit var overviewView: TextView
+
+    /** A tap on the poster: the same layer as the gallery, with the posters of the title (the current one first). */
+    private fun openPosters() {
+        val list = (listOf(posterPath.orEmpty()) + galleryPosters).filter { it.isNotEmpty() }.distinct()
+        if (list.isEmpty()) return
+        startActivity(
+            Intent(this, GalleryActivity::class.java)
+                .putExtra("name", currentName.ifEmpty { currentTitle.name })
+                .putExtra("posters", true)
+                .putStringArrayListExtra("backdrops", ArrayList(list))
+        )
+    }
 
     private fun openGallery() {
         val title = currentTitle

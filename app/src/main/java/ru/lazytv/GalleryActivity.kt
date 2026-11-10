@@ -167,7 +167,14 @@ class GalleryActivity : Activity() {
             }
         }
         mainImage.clipToOutline = true
-        mainImage.layoutParams = FrameLayout.LayoutParams(width, -2, Gravity.CENTER)
+        if (posterMode) {
+            // a poster is tall: the frame takes the size of the picture inside the screen, so the rounded corners stay on the picture
+            mainImage.maxWidth = width
+            mainImage.maxHeight = resources.displayMetrics.heightPixels - dp(200)
+            mainImage.layoutParams = FrameLayout.LayoutParams(-2, -2, Gravity.CENTER)
+        } else {
+            mainImage.layoutParams = FrameLayout.LayoutParams(width, -2, Gravity.CENTER)
+        }
 
         fun round(icon: String, size: Int, pad: Int, fill: Int, action: () -> Unit) = ImageView(this).apply {
             setImageDrawable(PathDrawable(icon))
@@ -214,11 +221,15 @@ class GalleryActivity : Activity() {
         return super.dispatchTouchEvent(ev)
     }
 
+    /** The posters of the title instead of the frames: opened by a tap on the poster of the card. */
+    private val posterMode by lazy { intent.getBooleanExtra("posters", false) }
+
     private fun imageUrl(path: String): String =
-        if (path.startsWith("http")) path else "https://image.tmdb.org/t/p/w1280$path"
+        if (path.startsWith("http")) path else "https://image.tmdb.org/t/p/${if (posterMode) "w780" else "w1280"}$path"
 
     private fun setupGallery() {
         if (backdrops.isEmpty()) {
+            emptyView.text = if (posterMode) "Постеров нет" else "В галерее нет обложек"
             emptyView.visibility = View.VISIBLE
             mainImage.setImageDrawable(null)
             counterView.text = ""
