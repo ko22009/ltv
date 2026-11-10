@@ -49,6 +49,9 @@
     <!-- bottom menu of the phone: dark plate, the active section is a plate with the indigo outline (no fill) -->
     <style name="Widget.LazyMobile.BottomNav" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">#161920</item>
+        <!-- no elevation overlay: it tinted the menu purple, and the system bar under it (#161920) no longer matched -->
+        <item name="android:elevation">0dp</item>
+        <item name="elevation">0dp</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.LazyMobile.BottomNav.Indicator</item>
         <item name="itemIconTint">@color/mobile_nav_item_colors</item>
         <item name="itemTextColor">@color/mobile_nav_item_colors</item>
