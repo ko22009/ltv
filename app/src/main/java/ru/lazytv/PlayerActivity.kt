@@ -992,6 +992,15 @@ class PlayerActivity : Activity() {
             }
             if (overlay.visibility == View.VISIBLE) {
                 if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                    // a phone: two Back presses in a row leave the player whether or not the panel was open (the first hides it)
+                    if (!DeviceType.isTv(this)) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastBackAt < 2500L) {
+                            finish()
+                            return true
+                        }
+                        lastBackAt = now
+                    }
                     setControlsVisible(false)
                     return true
                 }
