@@ -32,7 +32,8 @@ class PlayerTouchOverlay(
     private val onSeek: (deltaMs: Long) -> Unit,
     /** Toggles the playback; returns true when the video plays now. */
     private val onTogglePlay: () -> Boolean,
-    private val onToggleControls: () -> Unit,
+    /** A single tap; the argument is where it landed, as a share of the height (0 top, 1 bottom). */
+    private val onToggleControls: (Float) -> Unit,
     private val onUserAction: () -> Unit,
 ) : FrameLayout(context) {
 
@@ -138,7 +139,7 @@ class PlayerTouchOverlay(
     /** Taps only: the drags are handled in [onTouchEvent] by hand, so that they start at once and never get lost. */
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            onToggleControls()
+            onToggleControls(if (height > 0) e.y / height else 0.5f)
             return true
         }
 

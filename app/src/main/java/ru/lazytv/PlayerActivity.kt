@@ -279,7 +279,12 @@ class PlayerActivity : Activity() {
             activity = this,
             onSeek = { deltaMs -> seekByStep(deltaMs) },
             onTogglePlay = { togglePlay() },
-            onToggleControls = { setControlsVisible(overlay.visibility != View.VISIBLE) },
+            onToggleControls = { at ->
+                if (overlay.visibility == View.VISIBLE) setControlsVisible(false)
+                // on a phone the controls come only from a tap at the top or the bottom (a quarter of the height each):
+                // a tap in the middle does nothing, so the picture is not covered by accident
+                else if (DeviceType.isTv(this) || at < 0.25f || at > 0.75f) setControlsVisible(true)
+            },
             onUserAction = { resetHideTimer() }
         )
         root.addView(touchOverlay, FrameLayout.LayoutParams(-1, -1))
