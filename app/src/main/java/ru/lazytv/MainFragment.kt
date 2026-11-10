@@ -710,7 +710,7 @@ class SettingsSectionPresenter : Presenter() {
         tile.isFocusableInTouchMode = true
         val texts = LinearLayout(parent.context)
         texts.orientation = LinearLayout.VERTICAL
-        texts.setPadding(dp(16), dp(14), dp(16), dp(14))
+        texts.setPadding(dp(16), dp(16), dp(16), dp(16))
         val title = TextView(parent.context).apply {
             setTextColor(Color.WHITE); textSize = 18f; typeface = Typeface.DEFAULT_BOLD; maxLines = 2
         }
@@ -753,7 +753,7 @@ class FavoriteEpisodePresenter : Presenter() {
         tile.isFocusableInTouchMode = true
         val texts = LinearLayout(parent.context)
         texts.orientation = LinearLayout.VERTICAL
-        texts.setPadding(dp(16), dp(14), dp(16), dp(14))
+        texts.setPadding(dp(16), dp(16), dp(16), dp(16))
         val series = TextView(parent.context).apply {
             setTextColor(Color.WHITE); textSize = 16f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD
         }

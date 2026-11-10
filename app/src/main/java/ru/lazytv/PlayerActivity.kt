@@ -464,7 +464,7 @@ class PlayerActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xCC000000.toInt(), 0x00000000))
-            setPadding(dp(24), dp(20), dp(48), dp(40))
+            setPadding(dp(24), dp(16), dp(48), dp(40))
             setOnClickListener { resetHideTimer() }
         }
 
@@ -490,7 +490,7 @@ class PlayerActivity : Activity() {
         val bottom = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, intArrayOf(0xCC000000.toInt(), 0x00000000))
-            setPadding(dp(48), dp(60), dp(48), dp(28))
+            setPadding(dp(48), dp(60), dp(48), dp(24))
             setOnClickListener { resetHideTimer() }
         }
         bottomContainer = bottom
@@ -547,7 +547,7 @@ class PlayerActivity : Activity() {
 
         val buttons = LinearLayout(this)
         buttons.gravity = Gravity.CENTER_VERTICAL
-        buttons.setPadding(0, dp(14), 0, 0)
+        buttons.setPadding(0, dp(16), 0, 0)
         buttons.addView(round(MenuIcons.REPLAY10) { seekByStep(-10_000L) },
             LinearLayout.LayoutParams(dp(56), dp(56)).apply { rightMargin = dp(18) })
         playPause = round(MenuIcons.PAUSE, true) { togglePlay() }
@@ -583,7 +583,7 @@ class PlayerActivity : Activity() {
                 val caption = item.label.ifEmpty { item.title.substringAfter(" • ", "Серия ${index + 1}") }
                 val button = label(caption, 15f, TEXT_SECONDARY).apply {
                     gravity = Gravity.CENTER
-                    setPadding(dp(18), 0, dp(18), 0)
+                    setPadding(dp(16), 0, dp(16), 0)
                     isFocusable = true
                     isClickable = true
                     setOnClickListener { switchTo(index, toast = false) }

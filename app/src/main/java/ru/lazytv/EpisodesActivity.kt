@@ -82,7 +82,7 @@ class EpisodesActivity : Activity() {
         barsLikeCalmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(40), px(64), px(20))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(40), px(64), px(16))
         val back = backButton(this, scale) { finish() }
         backButton = back
         val titles = LinearLayout(this).apply {
@@ -95,7 +95,7 @@ class EpisodesActivity : Activity() {
             // the original name is its own line, not glued to the description
             if (variant.alt.isNotEmpty() && !variant.alt.equals(variant.title, true)) {
                 addView(label(variant.alt, 21f, TEXT_MUTED).apply {
-                    setPadding(0, px(2), 0, 0)
+                    setPadding(0, px(4), 0, 0)
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                 })
@@ -370,7 +370,7 @@ class EpisodesActivity : Activity() {
         card.gravity = Gravity.CENTER_VERTICAL
         // the same height and caption size as the buttons above (CHIP_HEIGHT, 16)
         card.minimumHeight = px(CHIP_HEIGHT)
-        card.setPadding(px(20), px(8), px(20), px(8))
+        card.setPadding(px(16), px(8), px(16), px(8))
         // the common outlined card; a watched episode is visibly dimmer than an unseen one
         card.background = outlinedCardBackground(
             uiScale(), android.R.attr.state_selected, 12,
@@ -378,17 +378,17 @@ class EpisodesActivity : Activity() {
             line = if (watched) PLATE_WATCHED_LINE else PLATE_LINE,
         )
         if (editMode) card.addView(label(if (watched) "☑" else "☐", 20f, 0)
-            .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else TEXT_MUTED)) })
+            .apply { setPadding(0, 0, px(16), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else TEXT_MUTED)) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there
         card.addView(label(shown, 16f, 0).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
             LinearLayout.LayoutParams(0, -2, 1f))
-        if (watched) card.addView(label("✓", 16f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
+        if (watched) card.addView(label("✓", 16f, 0).apply { setPadding(px(4), 0, px(8), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }
-        holder.setPadding(0, px(3), 0, px(3))
+        holder.setPadding(0, px(4), 0, px(4))
         holder.addView(card)
         return holder
     }

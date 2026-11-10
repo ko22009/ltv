@@ -81,7 +81,7 @@ class GalleryActivity : Activity() {
 
         val titleBox = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), 0, 0, 0)
+            setPadding(dp(16), 0, 0, 0)
         }
         titleView = TextView(this).apply {
             text = name
@@ -93,7 +93,7 @@ class GalleryActivity : Activity() {
         counterView = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setTextColor(TEXT_MUTED)
-            setPadding(0, dp(2), 0, 0)
+            setPadding(0, dp(4), 0, 0)
         }
         titleBox.addView(titleView)
         titleBox.addView(counterView)
@@ -216,13 +216,13 @@ class GalleryActivity : Activity() {
         phoneCounter = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             setTextColor(Color.WHITE)
-            setPadding(dp(16), dp(6), dp(16), dp(6))
+            setPadding(dp(16), dp(8), dp(16), dp(8))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
         }
         // the same counter as on the banner of the title card: the same plate and the same place, in the upper right corner of the picture
         phoneCounter.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         phoneCounter.setPadding(dp(12), dp(4), dp(12), dp(4))
-        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
+        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
         root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
         mainImage.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         phoneCounter.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }

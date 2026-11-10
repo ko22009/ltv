@@ -38,7 +38,7 @@ fun torrentRowCard(context: Context, torrent: Torrent, marked: Boolean, compact:
 
     val card = LinearLayout(context)
     card.gravity = Gravity.CENTER_VERTICAL
-    if (mobile || compact) card.setPadding(px(12), px(10), px(12), px(10)) else card.setPadding(px(20), px(10), px(20), px(10))
+    if (mobile || compact) card.setPadding(px(12), px(12), px(12), px(12)) else card.setPadding(px(16), px(12), px(16), px(12))
     card.background = outlinedCardBackground(scale, android.R.attr.state_selected, 12)
     val texts = LinearLayout(context)
     texts.orientation = LinearLayout.VERTICAL

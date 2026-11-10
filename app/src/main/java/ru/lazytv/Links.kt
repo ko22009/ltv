@@ -47,7 +47,7 @@ object Links {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                 gravity = Gravity.START
                 setTextIsSelectable(true)
-                setPadding(0, px(14), 0, 0)
+                setPadding(0, px(16), 0, 0)
             })
         }
         showMessage(activity, "Ссылка для загрузки", content = box, buttons = listOf(DialogButton("Понятно")))

@@ -21,6 +21,8 @@ const val TITLE_POSTER_HEIGHT = 360f
 const val TITLE_INFO_HEIGHT = 100f
 /** Corner of the card, the skeleton and the "show all" tile: the same rounding everywhere. */
 const val TITLE_CARD_RADIUS = 12f
+/** The small radius: buttons, chips, thin bars, skeletons, small plates over a picture (the only other corner size besides [TITLE_CARD_RADIUS]). */
+const val SMALL_RADIUS = 6f
 const val CARD_SCALE = 0.82f
 
 /** Card scale for a phone grid of [columns] columns: the card (240 units wide) fills its cell of the 480-unit screen, so nothing is clipped at the right. */

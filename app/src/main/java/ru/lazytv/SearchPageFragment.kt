@@ -118,7 +118,7 @@ class SearchPageFragment : Fragment() {
         // the caption with its "clear" button beside it, as the viewing history below has its own buttons
         val historyHeader = LinearLayout(requireContext())
         historyHeader.gravity = Gravity.CENTER_VERTICAL
-        historyHeader.setPadding(0, px(18), 0, px(12))
+        historyHeader.setPadding(0, px(16), 0, px(12))
         historyHeader.addView(label("История поиска", 22f), LinearLayout.LayoutParams(-2, -2))
         clearHistory = button(MenuIcons.DELETE, "Очистить") {
             Settings.setString(requireContext(), Settings.SEARCH_HISTORY, "[]")
@@ -159,7 +159,7 @@ class SearchPageFragment : Fragment() {
 
         recentHeader = LinearLayout(requireContext())
         recentHeader.gravity = Gravity.CENTER_VERTICAL
-        recentHeader.setPadding(0, px(18), 0, px(4))
+        recentHeader.setPadding(0, px(16), 0, px(4))
         recentHeader.visibility = View.GONE
         recentHeader.addView(label("Недавно открытое", 22f), LinearLayout.LayoutParams(-2, -2))
         recentActions = LinearLayout(requireContext())
@@ -167,7 +167,7 @@ class SearchPageFragment : Fragment() {
         page.addView(recentHeader)
 
         message = label("", 16f, TEXT_SECONDARY)
-        message.setPadding(0, px(14), 0, 0)
+        message.setPadding(0, px(16), 0, 0)
         message.visibility = View.GONE
         page.addView(message)
 

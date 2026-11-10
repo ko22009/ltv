@@ -76,7 +76,7 @@ class CatalogPageFragment : Fragment() {
         val buttons = LinearLayout(requireContext())
         buttons.orientation = LinearLayout.HORIZONTAL
         buttons.gravity = android.view.Gravity.CENTER_VERTICAL
-        buttons.setPadding(px(28), 0, 0, 0)
+        buttons.setPadding(px(24), 0, 0, 0)
         filterChip = chipButton(requireContext(), scale, "Фильтры", MenuIcons.FILTER).apply {
             setOnClickListener {
                 startActivity(Intent(requireContext(), FiltersActivity::class.java).putExtra("category", category.id))
@@ -99,7 +99,7 @@ class CatalogPageFragment : Fragment() {
         filtersText = TextView(requireContext()).apply {
             setTextColor(TEXT_MUTED)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 15f * scale)
-            setPadding(0, px(6), 0, 0)
+            setPadding(0, px(8), 0, 0)
             visibility = View.GONE
         }
         page.addView(filtersText)
@@ -107,7 +107,7 @@ class CatalogPageFragment : Fragment() {
         message = TextView(requireContext()).apply {
             setTextColor(TEXT_SECONDARY)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 16f * scale)
-            setPadding(0, px(10), 0, 0)
+            setPadding(0, px(12), 0, 0)
             visibility = View.GONE
         }
         page.addView(message)

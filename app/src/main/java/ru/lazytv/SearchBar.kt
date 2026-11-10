@@ -28,7 +28,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 /** Flat or round background that turns teal while the view has focus. */
-fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = cursorFill(LazyApp.app)) = StateListDrawable().apply {
+fun focusShape(scale: Float, normal: Int, radius: Float = SMALL_RADIUS, circle: Boolean = false, focused: Int = cursorFill(LazyApp.app)) = StateListDrawable().apply {
     fun shape(color: Int) = GradientDrawable().apply {
         setColor(color)
         if (circle) this.shape = GradientDrawable.OVAL else cornerRadius = radius * scale
@@ -96,7 +96,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         input.setTextColor(0xFFF1F5F9.toInt())
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
-        input.setPadding(px(18), 0, px(18), 0)
+        input.setPadding(px(16), 0, px(16), 0)
         // the field lights up when the remote reaches it and the keyboard comes up at once: the field is active, as when it is clicked;
         // it also goes away when the remote leaves the field, so the phrases below are not covered by it
         input.background = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)

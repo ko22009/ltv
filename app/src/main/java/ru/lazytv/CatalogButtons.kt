@@ -78,7 +78,7 @@ val TEXT_MUTED: Int get() = LazyApp.res.getColor(R.color.text_muted, null)
  * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the teal [FOCUS_FILL]
  * with a white caption. [text] is the caption view (the item itself or its child); the chip takes the focus, the caption follows it.
  */
-fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = PLATE_FILL, restText: Int = TEXT_MUTED) {
+fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = SMALL_RADIUS, plate: Int = PLATE_FILL, restText: Int = TEXT_MUTED) {
     val corner = radius * scale
     view.background = android.graphics.drawable.StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(cursorFill(view.context)); cornerRadius = corner })
@@ -109,7 +109,7 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         isFocusable = !context.isMobileUi()
         isFocusableInTouchMode = !context.isMobileUi()
         isClickable = true
-        background = focusShape(scale, PLATE_FILL, radius = 6f)
+        background = focusShape(scale, PLATE_FILL, radius = SMALL_RADIUS)
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {

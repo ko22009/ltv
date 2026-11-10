@@ -26,7 +26,7 @@ private fun dialogPanel(activity: Activity, scale: Float, title: String): Linear
     fun px(v: Int) = (v * scale).toInt()
     val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
-        if (activity.isMobileUi()) setPadding(px(10), px(12), px(10), px(10)) else setPadding(px(24), px(20), px(24), px(20))
+        if (activity.isMobileUi()) setPadding(px(12), px(12), px(12), px(12)) else setPadding(px(24), px(16), px(24), px(16))
         background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
     }
     panel.addView(TextView(activity).apply {
@@ -52,7 +52,7 @@ private fun dialogRow(activity: Activity, scale: Float, caption: String, active:
         ellipsize = android.text.TextUtils.TruncateAt.END
         gravity = Gravity.CENTER_VERTICAL
         minHeight = px(CHIP_HEIGHT)
-        if (activity.isMobileUi()) setPadding(px(12), px(2), px(12), px(2)) else setPadding(px(18), px(5), px(18), px(5))
+        if (activity.isMobileUi()) setPadding(px(12), px(4), px(12), px(4)) else setPadding(px(16), px(4), px(16), px(4))
         isFocusable = true
         isFocusableInTouchMode = !activity.isMobileUi()
         isClickable = true

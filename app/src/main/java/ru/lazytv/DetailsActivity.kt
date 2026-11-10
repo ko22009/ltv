@@ -81,7 +81,7 @@ class DetailsActivity : Activity() {
             // on a phone a tap is shown with a lighter plate, not with the teal of the remote's cursor
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
                 setColor(if (mobile) TOUCH_FILL else FOCUS_FILL)
-                cornerRadius = dp(if (mobile) TITLE_CARD_RADIUS.toInt() else 2).toFloat()
+                cornerRadius = dp(if (mobile) TITLE_CARD_RADIUS.toInt() else SMALL_RADIUS.toInt()).toFloat()
             })
             if (mobile) addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply {
                 setColor(TOUCH_FILL)
@@ -167,13 +167,13 @@ class DetailsActivity : Activity() {
             // the gallery mark: a dark round plate in the lower right corner, the same plate as the back button
             banner.addView(ImageView(this).apply {
                 setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-                setPadding(dp(10), dp(10), dp(10), dp(10))
+                setPadding(dp(12), dp(12), dp(12), dp(12))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
                 contentDescription = "Галерея"
             }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(10); bottomMargin = dp(10) })
             bannerCounter = text("", 14f).apply {
                 setPadding(dp(12), dp(4), dp(12), dp(4))
-                background = GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
+                background = GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
                 visibility = View.GONE
             }
             banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(10); rightMargin = dp(10) })
@@ -197,7 +197,7 @@ class DetailsActivity : Activity() {
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
             background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), softDisc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
                 addState(intArrayOf(), softDisc(0x99000000.toInt()))
@@ -371,7 +371,7 @@ class DetailsActivity : Activity() {
             // on a phone a magnifier in the upper right corner tells that a tap enlarges the poster
             if (mobile) addView(ImageView(this@DetailsActivity).apply {
                 setImageDrawable(PathDrawable(MenuIcons.SEARCH_ICON).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
-                setPadding(dp(6), dp(6), dp(6), dp(6))
+                setPadding(dp(8), dp(8), dp(8), dp(8))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
             }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(6); rightMargin = dp(6) })
             // the same label as on the cards: the film is in the cinemas now or comes soon
@@ -411,13 +411,13 @@ class DetailsActivity : Activity() {
                 addView(titleView)
                 addView(original)
                 genresLine = text("", 15f, TEXT_MUTED).apply {
-                    includeFontPadding = false; setPadding(0, dp(5), 0, 0)
+                    includeFontPadding = false; setPadding(0, dp(4), 0, 0)
                     // the full list of genres stands in the table below
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 }
                 skeletonText(genresLine, dp(170))
                 metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply {
-                    includeFontPadding = false; setPadding(0, dp(5), 0, 0)
+                    includeFontPadding = false; setPadding(0, dp(4), 0, 0)
                     maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 }
                 addView(genresLine)
@@ -451,7 +451,7 @@ class DetailsActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
             }
             val head = LinearLayout(this).apply {
-                setPadding(0, dp(20), 0, 0)
+                setPadding(0, dp(16), 0, 0)
                 addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
                 // the block is lifted by 4 dp (the capital letters of the title stand at the poster's upper edge) and is 4 dp taller (its minimum
                 // height), so the button ends exactly at the poster's lower edge
@@ -466,7 +466,7 @@ class DetailsActivity : Activity() {
         }
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
-        table.setPadding(0, dp(14), 0, dp(14))
+        table.setPadding(0, dp(16), 0, dp(16))
         fillTable(table, factRows(baseRows.map { if (it.first == RELEASE) it.first to "" else it }))
         if (!mobile) {
             // the TV page reads: titles, the description, then the facts (the table is added below the description)
@@ -486,11 +486,11 @@ class DetailsActivity : Activity() {
                 val focused = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
                     setStroke(dp(1).coerceAtLeast(1), Color.WHITE)
-                    cornerRadius = dp(6).toFloat()
+                    cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat()
                 }
                 val normal = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
-                    cornerRadius = dp(6).toFloat()
+                    cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat()
                 }
                 addState(intArrayOf(android.R.attr.state_focused), focused)
                 addState(intArrayOf(), normal)
@@ -600,7 +600,7 @@ class DetailsActivity : Activity() {
     private val skeletons = mutableListOf<View>()
 
     private fun skeletonBar(width: Int, height: Int, top: Int): View = View(this).apply {
-        background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }
+        background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat() }
         layoutParams = LinearLayout.LayoutParams(width, height).apply { topMargin = top }
         skeletons.add(this)
     }
@@ -645,7 +645,7 @@ class DetailsActivity : Activity() {
     /** An empty line of text drawn as a grey bar of exactly its own height (a narrower one), so filling it in moves nothing. */
     private fun skeletonText(tv: TextView, width: Int) {
         tv.background = android.graphics.drawable.InsetDrawable(
-            GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }, 0, dp(3), 0, dp(3))
+            GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat() }, 0, dp(3), 0, dp(3))
         tv.layoutParams = LinearLayout.LayoutParams(width, -2)
         skeletonTexts.add(tv)
     }
@@ -821,7 +821,7 @@ class DetailsActivity : Activity() {
                 // so the rows do not move when the details come
                 val bar = text(" ", 18f, Color.WHITE)
                 bar.background = android.graphics.drawable.InsetDrawable(
-                    GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }, 0, dp(3), 0, dp(3))
+                    GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat() }, 0, dp(3), 0, dp(3))
                 if (caption == "Режиссёр") bar.minimumHeight = dp(if (mobile) 44 else 40)
                 row.addView(bar, LinearLayout.LayoutParams(dp(140), -2))
             } else if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
@@ -831,7 +831,7 @@ class DetailsActivity : Activity() {
                     // the same card as the cast (outline, teal under the cursor), but the name only
                     val card = text(dir.name, 16f, Color.WHITE, bold = true).apply {
                         gravity = Gravity.CENTER_VERTICAL
-                        setPadding(dp(14), dp(8), dp(14), dp(8))
+                        setPadding(dp(16), dp(8), dp(16), dp(8))
                         isFocusable = true
                         isClickable = true
                         background = personCardBackground(scale)
@@ -1056,7 +1056,7 @@ class DetailsActivity : Activity() {
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
         block.orientation = LinearLayout.VERTICAL
-        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(6), 0, dp(10)) })
+        block.addView(text("В ролях", 22f, bold = true).apply { setPadding(0, dp(8), 0, dp(12)) })
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(96)

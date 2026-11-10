@@ -84,7 +84,7 @@ class TorrentsActivity : Activity() {
         barsLikeCalmBackground()
         val page = LinearLayout(this)
         page.orientation = LinearLayout.VERTICAL
-        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(20))
+        if (isMobileUi()) page.setPadding(px(16), px(16), px(16), px(12)) else page.setPadding(px(64), px(36), px(64), px(16))
 
         // the query can be changed: typed or spoken, the same bar as on the search screen, with Back to its left
         back = backButton(this, scale) { finish() }
@@ -185,7 +185,7 @@ class TorrentsActivity : Activity() {
             }
             val split = LinearLayout(this)
             split.addView(posterSlot, LinearLayout.LayoutParams(px(170), px(256)).apply { leftMargin = px(64); topMargin = px(36) })
-            page.setPadding(px(32), px(36), px(64), px(20))
+            page.setPadding(px(32), px(36), px(64), px(16))
             split.addView(page, LinearLayout.LayoutParams(0, -1, 1f))
             root.addView(split, FrameLayout.LayoutParams(-1, -1))
         }
@@ -334,7 +334,7 @@ class TorrentsActivity : Activity() {
     private fun chip(parent: LinearLayout, text: String, active: Boolean, icon: String? = null, action: () -> Unit) {
         val view = label(text, 15f, Color.WHITE)
         view.gravity = Gravity.CENTER_VERTICAL
-        view.setPadding(px(18), 0, px(18), 0)
+        view.setPadding(px(16), 0, px(16), 0)
         if (icon != null) {
             val size = px(22)
             view.setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, size, size) }, null, null, null)
@@ -391,7 +391,7 @@ class TorrentsActivity : Activity() {
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }
-        holder.setPadding(0, px(3), 0, px(3))
+        holder.setPadding(0, px(4), 0, px(4))
         holder.addView(card)
         return holder
     }
@@ -500,7 +500,7 @@ class TorrentsActivity : Activity() {
             setText(current)
             setSelection(current.length)
             setTextColor(Color.WHITE)
-            setPadding(px(12), px(10), px(12), px(10))
+            setPadding(px(12), px(12), px(12), px(12))
         }
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -583,13 +583,13 @@ class TorrentsActivity : Activity() {
         }
         val root = LinearLayout(this@TorrentsActivity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(px(24), px(18), px(24), px(18))
+            setPadding(px(24), px(16), px(24), px(16))
             background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
             if (!isMobileUi()) minimumWidth = px(620)
             addView(title)
             addView(label("ПРЕДЗАГРУЗКА", 14f, TEXT_MUTED, true).apply { setPadding(0, px(8), 0, px(4)) })
             addView(file)
-            addView(info.apply { setPadding(0, px(6), 0, 0) })
+            addView(info.apply { setPadding(0, px(8), 0, 0) })
             addView(buffer)
             addView(bar, LinearLayout.LayoutParams(-1, px(10)).apply { topMargin = px(8) })
         }

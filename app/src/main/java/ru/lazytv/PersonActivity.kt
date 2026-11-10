@@ -91,13 +91,13 @@ class PersonActivity : Activity() {
                         return@onSuccess
                     }
                     // the heading looks like «В ролях» on the title card
-                    page.addView(label("Фильмография", 22f, bold = true).apply { setPadding(0, px(20), 0, px(4)) })
+                    page.addView(label("Фильмография", 22f, bold = true).apply { setPadding(0, px(16), 0, px(4)) })
                     if (isMobileUi()) {
                         // the same cards as the films page of the phone (rating on the poster), not the TV cards
                         val list = androidx.recyclerview.widget.RecyclerView(this).apply {
                             layoutManager = androidx.recyclerview.widget.GridLayoutManager(this@PersonActivity, columns)
                             clipToPadding = false
-                            setPadding(0, px(6), 0, px(16))
+                            setPadding(0, px(8), 0, px(16))
                             adapter = ru.lazytv.mobile.MobileTitleAdapter { title ->
                                 startActivity(Intent(this@PersonActivity, DetailsActivity::class.java).putExtras(title.toExtras()))
                             }.also { it.setItems(person.credits.map { c -> c.title }) }
@@ -155,7 +155,7 @@ class PersonActivity : Activity() {
         band.orientation = LinearLayout.HORIZONTAL
         // the band is a card of the same look as the people cards of the title card (not focusable: only the resting outline shows)
         band.background = personCardBackground(scale)
-        band.setPadding(px(14), px(14), px(14), px(14))
+        band.setPadding(px(16), px(16), px(16), px(16))
         // initials on a calm teal plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {

@@ -88,7 +88,7 @@ class SettingsActivity : FragmentActivity() {
         topics.forEachIndexed { index, (topicTitle, body) ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(px(22), px(14), px(22), px(14))
+                setPadding(px(24), px(16), px(24), px(16))
                 background = textTilePlate(scale)
                 isFocusable = true
                 addView(TextView(this@SettingsActivity).apply {
@@ -106,7 +106,7 @@ class SettingsActivity : FragmentActivity() {
                         intArrayOf(Color.WHITE, TEXT_SECONDARY)))
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
                     setLineSpacing(0f, 1.2f)
-                    setPadding(0, px(6), 0, 0)
+                    setPadding(0, px(8), 0, 0)
                 })
                 setOnKeyListener { _, code, event ->
                     if (event.action != KeyEvent.ACTION_DOWN) false
@@ -277,12 +277,12 @@ open class SettingsScreen : Fragment() {
         val focusable = row.kind != RowKind.SECTION && row.kind != RowKind.INFO
         if (row.kind == RowKind.SECTION) {
             return label(row.title, if (mobile) 12f else 14f, TEXT_MUTED, bold = true).apply {
-                setPadding(px(4), px(18), 0, px(6))
+                setPadding(px(4), px(16), 0, px(8))
             }
         }
         val titleView = label(row.title, if (mobile) 15f else 18f, Color.WHITE, bold = true)
         val desc = label(row.description, if (mobile) 13f else 15f, TEXT_MUTED).apply {
-            setPadding(0, px(3), 0, 0)
+            setPadding(0, px(4), 0, 0)
             visibility = if (row.description.isEmpty()) View.GONE else View.VISIBLE
             // white while the row is focused: the grey is hard to read on the focus colour
             isDuplicateParentStateEnabled = true

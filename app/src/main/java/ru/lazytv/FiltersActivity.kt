@@ -113,7 +113,7 @@ class FiltersActivity : Activity() {
     private fun row(name: String, value: String, onKey: ((Int, TextView) -> Boolean)? = null, onClick: (TextView) -> Unit): View {
         val line = LinearLayout(this)
         line.gravity = Gravity.CENTER_VERTICAL
-        line.setPadding(px(22), px(16), px(22), px(16))
+        line.setPadding(px(24), px(16), px(24), px(16))
         line.background = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
         line.isFocusable = true
         line.isClickable = true
@@ -264,7 +264,7 @@ class FiltersActivity : Activity() {
     private fun GridLayout.addCaption(caption: String) {
         val colSpec = GridLayout.spec(0, columnCount, GridLayout.FILL, 1f)
         val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)
-        addView(text(caption, 16f, 0xFFFFFFFF.toInt()).apply { setPadding(px(14), px(14), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
+        addView(text(caption, 16f, 0xFFFFFFFF.toInt()).apply { setPadding(px(16), px(16), 0, px(4)); typeface = Typeface.DEFAULT_BOLD },
             GridLayout.LayoutParams(rowSpec, colSpec).apply {
                 width = 0
                 height = FrameLayout.LayoutParams.WRAP_CONTENT
@@ -325,7 +325,7 @@ class FiltersActivity : Activity() {
                 val matches = allCountries.filter { it.second.lowercase().contains(q) || it.first.lowercase().contains(q) }
                 if (matches.isEmpty()) {
                     val emptyText = text("Ничего не найдено", 18f, TEXT_MUTED).apply {
-                        setPadding(px(14), px(24), px(14), px(24))
+                        setPadding(px(16), px(24), px(16), px(24))
                     }
                     val colSpec = GridLayout.spec(0, 1, GridLayout.FILL, 1f)
                     val rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1, GridLayout.FILL, 0f)

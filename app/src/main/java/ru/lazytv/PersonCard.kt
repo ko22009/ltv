@@ -11,7 +11,7 @@ import android.graphics.drawable.StateListDrawable
 fun outlinedCardBackground(
     scale: Float,
     state: Int = android.R.attr.state_focused,
-    radius: Int = 14,
+    radius: Int = TITLE_CARD_RADIUS.toInt(),
     fill: Int = BACKDROP_PLATE,
     line: Int = PLATE_LINE,
     outline: Boolean = true,
