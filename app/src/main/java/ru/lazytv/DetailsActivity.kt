@@ -197,13 +197,18 @@ class DetailsActivity : Activity() {
             setColor(fill)
         }
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
+        // on a phone the touch area is wider than the disc (12 dp all round): a finger that misses the disc still hits Back
+        // and does not open the gallery under it
+        val reach = if (mobile) 12 else 0
+        fun disc(fill: Int): android.graphics.drawable.Drawable =
+            if (reach == 0) softDisc(fill) else android.graphics.drawable.InsetDrawable(softDisc(fill), dp(reach))
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK))
             imageTintList = cursorColors(this@DetailsActivity, Color.WHITE)
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(dp(12 + reach), dp(12 + reach), dp(12 + reach), dp(12 + reach))
             background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), softDisc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
-                addState(intArrayOf(), softDisc(OVERLAY_LIGHT))
+                addState(intArrayOf(android.R.attr.state_focused), disc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
+                addState(intArrayOf(), disc(OVERLAY_LIGHT))
             }
             isFocusable = true
             isClickable = true
@@ -212,8 +217,8 @@ class DetailsActivity : Activity() {
             setOnClickListener { finish() }
         }
         // on a phone the back button stands on the banner itself, in its upper left corner
-        stage.addView(back, FrameLayout.LayoutParams(dp(m(56, 48)), dp(m(56, 48)), Gravity.START or Gravity.TOP).apply {
-            topMargin = dp(m(32, 22)); leftMargin = dp(m(64, 26))
+        stage.addView(back, FrameLayout.LayoutParams(dp(m(56, 48) + 2 * reach), dp(m(56, 48) + 2 * reach), Gravity.START or Gravity.TOP).apply {
+            topMargin = dp(m(32, 22) - reach); leftMargin = dp(m(64, 26) - reach)
         })
 
         val bar = LinearLayout(this)
