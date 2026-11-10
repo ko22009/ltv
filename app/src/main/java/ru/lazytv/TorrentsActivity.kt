@@ -476,11 +476,16 @@ class TorrentsActivity : Activity() {
         val sameDevice = address.startsWith("127.") || address.startsWith("localhost")
         val where = if (sameDevice) "На этом устройстве он не установлен или не запущен."
             else "По адресу $address он не отвечает: не запущен или недоступен по сети."
-        val message = "LazyTV не качает торренты сам: их раздаёт отдельная программа TorrServe (TorrServer). $where\n\n" +
-            "Поставьте TorrServe на это устройство (APK ставится как обычное приложение). После установки " +
-            "запустите TorrServe и нажмите в нём кнопку «Установить»: без этого сервер не заработает. " +
-            "Если TorrServe уже работает на другом устройстве в сети (приставка, компьютер, NAS), укажите его адрес.\n\n" +
-            "Сейчас в настройках указан $address."
+        // the step after the installation stands on its own line, with one empty line before it, in bold: it is the one people miss
+        val message = android.text.SpannableStringBuilder().apply {
+            append("LazyTV не качает торренты сам: их раздаёт отдельная программа TorrServe (TorrServer). $where\n\n")
+            append("Поставьте TorrServe на это устройство (APK ставится как обычное приложение).\n\n")
+            val start = length
+            append("После установки запустите TorrServe и нажмите в нём кнопку «Установить»: без этого сервер не заработает.")
+            setSpan(android.text.style.StyleSpan(Typeface.BOLD), start, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append("\n\nЕсли TorrServe уже работает на другом устройстве в сети (приставка, компьютер, NAS), укажите его адрес.\n\n")
+            append("Сейчас в настройках указан $address.")
+        }
         showMessage(this, "TorrServe не установлен", message = message, buttons = listOf(
             DialogButton("Скачать TorrServe") { downloadTorrServe() },
             DialogButton("Указать адрес") { askTorrServeAddress() },
