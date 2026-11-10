@@ -204,8 +204,8 @@ class PlayerTouchOverlay(
         (dragSign.layoutParams as LayoutParams).apply {
             gravity = Gravity.CENTER_VERTICAL or (if (dragMode == DRAG_BRIGHTNESS) Gravity.START else Gravity.END)
             // left/right margins, not start/end: start/end changed on live params are not resolved again and the right one got lost
-            leftMargin = if (dragMode == DRAG_BRIGHTNESS) dp(56) else 0
-            rightMargin = if (dragMode == DRAG_VOLUME) dp(56) else 0
+            leftMargin = if (dragMode == DRAG_BRIGHTNESS) dp(80) else 0
+            rightMargin = if (dragMode == DRAG_VOLUME) dp(80) else 0
             marginStart = leftMargin
             marginEnd = rightMargin
         }
