@@ -11,7 +11,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.leanback.widget.Presenter
 
 /** Height of the one button of the app (dp of the screen), and of the rows that hold such buttons. */
 const val CHIP_HEIGHT = 44

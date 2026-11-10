@@ -12,7 +12,6 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.leanback.widget.Presenter
 
 /**
  * The "show all" tile at the end of a catalog row. It knows which list the row came from: a category with a sort order.

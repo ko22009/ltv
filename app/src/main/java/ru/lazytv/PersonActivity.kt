@@ -13,8 +13,6 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.ItemBridgeAdapter
 import com.bumptech.glide.Glide
 import android.graphics.drawable.Drawable
 import com.bumptech.glide.load.DataSource
@@ -31,9 +29,8 @@ class PersonActivity : Activity() {
     private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards by lazy { ArrayObjectAdapter(CardPresenter(CARD_SCALE)) }
+    private val cards by lazy { ItemList(CardPresenter(CARD_SCALE)) }
     private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
-    private lateinit var bridge: ItemBridgeAdapter
     /** The "read more" button of a long biography; null when the text fits. */
     private var readMore: View? = null
 
@@ -70,14 +67,13 @@ class PersonActivity : Activity() {
         root.addView(loading, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
 
-        bridge = ItemBridgeAdapter(cards)
-        bridge.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
-            override fun onCreate(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                viewHolder.itemView.setOnClickListener {
-                    (viewHolder.item as? Title)?.let { startActivity(Intent(this@PersonActivity, DetailsActivity::class.java).putExtras(it.toExtras())) }
+        cards.listener = object : ItemList.Listener() {
+            override fun onCreate(holder: ItemList.Holder) {
+                holder.itemView.setOnClickListener {
+                    (holder.item as? Title)?.let { startActivity(Intent(this@PersonActivity, DetailsActivity::class.java).putExtras(it.toExtras())) }
                 }
             }
-        })
+        }
 
         val id = intent.getLongExtra("id", 0)
         Thread {
@@ -109,11 +105,11 @@ class PersonActivity : Activity() {
                         page.addView(list, LinearLayout.LayoutParams(-1, 0, 1f))
                         return@onSuccess
                     }
-                    val grid = titleCardGrid(this, scale, bridge, columns)
+                    val grid = titleCardGrid(this, scale, cards, columns)
                     page.addView(grid, titleGridParams(scale))
                     cards.addAll(0, person.credits.map { it.title })
                     back.nextFocusDownId = (readMore ?: grid).id
-                    grid.setOnKeyInterceptListener { e ->
+                    grid.keyIntercept = { e ->
                         val up = e.action == android.view.KeyEvent.ACTION_DOWN && e.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
                         // only from the first row of the grid: the upper rows are reached by the grid itself
                         if (up && grid.selectedPosition < columns) { reach.requestFocus(); true } else false
@@ -150,7 +146,7 @@ class PersonActivity : Activity() {
     /** A title marked watched on its card comes back dimmed in this grid too. */
     override fun onResume() {
         super.onResume()
-        if (::bridge.isInitialized && cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
+        if (cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
     }
 
     /** The band under the title: a small photo, the facts and the biography. */

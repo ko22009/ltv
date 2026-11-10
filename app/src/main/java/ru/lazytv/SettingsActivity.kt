@@ -14,10 +14,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
-import androidx.leanback.app.GuidedStepSupportFragment
-import androidx.leanback.widget.GuidanceStylist
-import androidx.leanback.widget.GuidedAction
-import androidx.leanback.widget.GuidedActionsStylist
+import android.widget.EditText
+import android.widget.Switch
+import androidx.fragment.app.Fragment
 
 /**
  * Settings screens: one section per screen, opened from a card on the settings page. Choices open as compact
@@ -38,14 +37,9 @@ class SettingsActivity : FragmentActivity() {
         }
         if (savedInstanceState == null) {
             val args = Bundle().apply { putString("section", section) }
-            if (isMobileUi()) {
-                // the two-pane Leanback screen does not fit a phone: the same rows, drawn as a touch list
-                supportFragmentManager.beginTransaction()
-                    .add(android.R.id.content, ru.lazytv.mobile.MobileSettingsScreen().apply { arguments = args })
-                    .commit()
-            } else {
-                GuidedStepSupportFragment.addAsRoot(this, SettingsScreen().apply { arguments = args }, android.R.id.content)
-            }
+            supportFragmentManager.beginTransaction()
+                .add(android.R.id.content, SettingsScreen().apply { arguments = args })
+                .commit()
         }
     }
 
@@ -155,202 +149,353 @@ class SettingsActivity : FragmentActivity() {
     }
 }
 
-open class SettingsScreen : GuidedStepSupportFragment() {
-    /** Sub-option rows inside dropdown choices: sub-action id → (parent row id, setting key, value). */
-    private val subOptionRows = HashMap<Long, Triple<Long, String, String>>()
-    private val checkRows = HashMap<Long, String>()
-    private val editRows = HashMap<Long, String>()
-    private val buttons = HashMap<Long, () -> Unit>()
+/** What a line of a settings screen is. */
+enum class RowKind { SECTION, INFO, CHECK, CHOICE, EDIT, BUTTON }
+
+/** One line of a settings screen: the rows, their values and what they do are the same on the TV and on the phone. */
+class SettingRow(
+    val id: Long,
+    val kind: RowKind,
+    val title: String,
+    var description: String = "",
+    val key: String = "",
+    var checked: Boolean = false,
+    /** CHOICE: value to label; the current value is in [value]. */
+    val options: List<Pair<String, String>> = emptyList(),
+    /** CHOICE: the stored value, EDIT: the stored text. */
+    var value: String = "",
+    val action: (() -> Unit)? = null,
+) {
+    var descView: TextView? = null
+    var toggle: Switch? = null
+}
+
+/**
+ * A settings section drawn as plain views (the TV and the phone share it): a back button, the title and a scrolling list
+ * of rows. Switches flip at once, a choice opens a list, a text row opens an input box, a button does its action.
+ */
+open class SettingsScreen : Fragment() {
+    private val rows = mutableListOf<SettingRow>()
     private val sectionIds = HashMap<String, Long>()
     private var nextId = 1L
-    private var nextCheckSetId = 10
+    private lateinit var list: LinearLayout
 
     /** Request codes of the two file dialogs: a backup is written to the picked file, or read from it. */
     private val requestSave = 7001
     private val requestLoad = 7002
 
-    override fun onCreateGuidance(savedInstanceState: Bundle?): GuidanceStylist.Guidance {
-        val section = arguments?.getString("section").orEmpty()
-        val title = section.ifEmpty { "Настройки" }
-        val subtitle = if (title == "О приложении") "Сведения о программе" else "Изменения применяются сразу"
-        return GuidanceStylist.Guidance(title, subtitle, if (section.isEmpty()) "LazyTV" else "Настройки", null)
-    }
-
-    override fun onCreateActionsStylist(): GuidedActionsStylist = object : GuidedActionsStylist() {
-        override fun onBindViewHolder(vh: ViewHolder, action: GuidedAction) {
-            super.onBindViewHolder(vh, action)
-            vh.descriptionView?.apply {
-                maxLines = 10
-                isVerticalScrollBarEnabled = false
-            }
-        }
-    }
-
-    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        view.post { focusFirstRow(view) }
-    }
-
-    private fun focusFirstRow(view: android.view.View) {
-        val list = findList(view) ?: return
-        if (list.focusedChild != null) return
-        for (i in 0 until list.childCount) {
-            val child = list.getChildAt(i)
-            if (child.isFocusable) {
-                child.requestFocus()
-                return
-            }
-        }
-    }
-
-    private fun findList(view: android.view.View): androidx.recyclerview.widget.RecyclerView? {
-        if (view is androidx.recyclerview.widget.RecyclerView) return view
-        if (view !is android.view.ViewGroup) return null
-        for (i in 0 until view.childCount) findList(view.getChildAt(i))?.let { return it }
-        return null
-    }
+    private val scale get() = requireContext().uiScale()
+    private fun px(value: Int) = (value * scale).toInt()
 
     private fun newId() = nextId++
 
-    private fun section(actions: MutableList<GuidedAction>, title: String) {
+    private fun section(title: String) {
         val id = newId()
         sectionIds[title] = id
-        actions.add(GuidedAction.Builder(requireContext()).id(id).title(title.uppercase())
-            .infoOnly(true).focusable(false).build())
+        rows.add(SettingRow(id, RowKind.SECTION, title.uppercase()))
     }
 
-    private fun check(actions: MutableList<GuidedAction>, title: String, description: String, key: String, default: Boolean = true) {
-        val id = newId()
-        checkRows[id] = key
-        actions.add(GuidedAction.Builder(requireContext()).id(id).title(title).description(description)
-            .checkSetId(GuidedAction.CHECKBOX_CHECK_SET_ID)
-            .checked(Settings.bool(requireContext(), key, default)).build())
+    private fun check(title: String, description: String, key: String, default: Boolean = true) {
+        rows.add(SettingRow(newId(), RowKind.CHECK, title, description, key, checked = Settings.bool(requireContext(), key, default)))
     }
 
-    private fun choice(
-        actions: MutableList<GuidedAction>, title: String, key: String, default: String, options: List<Pair<String, String>>,
-    ) {
-        val ctx = requireContext()
-        val current = Settings.string(ctx, key, default)
-        val parentId = newId()
-        val setId = nextCheckSetId++
-        val subs = options.map { (value, label) ->
-            val subId = newId()
-            subOptionRows[subId] = Triple(parentId, key, value)
-            GuidedAction.Builder(ctx).id(subId).title(label).checkSetId(setId).checked(value == current).build()
-        }
-        actions.add(
-            GuidedAction.Builder(ctx).id(parentId).title(title)
-                .description(options.firstOrNull { it.first == current }?.second ?: current)
-                .subActions(subs)
-                .build()
-        )
+    private fun choice(title: String, key: String, default: String, options: List<Pair<String, String>>) {
+        val current = Settings.string(requireContext(), key, default)
+        rows.add(SettingRow(newId(), RowKind.CHOICE, title, options.firstOrNull { it.first == current }?.second ?: current, key,
+            options = options, value = current))
     }
 
-    private fun editable(actions: MutableList<GuidedAction>, title: String, key: String, default: String) {
-        val id = newId()
-        editRows[id] = key
+    private fun editable(title: String, key: String, default: String) {
         val value = Settings.string(requireContext(), key, default)
-        actions.add(GuidedAction.Builder(requireContext()).id(id).title(title)
-            .description(value.ifEmpty { default })
-            .editDescription(value)
-            .descriptionEditable(true).build())
+        rows.add(SettingRow(newId(), RowKind.EDIT, title, value.ifEmpty { default }, key, value = value))
     }
 
-    private fun info(actions: MutableList<GuidedAction>, title: String, description: String) {
-        actions.add(GuidedAction.Builder(requireContext()).id(newId()).title(title).description(description)
-            .infoOnly(true).focusable(false).build())
+    private fun info(title: String, description: String) {
+        rows.add(SettingRow(newId(), RowKind.INFO, title, description))
     }
 
-    private fun button(actions: MutableList<GuidedAction>, title: String, description: String = "", action: () -> Unit) {
-        val id = newId()
-        buttons[id] = action
-        actions.add(GuidedAction.Builder(requireContext()).id(id).title(title).description(description).build())
+    private fun button(title: String, description: String = "", action: () -> Unit) {
+        rows.add(SettingRow(newId(), RowKind.BUTTON, title, description, action = action))
     }
 
-    override fun onCreateActions(actions: MutableList<GuidedAction>, savedInstanceState: Bundle?) {
+    private fun label(value: CharSequence, size: Float, color: Int, bold: Boolean = false) = TextView(requireContext()).apply {
+        text = value
+        setTextColor(color)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, size * scale)
+        if (bold) typeface = Typeface.DEFAULT_BOLD
+    }
+
+    override fun onCreateView(inflater: android.view.LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): View {
+        val ctx = requireContext()
+        val mobile = requireContext().isMobileUi()
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            background = calmBackground()
+            if (mobile) setPadding(px(16), px(16), px(16), px(8)) else setPadding(px(64), px(36), px(64), px(24))
+        }
+        val back = backButton(ctx, scale) { requireActivity().finish() }
+        val sectionTitle = arguments?.getString("section").orEmpty()
+        val header = LinearLayout(ctx).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(back, LinearLayout.LayoutParams(px(if (mobile) 48 else 56), px(if (mobile) 48 else 56)).apply { rightMargin = px(if (mobile) 14 else 20) })
+            addView(label(sectionTitle.ifEmpty { "Настройки" }, if (mobile) 22f else 34f, Color.WHITE).apply {
+                typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            })
+        }
+        root.addView(header)
+        list = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            setPadding(0, px(if (mobile) 12 else 20), 0, px(16))
+        }
+        root.addView(ScrollView(ctx).apply {
+            isVerticalScrollBarEnabled = false
+            clipChildren = false
+            clipToPadding = false
+            addView(list)
+        }, LinearLayout.LayoutParams(-1, 0, 1f))
+        back.setOnKeyListener { _, code, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (code) {
+                KeyEvent.KEYCODE_DPAD_DOWN ->
+                    (0 until list.childCount).map { list.getChildAt(it) }.firstOrNull { it.isFocusable }?.requestFocus() ?: true
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP -> true
+                else -> false
+            }
+        }
+        buildRows()
+        render()
+        // the back button first, as on the other nested screens: the rows are one step down
+        back.requestFocus()
+        return root
+    }
+
+    private fun rowView(row: SettingRow): View {
+        val ctx = requireContext()
+        val mobile = requireContext().isMobileUi()
+        val focusable = row.kind != RowKind.SECTION && row.kind != RowKind.INFO
+        if (row.kind == RowKind.SECTION) {
+            return label(row.title, if (mobile) 12f else 14f, 0xFF94A3B8.toInt(), bold = true).apply {
+                setPadding(px(4), px(18), 0, px(6))
+            }
+        }
+        val titleView = label(row.title, if (mobile) 15f else 18f, Color.WHITE, bold = true)
+        val desc = label(row.description, if (mobile) 13f else 15f, 0xFF94A3B8.toInt()).apply {
+            setPadding(0, px(3), 0, 0)
+            visibility = if (row.description.isEmpty()) View.GONE else View.VISIBLE
+            // white while the row is focused: the grey is hard to read on the focus colour
+            isDuplicateParentStateEnabled = true
+            setTextColor(android.content.res.ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+                intArrayOf(Color.WHITE, 0xFF94A3B8.toInt())))
+        }
+        row.descView = desc
+        val texts = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(titleView)
+            addView(desc)
+        }
+        return LinearLayout(ctx).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(px(if (mobile) 14 else 22), px(if (mobile) 12 else 14), px(if (mobile) 14 else 22), px(if (mobile) 12 else 14))
+            background = textTilePlate(scale)
+            addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
+            if (row.kind == RowKind.CHECK) {
+                val toggle = Switch(ctx).apply {
+                    isChecked = row.checked
+                    isClickable = false
+                    isFocusable = false
+                    val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+                    // neutral greys: the switch does not take the blue of the page
+                    trackTintList = android.content.res.ColorStateList(states, intArrayOf(0xFF6B7280.toInt(), 0xFF3A3D42.toInt()))
+                    thumbTintList = android.content.res.ColorStateList(states, intArrayOf(0xFFFFFFFF.toInt(), 0xFFB4B7BC.toInt()))
+                }
+                row.toggle = toggle
+                addView(toggle, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
+            }
+            if (focusable) {
+                isFocusable = true
+                isClickable = true
+                setOnClickListener { clicked(row) }
+                // the left and right arrows do nothing on a row: the focus must not jump to a view that is not beside it
+                setOnKeyListener { _, code, event ->
+                    event.action == KeyEvent.ACTION_DOWN && (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT)
+                }
+            }
+        }
+    }
+
+    /** Draws the rows of the section; each row keeps its views, so a change redraws only its own texts. */
+    private fun render() {
+        list.removeAllViews()
+        for (row in rows) list.addView(rowView(row), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(8) })
+    }
+
+    private fun show(row: SettingRow) {
+        row.descView?.apply {
+            text = row.description
+            visibility = if (row.description.isEmpty()) View.GONE else View.VISIBLE
+        }
+    }
+
+    private fun clicked(row: SettingRow) {
+        val ctx = requireContext()
+        when (row.kind) {
+            RowKind.CHECK -> {
+                row.checked = !row.checked
+                row.toggle?.isChecked = row.checked
+                Settings.setBool(ctx, row.key, row.checked)
+                onCheck(row.key, row.checked)
+            }
+            RowKind.CHOICE -> showChoice(requireActivity(), row.title, row.options.map { it.second }, row.options.indexOfFirst { it.first == row.value }) { index ->
+                val (value, labelText) = row.options[index]
+                Settings.setString(ctx, row.key, value)
+                row.value = value
+                row.description = labelText
+                show(row)
+            }
+            RowKind.EDIT -> askText(row)
+            RowKind.BUTTON -> row.action?.invoke()
+            else -> Unit
+        }
+    }
+
+    /** A value typed by hand (an address, a key): the box starts with the stored text. */
+    private fun askText(row: SettingRow) {
+        val ctx = requireContext()
+        val input = EditText(ctx).apply {
+            setText(row.value)
+            setSingleLine()
+            setSelection(text.length)
+            setTextColor(Color.WHITE)
+        }
+        val box = FrameLayout(ctx).apply {
+            setPadding(px(20), px(8), px(20), 0)
+            addView(input, FrameLayout.LayoutParams(-1, -2))
+        }
+        android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle(row.title)
+            .setView(box)
+            .setPositiveButton("Сохранить") { _, _ ->
+                saveText(row, input.text.toString().trim())
+                show(row)
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
+    private fun saveText(row: SettingRow, typed: String) {
+        val ctx = requireContext()
+        when (row.key) {
+            Settings.TORRSERVE -> {
+                val address = typed.ifEmpty { "127.0.0.1:8090" }
+                Settings.setString(ctx, row.key, address)
+                row.value = address
+                row.description = address
+            }
+            Settings.JACRED_SERVERS -> {
+                Settings.setString(ctx, row.key, typed)
+                row.value = typed
+                row.description = typed.ifEmpty { "из конфига или встроенные" }
+            }
+            Settings.JACKETT_URL -> {
+                val url = typed.trimEnd('/').let { if (it.isEmpty() || it.startsWith("http")) it else "http://$it" }
+                Settings.setString(ctx, row.key, url)
+                row.value = url
+                row.description = url.ifEmpty { "не задан" }
+            }
+            else -> {
+                Settings.setString(ctx, row.key, typed)
+                row.value = typed
+                row.description = typed.ifEmpty { "не задан" }
+            }
+        }
+    }
+
+    private fun buildRows() {
         nextId = 1L
-        nextCheckSetId = 10
-        subOptionRows.clear(); checkRows.clear(); editRows.clear(); buttons.clear()
+        rows.clear()
+        sectionIds.clear()
         val ctx = requireContext()
 
-        section(actions, "Источники видео")
-        Sources.all.forEach { source -> check(actions, source.name, if (RemoteConfig.isDown(source.id)) "Сайт сейчас не отвечает" else "Сайт", Settings.service(source.id)) }
-        button(actions, "Проверить источники", "Время ответа и путь к каждому сайту: напрямую, обход или прокси") { checkSources() }
-        check(actions, "Торренты", "Раздачи для TorrServe", "source_torrents")
-        check(actions, "Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
+        section("Источники видео")
+        Sources.all.forEach { source -> check(source.name, if (RemoteConfig.isDown(source.id)) "Сайт сейчас не отвечает" else "Сайт", Settings.service(source.id)) }
+        button("Проверить источники", "Время ответа и путь к каждому сайту: напрямую, обход или прокси") { checkSources() }
+        check("Торренты", "Раздачи для TorrServe", "source_torrents")
+        check("Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
 
-        section(actions, "Адреса сайтов")
-        editable(actions, "Конфиг с адресами (URL)", Settings.REMOTE_URL, "")
-        info(actions, "Сейчас", RemoteConfig.status(ctx))
-        button(actions, "Обновить адреса из конфига", "Скачать JSON и применить сразу") { refreshRemote() }
-        button(actions, "Сбросить свои адреса", "Вернуть адреса из конфига или встроенные") {
+        section("Адреса сайтов")
+        editable("Конфиг с адресами (URL)", Settings.REMOTE_URL, "")
+        info("Сейчас", RemoteConfig.status(ctx))
+        button("Обновить адреса из конфига", "Скачать JSON и применить сразу") { refreshRemote() }
+        button("Сбросить свои адреса", "Вернуть адреса из конфига или встроенные") {
             RemoteConfig.resetManual(ctx)
             toast("Свои адреса сброшены")
             requireActivity().recreate()
         }
         Sources.all.forEach { source ->
-            editable(actions, "${source.name}: свой адрес", Settings.baseKey(source.id), RemoteConfig.base(source.id))
+            editable("${source.name}: свой адрес", Settings.baseKey(source.id), RemoteConfig.base(source.id))
         }
 
-        section(actions, "Воспроизведение")
-        choice(actions, "Плеер", Settings.PLAYER, "internal",
+        section("Воспроизведение")
+        choice("Плеер", Settings.PLAYER, "internal",
             listOf("internal" to "Встроенный", "external" to "Внешний (системный выбор)"))
-        choice(actions, "Качество по умолчанию", Settings.QUALITY, "best",
+        choice("Качество по умолчанию", Settings.QUALITY, "best",
             listOf("ask" to "Спрашивать", "best" to "Лучшее", "1080" to "1080p", "720" to "720p", "480" to "480p"))
-        choice(actions, "Озвучка по умолчанию", Settings.VOICE, "any",
+        choice("Озвучка по умолчанию", Settings.VOICE, "any",
             listOf("any" to "Любая", "ru" to "Русская", "original" to "Оригинал с субтитрами"))
-        choice(actions, "Что предлагать первым", Settings.SOURCE_MODE, "sites", listOf("sites" to "Сайты", "torrents" to "Торренты"))
-        check(actions, "Запоминать позицию", "Продолжать с места остановки", Settings.REMEMBER_POSITION)
-        check(actions, "Следующая серия сама", "После окончания включать следующую серию из списка", Settings.AUTO_NEXT)
+        choice("Что предлагать первым", Settings.SOURCE_MODE, "sites", listOf("sites" to "Сайты", "torrents" to "Торренты"))
+        check("Запоминать позицию", "Продолжать с места остановки", Settings.REMEMBER_POSITION)
+        check("Следующая серия сама", "После окончания включать следующую серию из списка", Settings.AUTO_NEXT)
 
-        section(actions, "Торренты и адреса")
-        choice(actions, "Открывать раздачи", Settings.TORRENT_CLIENT, "internal",
+        section("Торренты и адреса")
+        choice("Открывать раздачи", Settings.TORRENT_CLIENT, "internal",
             listOf("internal" to "Через TorrServe (адрес ниже)", "external" to "Сторонним приложением (системный выбор)"))
-        editable(actions, "Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
-        choice(actions, "Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
+        editable("Адрес TorrServe", Settings.TORRSERVE, "127.0.0.1:8090")
+        choice("Минимум сидов в списке раздач", Settings.TORRENT_MIN_SEEDS, "0",
             Settings.MIN_SEEDS.map { it.toString() to if (it == 0) "Любое количество" else "От $it" })
-        editable(actions, "Серверы JacRed (пусто: из конфига)", Settings.JACRED_SERVERS, "")
-        editable(actions, "Свой Jackett: адрес", Settings.JACKETT_URL, "")
-        editable(actions, "Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
-        button(actions, "Проверить Jackett", "Запрос к своему Jackett с этими адресом и ключом") { checkJackett() }
-        info(actions, "TorrServe (отдельная программа)", "LazyTV только просит её скачать раздачу")
-        button(actions, "Скачать TorrServe", "Страница загрузки в браузере") { downloadTorrServe() }
+        editable("Серверы JacRed (пусто: из конфига)", Settings.JACRED_SERVERS, "")
+        editable("Свой Jackett: адрес", Settings.JACKETT_URL, "")
+        editable("Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
+        button("Проверить Jackett", "Запрос к своему Jackett с этими адресом и ключом") { checkJackett() }
+        info("TorrServe (отдельная программа)", "LazyTV только просит её скачать раздачу")
+        button("Скачать TorrServe", "Страница загрузки в браузере") { downloadTorrServe() }
 
-        section(actions, "Каталог")
-        choice(actions, "Язык названий и описаний", Settings.LANGUAGE, "ru-RU",
+        section("Каталог")
+        choice("Язык названий и описаний", Settings.LANGUAGE, "ru-RU",
             listOf("ru-RU" to "Русский", "en-US" to "English", "uk-UA" to "Українська"))
-        check(actions, "Строка «Популярное» на главном экране TV",
+        check("Строка «Популярное» на главном экране TV",
             "Рекомендации в ленте Android TV (если лаунчер их показывает)", Settings.RECOMMENDATIONS)
 
-        section(actions, "Сеть")
+        section("Сеть")
         if (ClockCheck.skewed) {
-            info(actions, "Часы на устройстве сбились", ClockCheck.MESSAGE)
-            button(actions, "Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
+            info("Часы на устройстве сбились", ClockCheck.MESSAGE)
+            button("Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
         }
-        check(actions, "Обход блокировок", "Сначала напрямую, затем встроенный обход (ByeDPI)", Settings.AUTO_BYPASS)
-        check(actions, "Прокси для сайтов", "Запасной путь, если встроенный обход не помог", Settings.APP_PROXY)
-        check(actions, "Прокси для торрентов", "То же для поиска раздач (rutor)", Settings.APP_PROXY_TORRENTS)
-        button(actions, "Подобрать приём обхода", "Перебирает приёмы ByeDPI, запоминает рабочий для этой сети") {
+        check("Обход блокировок", "Сначала напрямую, затем встроенный обход (ByeDPI)", Settings.AUTO_BYPASS)
+        check("Прокси для сайтов", "Запасной путь, если встроенный обход не помог", Settings.APP_PROXY)
+        check("Прокси для торрентов", "То же для поиска раздач (rutor)", Settings.APP_PROXY_TORRENTS)
+        button("Подобрать приём обхода", "Перебирает приёмы ByeDPI, запоминает рабочий для этой сети") {
             com.lmd.dpi.DpiBypass.retune()
             toast("Подбор запущен, занимает до минуты")
         }
 
-        section(actions, "Данные")
-        info(actions, "Резервная копия", Backup.status(ctx))
-        button(actions, "Сохранить копию в файл", "Закладки, история, отметки, настройки") { exportBackup() }
-        button(actions, "Восстановить из файла", "Заменит закладки, историю, отметки и настройки") { importBackup() }
-        button(actions, "Очистить кэш картинок") {
+        section("Данные")
+        info("Резервная копия", Backup.status(ctx))
+        button("Сохранить копию в файл", "Закладки, история, отметки, настройки") { exportBackup() }
+        button("Восстановить из файла", "Заменит закладки, историю, отметки и настройки") { importBackup() }
+        button("Очистить кэш картинок") {
             clearFailedPosters()
             com.bumptech.glide.Glide.get(ctx.applicationContext).clearMemory()
             Thread { com.bumptech.glide.Glide.get(ctx.applicationContext).clearDiskCache() }.start()
             toast("Кэш картинок очищен")
         }
-        button(actions, "Очистить кэш найденных источников") {
+        button("Очистить кэш найденных источников") {
             ctx.getSharedPreferences("cache", 0).edit().clear().apply()
             toast("Кэш источников очищен")
         }
-        button(actions, "Очистить историю просмотров") {
+        button("Очистить историю просмотров") {
             android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle("Очистить историю просмотров?")
                 .setMessage("Список недавно открытых фильмов и сериалов будет удалён.")
@@ -361,7 +506,7 @@ open class SettingsScreen : GuidedStepSupportFragment() {
                 .setNegativeButton("Отмена", null)
                 .show()
         }
-        button(actions, "Сбросить все настройки") {
+        button("Сбросить все настройки") {
             android.app.AlertDialog.Builder(ctx, android.R.style.Theme_Material_Dialog_Alert)
                 .setTitle("Сбросить все настройки?")
                 .setMessage("Закладки, история и отметки просмотра сохранятся.")
@@ -379,46 +524,25 @@ open class SettingsScreen : GuidedStepSupportFragment() {
                 .show()
         }
 
-        section(actions, "О приложении")
-        info(actions, "Версия", BuildConfig.VERSION_NAME)
-        info(actions, "Как работает приложение",
+        section("О приложении")
+        info("Версия", BuildConfig.VERSION_NAME)
+        info("Как работает приложение",
             "Поисковая система по открытым источникам сети. Приложение не хранит видеофайлы и не имеет собственных серверов")
-        info(actions, "Условия использования",
+        info("Условия использования",
             "Предоставляется «как есть» (AS IS). Доступность сайтов и раздач зависит от вашей сети и самих источников")
+
 
         // one section per screen: the cards on the settings page open their own screen, not one long list
         val title = arguments?.getString("section").orEmpty().ifEmpty { "Списки" }
         val start = sectionIds[title] ?: return
-        val all = actions.toList()
+        val all = rows.toList()
         val headers = sectionIds.values.toSet()
         val from = all.indexOfFirst { it.id == start }
         if (from < 0) return
-        val rest = all.drop(from + 1)
-        val end = rest.indexOfFirst { it.id in headers }
-        actions.clear()
-        actions.addAll(if (end < 0) rest else rest.take(end))
-    }
-
-    override fun onGuidedActionClicked(action: GuidedAction) {
-        val id = action.id
-        checkRows[id]?.let { key ->
-            Settings.setBool(requireContext(), key, action.isChecked)
-            onCheck(key, action.isChecked)
-            return
-        }
-        buttons[id]?.invoke()
-    }
-
-    override fun onSubGuidedActionClicked(action: GuidedAction): Boolean {
-        val (parentId, key, value) = subOptionRows[action.id] ?: return true
-        Settings.setString(requireContext(), key, value)
-        findActionById(parentId)?.let { parent ->
-            parent.description = action.title
-            parent.subActions?.forEach { sub -> sub.isChecked = sub.id == action.id }
-            val pos = findActionPositionById(parentId)
-            if (pos >= 0) notifyActionChanged(pos)
-        }
-        return true
+        val after = all.drop(from + 1)
+        val end = after.indexOfFirst { it.id in headers }
+        rows.clear()
+        rows.addAll(if (end < 0) after else after.take(end))
     }
 
     /** Side effects of the switches that do something at once, not only when a screen reads them. */
@@ -444,33 +568,6 @@ open class SettingsScreen : GuidedStepSupportFragment() {
                 com.lmd.dpi.DpiBypass.clearCache()
             }
         }
-    }
-
-    override fun onGuidedActionEditedAndProceed(action: GuidedAction): Long {
-        val key = editRows[action.id] ?: return GuidedAction.ACTION_ID_CURRENT
-        val ctx = requireContext()
-        val value = action.description.toString().trim()
-        when (key) {
-            Settings.TORRSERVE -> {
-                val address = value.ifEmpty { "127.0.0.1:8090" }
-                Settings.setString(ctx, key, address)
-                action.description = address
-            }
-            Settings.JACRED_SERVERS -> {
-                Settings.setString(ctx, key, value)
-                action.description = value.ifEmpty { "из конфига или встроенные" }
-            }
-            Settings.JACKETT_URL -> {
-                val url = value.trimEnd('/').let { if (it.isEmpty() || it.startsWith("http")) it else "http://$it" }
-                Settings.setString(ctx, key, url)
-                action.description = url.ifEmpty { "не задан" }
-            }
-            else -> {
-                Settings.setString(ctx, key, value)
-                action.description = value.ifEmpty { "не задан" }
-            }
-        }
-        return GuidedAction.ACTION_ID_CURRENT
     }
 
     /** Downloads the addresses file and redraws the screen, so the new "Сейчас" line is visible at once. */

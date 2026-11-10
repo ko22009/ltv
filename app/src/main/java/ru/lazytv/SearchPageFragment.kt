@@ -20,11 +20,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.ClassPresenterSelector
-import androidx.leanback.widget.ItemBridgeAdapter
-import androidx.leanback.widget.VerticalGridView
 import org.json.JSONArray
 
 /** The "search torrents for this phrase" tile (still referenced by the list presenters). */
@@ -36,32 +31,7 @@ data class TorrentQuery(val query: String)
  * torrent list. While no phrase is typed the grid shows the viewing history, which can be edited in place.
  * The cards are the ones of the rest of the app ([CardPresenter], [MoreTilePresenter]), not their own copies.
  */
-class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
-    private val pageAdapter = object : BrowseSupportFragment.MainFragmentAdapter<SearchPageFragment>(this) {
-        // while the menu slides, the page is a flat picture that is only moved: no redrawing of dozens of cards per frame
-        override fun onTransitionStart() {
-            super.onTransitionStart()
-            view?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        }
-
-        override fun onTransitionEnd() {
-            super.onTransitionEnd()
-            view?.setLayerType(View.LAYER_TYPE_NONE, null)
-        }
-
-        // the rows pages are dimmed while the menu has the focus; this page does the same, so that the move from one page
-        // to another looks the same whichever page it is
-        // (expand = the page is expanded, the menu is away)
-        override fun setExpand(expand: Boolean) {
-            super.setExpand(expand)
-            view?.animate()?.alpha(if (expand) 1f else 0.55f)?.setDuration(200)?.start()
-        }
-    }
-    override fun getMainFragmentAdapter() = pageAdapter.also {
-        // the same as the rows pages: the page is squeezed into what the menu leaves, instead of lying under it
-        it.isScalingEnabled = true
-    }
-
+class SearchPageFragment : Fragment() {
     private lateinit var loader: LoadingView
     private val scale get() = resources.displayMetrics.widthPixels / 1280f
     private fun px(value: Int) = (value * scale).toInt()
@@ -73,12 +43,12 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     private lateinit var history: LinearLayout
     private lateinit var historyBlock: LinearLayout
     private lateinit var clearHistory: View
-    private lateinit var grid: VerticalGridView
+    private lateinit var grid: CardGridView
     private lateinit var message: TextView
     private var pending: Runnable? = null
 
     /** Titles of the grid: the found ones, or the viewing history while no phrase is typed. */
-    private val cards = ArrayObjectAdapter(ClassPresenterSelector()
+    private val cards = ItemList(ClassPresenterSelector()
         .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE)))
 
     // the viewing history shown under the input while no phrase is typed, and its edit mode
@@ -201,20 +171,19 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         message.visibility = View.GONE
         page.addView(message)
 
-        val bridge = ItemBridgeAdapter(cards)
-        bridge.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
-            override fun onCreate(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                viewHolder.itemView.setOnClickListener { open(viewHolder.item, viewHolder.itemView) }
+        cards.listener = object : ItemList.Listener() {
+            override fun onCreate(holder: ItemList.Holder) {
+                holder.itemView.setOnClickListener { open(holder.item, holder.itemView) }
             }
 
-            override fun onBind(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                val title = viewHolder.item as? Title
-                (viewHolder.itemView as? TitleCard)?.setPicked(title != null && showingRecent && editing && key(title) in picked)
+            override fun onBind(holder: ItemList.Holder) {
+                val title = holder.item as? Title
+                (holder.itemView as? TitleCard)?.setPicked(title != null && showingRecent && editing && key(title) in picked)
             }
-        })
-        grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS)
+        }
+        grid = titleCardGrid(requireContext(), scale, cards, COLUMNS)
         // up from the first row goes to the nearest controls above instead of getting stuck inside the grid
-        grid.setOnKeyInterceptListener { event ->
+        grid.keyIntercept = { event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&
                 grid.selectedPosition in 0 until COLUMNS
             ) {
@@ -237,17 +206,6 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
         page.layoutParams = FrameLayout.LayoutParams(resources.displayMetrics.widthPixels, ViewGroup.LayoutParams.MATCH_PARENT)
         return page
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        tellBrowse()
-    }
-
-    /** The browse screen waits for a page to say that it is made and filled; this page is ready at once. */
-    private fun tellBrowse() {
-        pageAdapter.fragmentHost?.notifyViewCreated(pageAdapter)
-        pageAdapter.fragmentHost?.notifyDataReady(pageAdapter)
     }
 
     /** The answer of the voice recognizer arrives at the activity and is passed here by the menu screen. */
@@ -290,7 +248,6 @@ class SearchPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapter
     /** The history changes while a card is open (a title is watched): the grid is filled again on return. */
     override fun onResume() {
         super.onResume()
-        tellBrowse()
         showRecent()
     }
 

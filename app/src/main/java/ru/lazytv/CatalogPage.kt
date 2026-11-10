@@ -11,11 +11,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.doOnLayout
 import androidx.fragment.app.Fragment
-import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.ItemBridgeAdapter
-import androidx.leanback.widget.OnChildViewHolderSelectedListener
-import androidx.leanback.widget.VerticalGridView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Job
@@ -29,25 +24,7 @@ import kotlinx.coroutines.Dispatchers
  * the next TMDB page asked for while the cursor nears the end. There are no rows of collections and no
  * "Результаты" tile any more: everything is one list, so the remote only ever scrolls down.
  */
-class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapterProvider {
-    private val pageAdapter = object : BrowseSupportFragment.MainFragmentAdapter<CatalogPageFragment>(this) {
-        // while the menu slides, the page is a flat picture that is only moved: no redrawing of dozens of cards per frame
-        override fun onTransitionStart() {
-            super.onTransitionStart()
-            view?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        }
-
-        override fun onTransitionEnd() {
-            super.onTransitionEnd()
-            view?.setLayerType(View.LAYER_TYPE_NONE, null)
-        }
-    }
-
-    override fun getMainFragmentAdapter() = pageAdapter.also {
-        // scaled like the rows pages and the search page, so the left edge is the same on all of them with the menu open and closed
-        it.isScalingEnabled = true
-    }
-
+class CatalogPageFragment : Fragment() {
     private val scale get() = resources.displayMetrics.widthPixels / 1280f
     private fun px(value: Int) = (value * scale).toInt()
 
@@ -58,11 +35,11 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
     private lateinit var sortChip: LinearLayout
     private lateinit var resetChip: LinearLayout
     private lateinit var filtersText: TextView
-    private lateinit var grid: VerticalGridView
+    private lateinit var grid: CardGridView
     private lateinit var message: TextView
 
-    private val cards = ArrayObjectAdapter(
-        androidx.leanback.widget.ClassPresenterSelector()
+    private val cards = ItemList(
+        ClassPresenterSelector()
             .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE))
             .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(CARD_SCALE)),
     )
@@ -135,30 +112,25 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
         }
         page.addView(message)
 
-        val bridge = ItemBridgeAdapter(cards)
-        bridge.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
-            override fun onCreate(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                viewHolder.itemView.setOnClickListener {
-                    (viewHolder.item as? Title)?.let {
+        cards.listener = object : ItemList.Listener() {
+            override fun onCreate(holder: ItemList.Holder) {
+                holder.itemView.setOnClickListener {
+                    (holder.item as? Title)?.let {
                         startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(it.toExtras()))
                     }
                 }
             }
-        })
-        grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS)
-        // leanback 1.0 keeps the cursor inside the grid at its first row: up from there is sent to the buttons by hand
-        grid.setOnKeyInterceptListener { event ->
+        }
+        grid = titleCardGrid(requireContext(), scale, cards, COLUMNS)
+        // up from the first row of the grid is sent to the buttons by hand
+        grid.keyIntercept = { event ->
             val up = event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP && event.action == android.view.KeyEvent.ACTION_DOWN
             if (up && grid.selectedPosition < COLUMNS && filterChip.isShown) nearestChip().requestFocus() else false
         }
-        grid.setOnChildViewHolderSelectedListener(object : OnChildViewHolderSelectedListener() {
-            override fun onChildViewHolderSelected(
-                parent: RecyclerView, child: RecyclerView.ViewHolder?, position: Int, subposition: Int,
-            ) {
-                // two rows before the end: the next page is asked for
-                if (position >= cards.size() - COLUMNS * 2) loadNext()
-            }
-        })
+        grid.onSelected = { position ->
+            // two rows before the end: the next page is asked for
+            if (position >= cards.size() - COLUMNS * 2) loadNext()
+        }
         // the remote goes from the buttons straight down to the cards
         for (chip in listOf(resetChip, filterChip, sortChip)) chip.nextFocusDownId = grid.id
         // the browse screen does not pass the focus between the neighbours of the header: right and left walk the buttons,
@@ -193,9 +165,6 @@ class CatalogPageFragment : Fragment(), BrowseSupportFragment.MainFragmentAdapte
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // the browse screen waits for a page to say that it is made and filled; the grid fills itself right after
-        pageAdapter.fragmentHost?.notifyViewCreated(pageAdapter)
-        pageAdapter.fragmentHost?.notifyDataReady(pageAdapter)
         signature = CatalogFilter.signature(requireContext(), category.id)
         renderButtons()
         startOver()

@@ -12,7 +12,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.leanback.widget.Presenter
 
 /**
  * The bookmarks page of the TV: plain views in a scroll view, no Leanback rows. A Leanback list scrolls its rows
@@ -111,7 +110,7 @@ class FavoritesPageFragment : Fragment() {
         titleHolders.clear()
         firstFocus = null
         val scale = resources.displayMetrics.widthPixels / 1280f
-        val pad = resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start)
+        val pad = resources.getDimensionPixelSize(R.dimen.page_padding_start)
 
         content.addView(TextView(ctx).apply {
             text = "Закладки"

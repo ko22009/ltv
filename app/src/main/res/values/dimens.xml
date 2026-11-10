@@ -1,7 +1,5 @@
 <resources>
-    <!-- Leanback leaves 28dp under every row; rows (and the settings tiles) sit closer together -->
-    <dimen name="lb_browse_expanded_row_no_hovercard_bottom_padding">6dp</dimen>
 
     <!-- Content starts 92 layout units (138 px on 1080p) from the left edge: 68 icon rail + 24 gap. The dp value is right for 240 dpi; values-xhdpi and values-tvdpi give the same pixels on the other TV densities -->
-    <dimen name="lb_browse_padding_start">92dp</dimen>
+    <dimen name="page_padding_start">92dp</dimen>
 </resources>

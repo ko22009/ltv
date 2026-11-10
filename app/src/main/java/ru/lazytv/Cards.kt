@@ -351,16 +351,16 @@ private const val GRID_TOP_GAP = 14
 
 /**
  * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
- * ([bridge] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut at the grid's edge
+ * ([list] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut at the grid's edge
  * under the header instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where
  * the page's edge is.
  */
-fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widget.ItemBridgeAdapter, columns: Int): androidx.leanback.widget.VerticalGridView {
+fun titleCardGrid(context: Context, scale: Float, list: ItemList, columns: Int, spacing: Int = (6 * scale).toInt()): CardGridView {
     // a touch screen has no cursor: no zoomed "active" card
-    if (!context.isMobileUi()) androidx.leanback.widget.FocusHighlightHelper.setupBrowseItemFocusHighlight(bridge, androidx.leanback.widget.FocusHighlight.ZOOM_FACTOR_MEDIUM, false)
+    list.zoom = !context.isMobileUi()
     val side = (GRID_EDGE_SIDE * scale).toInt()
-    // Leanback's GridLayoutManager allows secondary-axis scroll on touch drags, which slides a vertical grid sideways under a mouse
-    return object : androidx.leanback.widget.VerticalGridView(context) {
+    // a vertical grid must not slide sideways under a mouse or a finger: the horizontal part of a drag is dropped
+    return object : CardGridView(context, columns, spacing) {
         private var downX = 0f
         private var downY = 0f
         private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
@@ -410,12 +410,11 @@ fun titleCardGrid(context: Context, scale: Float, bridge: androidx.leanback.widg
         }
     }.apply {
         id = View.generateViewId()
-        setNumColumns(columns)
         setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (16 * scale).toInt())
         // the focused card grows into the padding: clipping it there would cut the enlarged card at the page's edge
         clipToPadding = false
-        setItemSpacing((6 * scale).toInt())
-        adapter = bridge
+        clipChildren = false
+        adapter = list
         addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
                 if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {

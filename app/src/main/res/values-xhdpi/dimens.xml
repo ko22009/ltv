@@ -1,4 +1,4 @@
 <resources>
     <!-- the same 92 layout units of a 1080p screen as in values/: 138 px = 69dp at 320 dpi -->
-    <dimen name="lb_browse_padding_start">69dp</dimen>
+    <dimen name="page_padding_start">69dp</dimen>
 </resources>

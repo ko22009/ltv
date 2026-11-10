@@ -22,18 +22,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.leanback.app.RowsSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.ClassPresenterSelector
-import androidx.leanback.widget.FocusHighlight
-import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
-import androidx.leanback.widget.OnItemViewClickedListener
-import androidx.leanback.widget.OnItemViewSelectedListener
-import androidx.leanback.widget.Presenter
-import androidx.leanback.widget.Row
-import androidx.leanback.widget.RowPresenter
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +52,6 @@ object OpenSettings
 class MainFragment : Fragment() {
     private val CONTENT_CONTAINER_ID = View.generateViewId()
 
-    private val pages = HashMap<String, ArrayObjectAdapter>()
     private var shown = ""
     private var watchedMarks = ""
 
@@ -92,29 +79,6 @@ class MainFragment : Fragment() {
 
     fun permissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         searchPage?.permissionsResult(requestCode, permissions, grantResults)
-    }
-
-    private val onClick = OnItemViewClickedListener { _, item, _, _ ->
-        when (item) {
-            is Title -> startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(item.toExtras()))
-            is MoreTile -> startActivity(item.toIntent(requireContext()))
-            is Torrent -> startActivity(
-                Intent(requireContext(), TorrentsActivity::class.java).putExtra("name", item.title)
-                    .putExtra("magnet", item.magnet).putExtra("size", item.size).putExtra("seeds", item.seeds)
-                    .putExtra("leeches", item.leeches).putExtra("source", item.source)
-            )
-            is FavoriteEpisode -> startActivity(
-                Intent(requireContext(), EpisodesActivity::class.java)
-                    .putExtra("source", item.source).putExtra("sourceId", item.sourceId)
-                    .putExtra("title", item.seriesTitle).putExtra("note", item.note).putExtra("ref", item.ref)
-                    .putExtra("alt", item.alt).putExtra("description", item.description)
-                    .putExtra("episodeIndex", item.index)
-            )
-            is SettingsSection -> startActivity(
-                Intent(requireContext(), SettingsActivity::class.java).putExtra("section", item.title)
-            )
-            OpenSettings -> startActivity(Intent(requireContext(), SettingsActivity::class.java))
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -237,7 +201,6 @@ class MainFragment : Fragment() {
     }
 
     private fun rebuildNavRail() {
-        pages.clear()
         val tx = childFragmentManager.beginTransaction()
         childFragmentManager.fragments.forEach { tx.remove(it) }
         tx.commitAllowingStateLoss()
@@ -541,67 +504,6 @@ class MainFragment : Fragment() {
             rebuildNavRail()
             return
         }
-        val marks = Watched.revision(ctx)
-        if (marks != watchedMarks) {
-            watchedMarks = marks
-            pages.values.forEach { rows ->
-                for (i in 0 until rows.size()) {
-                    val cards = (rows.get(i) as? ListRow)?.adapter as? ArrayObjectAdapter ?: continue
-                    cards.notifyArrayItemRangeChanged(0, cards.size())
-                }
-            }
-        }
-    }
-
-    /** Rows of the pages: the focused card grows a little, so it is clear at once which one is chosen. */
-    private fun rowPresenter(dimOthers: Boolean) = object : ListRowPresenter(FocusHighlight.ZOOM_FACTOR_MEDIUM) {
-        override fun onRowViewExpanded(holder: RowPresenter.ViewHolder, expanded: Boolean) {
-            super.onRowViewExpanded(holder, expanded)
-            showCaption(holder)
-        }
-
-        override fun onBindRowViewHolder(holder: RowPresenter.ViewHolder, item: Any) {
-            super.onBindRowViewHolder(holder, item)
-            showCaption(holder)
-            val grid = (holder as? ListRowPresenter.ViewHolder)?.gridView ?: return
-            if (grid.tag != "glide_scroll") {
-                grid.tag = "glide_scroll"
-                grid.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
-                    override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
-                        if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
-                            clearFailedPosters()
-                        }
-                    }
-                })
-            }
-        }
-
-        override fun onRowViewSelected(holder: RowPresenter.ViewHolder, selected: Boolean) {
-            super.onRowViewSelected(holder, selected)
-            showCaption(holder)
-        }
-
-        private fun showCaption(holder: RowPresenter.ViewHolder) {
-            (holder.headerViewHolder?.view?.parent as? View)?.visibility = View.VISIBLE
-        }
-    }.apply {
-        selectEffectEnabled = dimOthers
-        // Leanback clips every card of a row to its own tiny rounded rectangle, which squares off the rounding of the cards
-        enableChildRoundedCorners(false)
-        shadowEnabled = false
-    }
-
-    private fun pageRows(dimOthers: Boolean) = ClassPresenterSelector()
-        .addClassPresenter(PageNoteRow::class.java, PageNotePresenter())
-        .addClassPresenter(ListRow::class.java, rowPresenter(dimOthers))
-
-    private fun pageTitle(name: String) = name.lowercase().replaceFirstChar { it.uppercase() }
-
-    private fun pageFor(name: String): ArrayObjectAdapter = pages.getOrPut(name) {
-        // no dimming of the rows without focus: the overlay is a plain rectangle and spoils the rounded corners of the cards
-        val rows = ArrayObjectAdapter(pageRows(dimOthers = false))
-        val ctx = requireContext()
-        rows
     }
 
     private fun createPageFragment(name: String): Fragment {
@@ -614,16 +516,8 @@ class MainFragment : Fragment() {
                 arguments = Bundle().apply { putString("category", category.id) }
             }
         }
-        val page = TitledRowsFragment().apply {
-            arguments = Bundle().apply {
-                putString("title", pageTitle(name))
-                putBoolean("compact", name == SETTINGS)
-            }
-        }
-        val rows = pageFor(name)
-        page.adapter = rows
-        page.onItemViewClickedListener = onClick
-        return page
+        // a name the menu no longer has (a category hidden in the settings): an empty page until the menu is rebuilt
+        return Fragment()
     }
 
     companion object {
@@ -779,55 +673,19 @@ class SettingsPageFragment : Fragment() {
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
         })
-        val tiles = ArrayObjectAdapter(SettingsSectionPresenter()).apply { addAll(0, SETTINGS_SECTIONS) }
-        val bridge = androidx.leanback.widget.ItemBridgeAdapter(tiles)
-        bridge.setAdapterListener(object : androidx.leanback.widget.ItemBridgeAdapter.AdapterListener() {
-            override fun onCreate(viewHolder: androidx.leanback.widget.ItemBridgeAdapter.ViewHolder) {
-                viewHolder.itemView.setOnClickListener {
-                    (viewHolder.item as? SettingsSection)?.let { section ->
+        val tiles = ItemList(SettingsSectionPresenter()).apply { addAll(0, SETTINGS_SECTIONS) }
+        tiles.listener = object : ItemList.Listener() {
+            override fun onCreate(holder: ItemList.Holder) {
+                holder.itemView.setOnClickListener {
+                    (holder.item as? SettingsSection)?.let { section ->
                         startActivity(Intent(requireContext(), SettingsActivity::class.java).putExtra("section", section.title))
                     }
                 }
             }
-        })
+        }
         val gap = px(12)
         val side = px(20)
-        val grid = titleCardGrid(requireContext(), scale, bridge, COLUMNS).apply {
-            setItemSpacing(gap)
-        }
-        fun moveTo(target: Int) {
-            grid.selectedPosition = target
-            grid.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus()
-        }
-        grid.setOnKeyInterceptListener { event ->
-            if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyInterceptListener false
-            val pos = grid.selectedPosition
-            val count = SETTINGS_SECTIONS.size
-            if (pos !in 0 until count) return@setOnKeyInterceptListener false
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (pos + 1 < count) moveTo(pos + 1)
-                    true
-                }
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (pos % COLUMNS == 0) false
-                    else {
-                        moveTo(pos - 1)
-                        true
-                    }
-                }
-                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    val nextRowStart = (pos / COLUMNS + 1) * COLUMNS
-                    if (nextRowStart < count) moveTo(minOf(pos + COLUMNS, count - 1))
-                    true
-                }
-                KeyEvent.KEYCODE_DPAD_UP -> {
-                    if (pos >= COLUMNS) moveTo(pos - COLUMNS)
-                    true
-                }
-                else -> false
-            }
-        }
+        val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap)
         val gridWidth = COLUMNS * px(290) + (COLUMNS - 1) * gap + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
             setMargins(-side, px(14), 0, 0)
@@ -954,114 +812,4 @@ class TorrentCardPresenter : Presenter() {
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
-}
-
-class PageNoteRow(val text: String) : Row()
-
-class PageNotePresenter : RowPresenter() {
-    init {
-        headerPresenter = null
-        selectEffectEnabled = false
-    }
-
-    override fun createRowViewHolder(parent: ViewGroup): RowPresenter.ViewHolder =
-        RowPresenter.ViewHolder(View(parent.context).apply { isFocusable = false; minimumHeight = 1 })
-
-    override fun isUsingDefaultSelectEffect() = false
-}
-
-class TitledRowsFragment : RowsSupportFragment() {
-    private lateinit var titleLayout: LinearLayout
-    private lateinit var note: TextView
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val rows = super.onCreateView(inflater, container, savedInstanceState) ?: return null
-        val scale = resources.displayMetrics.widthPixels / 1280f
-        val compact = requireArguments().getBoolean("compact")
-        val headerHeight = ((if (compact) 39 else 72) * scale).toInt()
-        val title = TextView(requireContext()).apply {
-            text = requireArguments().getString("title")
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * scale)
-            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (30 * scale).toInt(), 0, (6 * scale).toInt())
-        }
-        note = TextView(requireContext()).apply {
-            setTextColor(0xFF94A3B8.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
-            setPadding(resources.getDimensionPixelSize(androidx.leanback.R.dimen.lb_browse_padding_start), (6 * scale).toInt(), 0, 0)
-            visibility = View.GONE
-        }
-        titleLayout = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(title, LinearLayout.LayoutParams(-1, -2))
-            addView(note, LinearLayout.LayoutParams(-1, -2))
-        }
-        (rows as? ViewGroup)?.apply {
-            clipChildren = false
-            clipToPadding = false
-            setPadding(0, headerHeight, 0, 0)
-        }
-        return FrameLayout(requireContext()).apply {
-            clipChildren = false
-            clipToPadding = false
-            addView(rows, FrameLayout.LayoutParams(-1, -1))
-            addView(titleLayout, FrameLayout.LayoutParams(-1, -2))
-        }
-    }
-
-    private val noteWatcher = object : androidx.leanback.widget.ObjectAdapter.DataObserver() {
-        override fun onChanged() = showNote()
-        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = showNote()
-        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = showNote()
-    }
-
-    private fun showNote() {
-        val rows = adapter ?: return
-        val text = (0 until rows.size()).firstNotNullOfOrNull { (rows.get(it) as? PageNoteRow)?.text }
-        note.text = text.orEmpty()
-        note.visibility = if (text == null) View.GONE else View.VISIBLE
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        adapter?.registerObserver(noteWatcher)
-        showNote()
-        // rows that fit on the screen stay still when the focus goes from one row to another (no row captions jumping)
-        verticalGridView?.focusScrollStrategy = androidx.leanback.widget.BaseGridView.FOCUS_SCROLL_PAGE
-
-        val scale = resources.displayMetrics.widthPixels / 1280f
-        val compact = requireArguments().getBoolean("compact")
-        val headerHeight = ((if (compact) 39 else 72) * scale).toInt()
-
-        fun updateHeaderTranslation() {
-            val grid = verticalGridView ?: return
-            val maxShift = titleLayout.height.takeIf { it > 0 } ?: headerHeight
-            val vh = grid.findViewHolderForAdapterPosition(0)
-            val shift = if (vh != null) {
-                // a dead zone: the small shift of the rows when the selection moves down must not nudge the caption
-                (headerHeight - vh.itemView.top - (24 * scale).toInt()).coerceAtLeast(0)
-            } else {
-                maxShift
-            }
-            titleLayout.translationY = (-shift).coerceIn(-maxShift, 0).toFloat()
-        }
-
-        verticalGridView?.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: androidx.recyclerview.widget.RecyclerView, dx: Int, dy: Int) {
-                updateHeaderTranslation()
-            }
-
-            override fun onScrollStateChanged(recyclerView: androidx.recyclerview.widget.RecyclerView, newState: Int) {
-                if (newState == androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) {
-                    clearFailedPosters()
-                    updateHeaderTranslation()
-                }
-            }
-        })
-    }
-
-    override fun onDestroyView() {
-        adapter?.unregisterObserver(noteWatcher)
-        super.onDestroyView()
-    }
 }

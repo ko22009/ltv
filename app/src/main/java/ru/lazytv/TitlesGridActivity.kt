@@ -13,9 +13,6 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.ItemBridgeAdapter
-import androidx.leanback.widget.VerticalGridView
 
 /**
  * A whole row of the catalog on one page: the same cards, in columns, scrolled down. More pages are asked from
@@ -25,10 +22,9 @@ class TitlesGridActivity : Activity() {
     private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
 
-    private val cards by lazy { ArrayObjectAdapter(CardPresenter(CARD_SCALE)) }
+    private val cards by lazy { ItemList(CardPresenter(CARD_SCALE)) }
     private val columns get() = if (isMobileUi()) MOBILE_COLUMNS else COLUMNS
-    private lateinit var bridge: ItemBridgeAdapter
-    private lateinit var grid: VerticalGridView
+    private lateinit var grid: CardGridView
     private lateinit var loadingMore: LoadingView
     private lateinit var message: TextView
     private var nextPage = 1
@@ -67,35 +63,32 @@ class TitlesGridActivity : Activity() {
         page.addView(message)
 
         var pendingFirstFocus = true
-        bridge = ItemBridgeAdapter(cards)
-        bridge.setAdapterListener(object : ItemBridgeAdapter.AdapterListener() {
-            override fun onCreate(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                viewHolder.itemView.setOnClickListener {
-                    (viewHolder.item as? Title)?.let { startActivity(Intent(this@TitlesGridActivity, DetailsActivity::class.java).putExtras(it.toExtras())) }
+        cards.listener = object : ItemList.Listener() {
+            override fun onCreate(holder: ItemList.Holder) {
+                holder.itemView.setOnClickListener {
+                    (holder.item as? Title)?.let { startActivity(Intent(this@TitlesGridActivity, DetailsActivity::class.java).putExtras(it.toExtras())) }
                 }
             }
 
-            override fun onAttachedToWindow(viewHolder: ItemBridgeAdapter.ViewHolder) {
-                if (pendingFirstFocus && viewHolder.absoluteAdapterPosition == 0 && !isMobileUi()) {
+            override fun onAttachedToWindow(holder: ItemList.Holder) {
+                if (pendingFirstFocus && holder.absoluteAdapterPosition == 0 && !isMobileUi()) {
                     pendingFirstFocus = false
-                    viewHolder.itemView.post {
-                        viewHolder.itemView.requestFocus()
+                    holder.itemView.post {
+                        holder.itemView.requestFocus()
                     }
                 }
             }
-        })
-        grid = titleCardGrid(this, scale, bridge, columns)
+        }
+        grid = titleCardGrid(this, scale, cards, columns)
         back.nextFocusDownId = grid.id
-        grid.setOnKeyInterceptListener { event ->
+        grid.keyIntercept = { event ->
             val up = event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP
             if (up && grid.selectedPosition < columns) { back.requestFocus(); true } else false
         }
-        grid.setOnChildViewHolderSelectedListener(object : androidx.leanback.widget.OnChildViewHolderSelectedListener() {
-            override fun onChildViewHolderSelected(parent: androidx.recyclerview.widget.RecyclerView, child: androidx.recyclerview.widget.RecyclerView.ViewHolder?, position: Int, subposition: Int) {
-                // two rows before the end: the next page is asked for
-                if (position >= cards.size() - columns * 2) loadNext()
-            }
-        })
+        grid.onSelected = { position ->
+            // two rows before the end: the next page is asked for
+            if (position >= cards.size() - columns * 2) loadNext()
+        }
         loadingMore = LoadingView(this, scale, "Загружаем…")
         val body = FrameLayout(this)
         body.addView(grid, FrameLayout.LayoutParams(-1, -1))
@@ -109,7 +102,7 @@ class TitlesGridActivity : Activity() {
     /** A title marked watched on its card comes back dimmed in this grid too. */
     override fun onResume() {
         super.onResume()
-        if (::bridge.isInitialized && cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
+        if (::grid.isInitialized && cards.size() > 0) cards.notifyArrayItemRangeChanged(0, cards.size())
     }
 
     private fun loadNext(fallbackFocus: View? = null) {
