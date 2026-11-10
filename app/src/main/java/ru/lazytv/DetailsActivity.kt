@@ -1087,10 +1087,9 @@ class DetailsActivity : Activity() {
                             true
                         }
                         android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                            // the focus goes first: a smooth scroll started before it fought with the jump the ScrollView makes to the
-                            // focused view and the page flew past; then the page glides up to the top once
+                            // only the focus moves: the ScrollView itself brings the focused director into view by the smallest step
+                            // (a scroll to the very top flew the page past the director)
                             (firstDirectorLink ?: (if (::overviewView.isInitialized && overviewView.text.isNotEmpty()) overviewView else null) ?: watchButton).requestFocus()
-                            pageScroll.post { pageScroll.smoothScrollTo(0, 0) }
                             true
                         }
                         else -> false
