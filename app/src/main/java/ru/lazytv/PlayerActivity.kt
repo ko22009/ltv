@@ -405,7 +405,6 @@ class PlayerActivity : Activity() {
             shape = android.graphics.drawable.GradientDrawable.OVAL
             if (seek.isFocused) {
                 setColor(0x8C101216.toInt())
-                setStroke(dp(2).coerceAtLeast(1), ACTIVE_PLATE)
             } else setColor(Color.TRANSPARENT)
         }
         val dot = android.graphics.drawable.GradientDrawable().apply {
@@ -413,12 +412,14 @@ class PlayerActivity : Activity() {
             setColor(thumbColor)
         }
         seek.thumbTintList = null
-        // no reserved space at rest: the dot alone, the plate is added only while the thumb is under the cursor
-        seek.thumb = if (seek.isFocused) android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
+        // the same size in both states, so the bar does not jump when the focus comes; the track is not split at the thumb,
+        // so the line runs under the clear plate and no gap shows round the dot at rest
+        seek.splitTrack = false
+        seek.thumb = android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
             setLayerSize(0, dp(40), dp(40))
             setLayerSize(1, dp(18), dp(18))
             setLayerGravity(1, android.view.Gravity.CENTER)
-        } else dot.apply { setSize(dp(18), dp(18)) }
+        }
         seek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66FFFFFF)
         seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt())
     }
