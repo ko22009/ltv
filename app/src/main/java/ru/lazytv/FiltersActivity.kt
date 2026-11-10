@@ -117,9 +117,10 @@ class FiltersActivity : Activity() {
         line.background = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
         line.isFocusable = true
         line.isClickable = true
-        line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
-        val shown = text(value, 17f, 0xFFCBD5E1.toInt()).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
-        line.addView(shown, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(24) })
+        // the name keeps its width; the chosen value takes the rest (right-aligned) and is cut with "..." when it is long
+        line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD; maxLines = 1 }, LinearLayout.LayoutParams(-2, -2))
+        val shown = text(value, 17f, 0xFFCBD5E1.toInt()).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; gravity = Gravity.END }
+        line.addView(shown, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = px(24) })
         line.setOnClickListener { onClick(shown) }
         if (onKey != null) line.setOnKeyListener { _, code, event -> event.action == KeyEvent.ACTION_DOWN && onKey(code, shown) }
         return line
@@ -232,12 +233,12 @@ class FiltersActivity : Activity() {
         mark.text = name
         mark.isChecked = checked
         mark.setTextColor(Color.WHITE)
-        mark.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
+        mark.setTextSize(TypedValue.COMPLEX_UNIT_PX, (if (isMobileUi()) 16f else 18f) * scale)
         mark.buttonTintList = ColorStateList.valueOf(Color.WHITE)
         mark.isClickable = false
         mark.isFocusable = false
         val cell = FrameLayout(this)
-        cell.setPadding(px(14), px(8), px(14), px(8))
+        cell.setPadding(px(if (isMobileUi()) 8 else 14), px(8), px(if (isMobileUi()) 8 else 14), px(8))
         cell.background = focusShape(scale, Color.TRANSPARENT)
         cell.isFocusable = true
         cell.isClickable = true
@@ -285,7 +286,8 @@ class FiltersActivity : Activity() {
         searchBar = null
         if (::backBtn.isInitialized) backBtn.setOnKeyListener(null)
         val picked = filter.genres.toMutableSet()
-        val view = grid(3) { g ->
+        // three columns are too narrow for a phone: the captions broke in the middle of a word
+        val view = grid(if (isMobileUi()) 2 else 3) { g ->
             (if (category.tv) CatalogOptions.tvGenres else CatalogOptions.movieGenres).forEach { (id, name) ->
                 g.addCell(choice(name, id in picked, false) { on ->
                     if (on) picked += id else picked -= id
@@ -426,7 +428,8 @@ class FiltersActivity : Activity() {
         column.addView(fromRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(8) })
         column.addView(toRow, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(12) })
         val presets = GridLayout(this).apply {
-            columnCount = 3
+            // two columns on a phone: "2020–2026" does not fit in a third of the width
+            columnCount = if (isMobileUi()) 2 else 3
             layoutParams = LinearLayout.LayoutParams(-1, -2)
         }
         presets.addCaption("Быстрый выбор")

@@ -57,7 +57,7 @@ data class CatalogFilter(
 
     /** The part of the TMDB discover address that the filter adds. */
     fun query(tv: Boolean): String = buildString {
-        if (genres.isNotEmpty()) append("&with_genres=").append(genres.joinToString(","))
+        if (genres.isNotEmpty()) append("&with_genres=").append(genres.joinToString("|"))
         if (countries.isNotEmpty()) append("&with_origin_country=").append(countries.joinToString("|"))
         val field = if (tv) "first_air_date" else "primary_release_date"
         val format = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
