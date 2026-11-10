@@ -421,8 +421,7 @@ class DetailsActivity : Activity() {
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
-        fillTable(table, baseRows.map { if (it.first == RELEASE) it.first to "" else it } +
-            listOfNotNull("Длительность", if (intent.getBooleanExtra("tv", false)) "Сезонов" else null, "Возраст", "Жанр", "Страна", "Режиссёр").map { it to "" })
+        fillTable(table, factRows(baseRows.map { if (it.first == RELEASE) it.first to "" else it }))
         if (!mobile) {
             info.addView(original)
             info.addView(table)
@@ -451,7 +450,7 @@ class DetailsActivity : Activity() {
                 addState(intArrayOf(), normal)
             }
             setOnClickListener {
-                if (text.isNotEmpty()) {
+                if (text.isNotEmpty() && text.toString() != DASH) {
                     android.app.AlertDialog.Builder(this@DetailsActivity)
                         .setTitle(name)
                         .setMessage(text)
@@ -489,7 +488,7 @@ class DetailsActivity : Activity() {
         overviewView.maxLines = 3
         overviewView.ellipsize = android.text.TextUtils.TruncateAt.END
         fun showFullOverview() {
-            if (overviewView.text.isNotEmpty()) {
+            if (overviewView.text.isNotEmpty() && overviewView.text.toString() != DASH) {
                 android.app.AlertDialog.Builder(this@DetailsActivity)
                     .setTitle(name)
                     .setMessage(overviewView.text)
@@ -573,11 +572,25 @@ class DetailsActivity : Activity() {
 
     /** The details are in (or failed): a line that stays empty is taken out, so no blank gap is left where the data is missing. */
     private fun dropEmpty(original: TextView) {
+        // the original title is only a repeat when it is missing: its line goes; the rest that has no data shows a dash
         original.visibility = if (original.text.isEmpty()) View.GONE else View.VISIBLE
-        overviewView.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
-        if (::moreRow.isInitialized && overviewView.text.isEmpty()) moreRow.visibility = View.GONE
-        if (::genresLine.isInitialized) genresLine.visibility = if (genresLine.text.isEmpty()) View.GONE else View.VISIBLE
+        overviewView.visibility = View.VISIBLE
+        if (overviewView.text.isEmpty()) overviewView.text = DASH
+        if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.toString() == DASH) View.GONE else View.VISIBLE
+        if (::genresLine.isInitialized) {
+            genresLine.visibility = View.VISIBLE
+            if (genresLine.text.isEmpty()) genresLine.text = DASH
+        }
     }
+
+    /** The rows every card has: a value that is not known is shown as a dash, not left out. */
+    private fun withDashes(rows: List<Pair<String, String>>): List<Pair<String, String>> {
+        val always = setOf(RELEASE, "Рейтинг", "Длительность", "Возраст", "Жанр", "Страна", "Режиссёр") + (if (currentTitle.tv) setOf("Сезонов") else emptySet())
+        return rows.map { (caption, value) -> if (value.isBlank() && caption in always) caption to DASH else caption to value }
+    }
+
+    private fun factRows(base: List<Pair<String, String>>): List<Pair<String, String>> =
+        base + listOfNotNull("Длительность", if (currentTitle.tv) "Сезонов" else null, "Возраст", "Жанр", "Страна", "Режиссёр").map { it to "" }
 
     private var tablePending = true
 
@@ -668,7 +681,7 @@ class DetailsActivity : Activity() {
                 "В кино с" to formatReleaseDate(d.cinemaDate).let { if (it.isEmpty()) "" else "$it (повторный прокат)" },
             )
         }
-        fillTable(table, rows + listOf(
+        fillTable(table, withDashes(rows + listOf(
             "Длительность" to (formatRuntime(d.runtime)),
             "Сезонов" to (if (d.seasons > 0) d.seasons.toString() else ""),
             "Следующая серия" to d.nextEpisode,
@@ -676,7 +689,7 @@ class DetailsActivity : Activity() {
             "Жанр" to d.genres.joinToString(", "),
             "Страна" to d.countries.joinToString(", "),
             "Режиссёр" to d.director,
-        ), d.directors, scroll)
+        )), d.directors, scroll)
         val info = table.parent as? LinearLayout
         // directors already stand in the table above as cards: the cast block holds the actors only
         val mergedPeople = d.castPeople
@@ -710,7 +723,7 @@ class DetailsActivity : Activity() {
                         hideBannerSpinner(); hideSkeletons()
                         // no details: the year of the list is all there is, shown as it is
                         tablePending = false
-                        fillTable(table, baseRows)
+                        fillTable(table, withDashes(factRows(baseRows)))
                         dropEmpty(original)
                     }
                 } else if (cached == null) {
@@ -797,7 +810,7 @@ class DetailsActivity : Activity() {
                     addView(cards)
                 }
                 row.addView(cardsScroll, LinearLayout.LayoutParams(0, -2, 1f))
-            } else if (caption == "Рейтинг") {
+            } else if (caption == "Рейтинг" && value != DASH) {
                 val ratingVal = value.replace(',', '.').toDoubleOrNull()
                 val color = if (ratingVal != null && ratingVal < 6.0) 0x99FFFFFF.toInt() else Color.WHITE
                 row.addView(text("★ $value", 18f, color).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
@@ -1258,3 +1271,6 @@ class DetailsActivity : Activity() {
         const val RELEASE = "Дата выхода"
     }
 }
+
+/** What stands where a fact of the card is not known. */
+private const val DASH = "–"
