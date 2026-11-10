@@ -29,13 +29,15 @@ object RatingBadge {
     }
 
     /** The height the rating plate gets with [style] (the line of "★ 8.6" plus the padding), for plates that must stand beside it equally tall. */
-    fun plateHeight(sizePx: Float, padVerticalPx: Int): Int {
-        val paint = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = sizePx
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        val sample = "★ 8.6"
-        val layout = StaticLayout.Builder.obtain(sample, 0, sample.length, paint, 10_000).setIncludePad(false).build()
-        return layout.height + 2 * padVerticalPx
+    fun plateHeight(context: android.content.Context, sizePx: Float, padPx: Int, padVerticalPx: Int): Int {
+        // measured on a real plate with a sample text: the star comes from another font, and only the view knows the true line height
+        val sample = TextView(context)
+        style(sample, sizePx, padPx, padVerticalPx)
+        sample.text = "★ 8.6"
+        sample.measure(
+            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED),
+            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED),
+        )
+        return sample.measuredHeight
     }
 }

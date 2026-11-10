@@ -72,7 +72,7 @@ class MobileTitleAdapter(
             binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (ru.lazytv.SPINNER_CARD * d).toInt()))
             // the plate of the rating (same size and padding) with the bookmark icon as tall as the rating text
             RatingBadge.style(binding.cardFavorite, 12f * d, (8 * d).toInt(), (4 * d).toInt())
-            binding.cardFavorite.height = RatingBadge.plateHeight(12f * d, (4 * d).toInt())
+            binding.cardFavorite.height = RatingBadge.plateHeight(binding.root.context, 12f * d, (8 * d).toInt(), (4 * d).toInt())
             binding.cardFavorite.gravity = android.view.Gravity.CENTER_VERTICAL
             binding.cardFavorite.setCompoundDrawables(ru.lazytv.PathDrawable(ru.lazytv.MenuIcons.BOOKMARK).apply {
                 setColorFilter(android.graphics.Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
