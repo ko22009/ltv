@@ -405,6 +405,8 @@ class DetailsActivity : Activity() {
         val rawOverview = intent.getStringExtra("overview").orEmpty()
         overviewView = text(rawOverview, 18f, 0xFFE2E8F0.toInt()).apply {
             setLineSpacing(0f, 1.25f)
+            // the description takes the focus only on the TV (so the remote can scroll it); on a phone it is plain text of the page
+            if (!mobile) {
             setPadding(dp(12), dp(8), dp(12), dp(8))
             isFocusable = true
             isClickable = true
@@ -453,6 +455,7 @@ class DetailsActivity : Activity() {
                     else -> false
                 }
             }
+            } else setPadding(0, dp(8), 0, dp(8))
         }
         info.addView(overviewView)
 
