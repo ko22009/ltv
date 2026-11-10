@@ -46,7 +46,7 @@
             </intent-filter>
         </receiver>
         <activity android:name=".DetailsActivity" android:exported="false" android:screenOrientation="behind" />
-        <activity android:name=".GalleryActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV.Filters" />
+        <activity android:name=".GalleryActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:theme="@style/Theme.LazyTV.Filters" />
         <activity android:name=".SettingsActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV" />
         <activity android:name=".EpisodesActivity" android:exported="false" android:screenOrientation="behind" />
         <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="behind" />
