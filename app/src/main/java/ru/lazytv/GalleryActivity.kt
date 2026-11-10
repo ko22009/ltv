@@ -199,19 +199,15 @@ class GalleryActivity : Activity() {
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
         }
-        // a tab in the lower right corner of the picture itself: flush with its edges (the part of it that is on the screen), only the upper left corner is round
-        phoneCounter.setPadding(dp(14), dp(8), dp(14), dp(8))
-        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xCC1C2029.toInt())
-            val r = dp(14).toFloat()
-            cornerRadii = floatArrayOf(r, r, 0f, 0f, 0f, 0f, 0f, 0f)
-        }
+        // the same plate as the rating on the poster cards, in the lower right corner of the picture (the part of it on the screen)
+        RatingBadge.style(phoneCounter, 14f * resources.displayMetrics.density, dp(10), dp(5))
         root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
         val placeCounter = {
             val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
             val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
-            val right = minOf(imageAt[0] - rootAt[0] + mainImage.width, root.width)
-            val bottom = minOf(imageAt[1] - rootAt[1] + mainImage.height, root.height)
+            val inset = dp(8)
+            val right = minOf(imageAt[0] - rootAt[0] + mainImage.width, root.width) - inset
+            val bottom = minOf(imageAt[1] - rootAt[1] + mainImage.height, root.height) - inset
             phoneCounter.translationX = (right - phoneCounter.width).toFloat()
             phoneCounter.translationY = (bottom - phoneCounter.height).toFloat()
         }
