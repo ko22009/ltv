@@ -61,7 +61,11 @@ class EpisodesActivity : Activity() {
     }
 
     /** One of the action buttons above the list: the button of the design system ([chipButton]); works on the selected episode. */
-    private fun actionButton() = chipButton(this, scale, "")
+    /** The buttons of the page look like an inactive season chip (same corner, white caption). */
+    private fun actionButton() = chipButton(this, scale, "").also {
+        it.findViewWithTag<TextView>("caption").typeface = android.graphics.Typeface.DEFAULT
+        styleChoice(it, it.findViewWithTag<TextView>("caption"), false, scale, restText = Color.WHITE)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,6 +127,8 @@ class EpisodesActivity : Activity() {
         page.addView(errorRow, LinearLayout.LayoutParams(-2, px(56)).apply { topMargin = px(6) })
         actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
+        // the buttons keep the height of the season chips and stand at the top of the band, close to the seasons
+        actions.gravity = Gravity.TOP
         actions.visibility = View.GONE
         actionWatched = actionButton().apply { setOnClickListener { startEdit() } }
         actionApply = actionButton().apply { chipCaption = "Применить"; visibility = View.GONE; setOnClickListener { applyEdit() } }
@@ -130,19 +136,19 @@ class EpisodesActivity : Activity() {
         actionCancel = actionButton().apply { chipCaption = "Отмена"; visibility = View.GONE; setOnClickListener { endEdit() } }
         // shown only when the site offers several voice-overs (see load() below)
         actionVoice = actionButton().apply { visibility = View.GONE }
-        actions.addView(actionVoice, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionWatched, LinearLayout.LayoutParams(-1, -1).apply { width = -2; rightMargin = px(12) })
-        actions.addView(actionApply, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionAll, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = px(12) })
-        actions.addView(actionCancel, LinearLayout.LayoutParams(-2, -1))
+        actions.addView(actionVoice, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+        actions.addView(actionWatched, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+        actions.addView(actionApply, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+        actions.addView(actionAll, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+        actions.addView(actionCancel, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
         seasonRow = LinearLayout(this)
         seasonScroll = android.widget.HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             visibility = View.GONE
             addView(seasonRow)
         }
-        page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(56)).apply { topMargin = px(6) })
-        // no extra margin: the buttons sit centred in the 56 band, so the gap to the seasons above is already 12
+        page.addView(seasonScroll, LinearLayout.LayoutParams(-1, px(54)).apply { topMargin = px(6) })
+        // no extra margin: the buttons sit centred in the 56 band, so the gap to the seasons above is 10
         page.addView(actions, LinearLayout.LayoutParams(-1, px(56)))
         list = ListView(this)
         list.divider = null
@@ -308,7 +314,7 @@ class EpisodesActivity : Activity() {
 
     /** A season chip: the common look of the chosen one among equals (see [styleChoice]). */
     private fun styleSeasonChip(chip: View, active: Boolean) =
-        styleChoice(chip, chip.findViewWithTag<TextView>("caption"), active, scale)
+        styleChoice(chip, chip.findViewWithTag<TextView>("caption"), active, scale, restText = Color.WHITE)
 
     private fun back(): View = backButton
     private fun activeSeasonChip(): View =
@@ -362,21 +368,23 @@ class EpisodesActivity : Activity() {
         val watched = if (editMode) pending[key] ?: EpisodeState.isWatched(this, key) else EpisodeState.isWatched(this, key)
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
-        card.setPadding(px(20), px(14), px(20), px(14))
+        // the same height and caption size as the buttons above (CHIP_HEIGHT, 16)
+        card.minimumHeight = px(CHIP_HEIGHT)
+        card.setPadding(px(20), px(8), px(20), px(8))
         // the common outlined card; a watched episode is visibly dimmer than an unseen one
         card.background = outlinedCardBackground(
             uiScale(), android.R.attr.state_selected, 12,
             fill = if (watched) 0xFF121418.toInt() else 0xFF161920.toInt(),
             line = if (watched) 0xFF1B1F2A.toInt() else 0xFF232836.toInt(),
         )
-        if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, 0)
+        if (editMode) card.addView(label(if (watched) "☑" else "☐", 20f, 0)
             .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else 0xFF94A3B8.toInt())) })
         // the season is already chosen with the season buttons: the row names only the episode
         val shown = if (currentSeason != null) episode.title.substringAfter(" • ", episode.title) else episode.title
         // on the bright plate of the selected row every text is white: the dimmed colour of a watched episode was unreadable there
-        card.addView(label(shown, 19f, 0, true).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
+        card.addView(label(shown, 16f, 0).apply { setTextColor(whiteWhenSelected(if (watched) 0xFF64748B.toInt() else Color.WHITE)) },
             LinearLayout.LayoutParams(0, -2, 1f))
-        if (watched) card.addView(label("✓", 20f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
+        if (watched) card.addView(label("✓", 16f, 0).apply { setPadding(px(4), 0, px(6), 0); setTextColor(whiteWhenSelected(Color.WHITE)) })
         val holder = object : FrameLayout(this) {
             override fun setSelected(selected: Boolean) { super.setSelected(selected); card.isSelected = selected }
         }
