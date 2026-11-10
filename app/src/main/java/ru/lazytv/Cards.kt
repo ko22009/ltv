@@ -140,6 +140,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     private val fav = TextView(context).apply {
         val size = 16f * scale
         RatingBadge.style(this, size, px(10f), px(5f))
+        height = RatingBadge.plateHeight(size, px(5f))
+        gravity = Gravity.CENTER_VERTICAL
         // the icon is as tall as the rating text, so the plate has the height of the rating plate
         val icon = PathDrawable(MenuIcons.BOOKMARK).apply {
             setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)

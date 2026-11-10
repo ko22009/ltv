@@ -2,6 +2,8 @@ package ru.lazytv
 
 import android.graphics.Color
 import android.graphics.Typeface
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.TypedValue
 import android.widget.TextView
 
@@ -24,5 +26,16 @@ object RatingBadge {
         view.setBackgroundResource(R.drawable.bg_rating_pill)
         view.setPadding(padPx, padVerticalPx, padPx, padVerticalPx)
         view.includeFontPadding = false
+    }
+
+    /** The height the rating plate gets with [style] (the line of "★ 8.6" plus the padding), for plates that must stand beside it equally tall. */
+    fun plateHeight(sizePx: Float, padVerticalPx: Int): Int {
+        val paint = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = sizePx
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val sample = "★ 8.6"
+        val layout = StaticLayout.Builder.obtain(sample, 0, sample.length, paint, 10_000).setIncludePad(false).build()
+        return layout.height + 2 * padVerticalPx
     }
 }
