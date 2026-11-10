@@ -491,8 +491,8 @@ class PlayerActivity : Activity() {
         val progressColor = Color.WHITE
         // as the season buttons of the design system: the light plate at rest, the teal of the focus under the cursor
         // as the season buttons of the design system: the light plate at rest, the dark teal of the focus under the cursor
-        // under the cursor the thumb is a black dot inside a whitish halo (the cursor colour is now light and would vanish on the bar)
-        val thumbColor = if (seek.isFocused) ON_FOCUS else ACTIVE_PLATE
+        // under the cursor the thumb is a white dot inside a whitish halo (the cursor colour is light and would vanish on the bar)
+        val thumbColor = if (seek.isFocused) Color.WHITE else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
         // the same size at rest (the plate is clear) so the bar does not shift when the focus comes
