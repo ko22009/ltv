@@ -77,6 +77,12 @@ class PlayerActivity : Activity() {
     private var resumeWhenOnline = false
     private lateinit var waitingDots: View
     private var bufferEmpty = false
+    private lateinit var pauseBadge: View
+    private fun updatePauseBadge() {
+        if (!::pauseBadge.isInitialized || !::overlay.isInitialized) return
+        val paused = player?.let { !it.playWhenReady && it.playbackState == Player.STATE_READY } == true
+        pauseBadge.visibility = if (paused && overlay.visibility != View.VISIBLE) View.VISIBLE else View.GONE
+    }
     // the dots only while nothing plays: an empty buffer or a stopped player; offline with a buffer left shows nothing
     private fun showWaiting() {
         if (!::waitingDots.isInitialized) return
@@ -153,6 +159,7 @@ class PlayerActivity : Activity() {
                 updateStreamMeta(exo)
             }
             updateSeekColors()
+            updatePauseBadge()
             handler.postDelayed(this, 500)
         }
     }
@@ -229,6 +236,15 @@ class PlayerActivity : Activity() {
         waitingDots = WaitingDots(this, dp(84))
         waitingDots.visibility = View.GONE
         root.addView(waitingDots, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
+        // on pause with the controls hidden the sign stays, so nobody takes the still picture for a freeze
+        pauseBadge = ImageView(this).apply {
+            setImageDrawable(PathDrawable(MenuIcons.PAUSE).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+            val pad = dp(24)
+            setPadding(pad, pad, pad, pad)
+            background = GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL }
+            visibility = View.GONE
+        }
+        root.addView(pauseBadge, FrameLayout.LayoutParams(dp(84), dp(84), android.view.Gravity.CENTER))
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val at = IntArray(2)
@@ -236,6 +252,7 @@ class PlayerActivity : Activity() {
             val shift = resources.displayMetrics.heightPixels / 2f - (at[1] + root.height / 2f)
             bufferSpinner.translationY = shift
             waitingDots.translationY = shift
+            pauseBadge.translationY = shift
         }
 
         val touchOverlay = PlayerTouchOverlay(
@@ -295,6 +312,7 @@ class PlayerActivity : Activity() {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (overlay.visibility == View.VISIBLE) resetHideTimer()
+                updatePauseBadge()
             }
         })
         exo.prepare()
@@ -997,6 +1015,7 @@ class PlayerActivity : Activity() {
 
     private fun setControlsVisible(visible: Boolean, focusSeek: Boolean = false) {
         overlay.visibility = if (visible) View.VISIBLE else View.GONE
+        updatePauseBadge()
         if (visible) {
             resetHideTimer()
             // a mouse click or touch puts the window in touch mode, where a view takes the focus only if it allows it:
