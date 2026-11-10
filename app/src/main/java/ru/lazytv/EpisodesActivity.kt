@@ -357,14 +357,12 @@ class EpisodesActivity : Activity() {
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
         card.setPadding(px(20), px(14), px(20), px(14))
-        card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
-            addState(intArrayOf(), GradientDrawable().apply {
-                // a watched episode is visibly dimmer than an unseen one
-                setColor(if (watched) 0x16000000 else 0x33000000)
-                cornerRadius = px(3).toFloat()
-            })
-        }
+        // the common outlined card; a watched episode is visibly dimmer than an unseen one
+        card.background = outlinedCardBackground(
+            uiScale(), android.R.attr.state_selected, 12,
+            fill = if (watched) 0xFF121418.toInt() else 0xFF161920.toInt(),
+            line = if (watched) 0xFF1F2430.toInt() else 0xFF2E3445.toInt(),
+        )
         if (editMode) card.addView(label(if (watched) "☑" else "☐", 24f, 0)
             .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) 0xFFA5B4FC.toInt() else 0xFF94A3B8.toInt())) })
         // the season is already chosen with the season buttons: the row names only the episode

@@ -385,10 +385,7 @@ class TorrentsActivity : Activity() {
         val card = LinearLayout(this)
         card.gravity = Gravity.CENTER_VERTICAL
         if (isMobileUi()) card.setPadding(px(12), px(10), px(12), px(10)) else card.setPadding(px(20), px(10), px(20), px(10))
-        card.background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = px(3).toFloat() })
-            addState(intArrayOf(), GradientDrawable().apply { setColor(0x33000000); cornerRadius = px(3).toFloat() })
-        }
+        card.background = outlinedCardBackground(uiScale(), android.R.attr.state_selected, 12)
         val texts = LinearLayout(this)
         texts.orientation = LinearLayout.VERTICAL
         texts.addView(label(main, if (isMobileUi()) 16f else 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
