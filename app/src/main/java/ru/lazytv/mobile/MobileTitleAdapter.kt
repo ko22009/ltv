@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import ru.lazytv.Cinema
+import ru.lazytv.RatingBadge
 import ru.lazytv.Title
 import ru.lazytv.Watched
 import ru.lazytv.databinding.ItemMobileTitleCardBinding
@@ -53,6 +54,12 @@ class MobileTitleAdapter(
         private val binding: ItemMobileTitleCardBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        init {
+            // the same plate as on the TV and on the poster of the title card
+            val d = binding.root.resources.displayMetrics.density
+            RatingBadge.style(binding.cardRating, 12f * d, (8 * d).toInt(), (4 * d).toInt())
+        }
+
         fun bind(title: Title) {
             binding.cardTitle.text = title.name
             val subtitle = listOfNotNull(
@@ -62,12 +69,9 @@ class MobileTitleAdapter(
             binding.cardSubtitle.text = subtitle
 
             // Rating
-            if (title.rating.isNotEmpty() && title.rating != "0.0") {
-                binding.cardRating.text = "★ ${title.rating}"
-                binding.cardRating.visibility = View.VISIBLE
-            } else {
-                binding.cardRating.visibility = View.GONE
-            }
+            val ratingLabel = RatingBadge.label(title.rating)
+            binding.cardRating.text = ratingLabel
+            binding.cardRating.visibility = if (ratingLabel != null) View.VISIBLE else View.GONE
 
             // Cinema badge
             val cinemaCaption = Cinema.caption(title.id, title.tv)

@@ -183,13 +183,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** Pending runtime fetch for this card, cancelled when the card scrolls off screen or is rebound. */
     var runtimeTask: java.util.concurrent.Future<*>? = null
 
-    /** Same size as the name and year, at the right edge of its line; hidden when TMDB has no rating. */
+    /** The rating plate in the lower right corner of the poster (the same look as everywhere); hidden when TMDB has no rating. */
     private val rating = TextView(context).apply {
-        setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
-        gravity = Gravity.END
+        RatingBadge.style(this, 16f * scale, px(9f), px(4f))
         visibility = View.GONE
-        includeFontPadding = false
     }
 
     private val info = LinearLayout(context).apply {
@@ -199,12 +196,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setPadding(px(12f), px(7f), px(12f), px(7f))
         addView(name, LayoutParams(-1, -2))
         addView(genre, LayoutParams(-1, -2).apply { topMargin = px(3f) })
-        addView(LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(year, LayoutParams(0, -2, 1f))
-            addView(rating, LayoutParams(-2, -2))
-        }, LayoutParams(-1, -2).apply { topMargin = px(3f) })
+        addView(year, LayoutParams(-1, -2).apply { topMargin = px(3f) })
     }
 
     init {
@@ -224,6 +216,10 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             addView(pick, android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)
+                rightMargin = px(10f)
+            })
+            addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
+                bottomMargin = px(10f)
                 rightMargin = px(10f)
             })
             addView(cinema, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.TOP).apply {
@@ -252,7 +248,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     // the poster and the text plate are dimmed, the card itself and the tick badge are not
     private fun dim(value: Float, animated: Boolean) {
-        for (part in listOf<View>(poster, info)) {
+        for (part in listOf<View>(poster, info, rating)) {
             if (animated) part.animate().alpha(value).setDuration(150).start() else part.alpha = value
         }
     }
@@ -300,12 +296,9 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         genre.text = title.genre
         genre.visibility = if (title.genre.isEmpty()) View.GONE else View.VISIBLE
         showYear()
-        val value = title.rating.replace(',', '.').toDoubleOrNull()
-        if (value != null && value > 0) {
-            rating.text = String.format(java.util.Locale.US, "★ %.1f", value)
-            rating.setTextColor(if (value >= 6.0) Color.WHITE else 0x99FFFFFF.toInt())
-            rating.visibility = View.VISIBLE
-        } else rating.visibility = View.GONE
+        val ratingLabel = RatingBadge.label(title.rating)
+        rating.text = ratingLabel
+        rating.visibility = if (ratingLabel != null) View.VISIBLE else View.GONE
     }
 
     /** The list answer has no runtime: it arrives later from the card details and is added to the year line. */

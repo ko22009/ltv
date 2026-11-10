@@ -105,8 +105,6 @@ class DetailsActivity : Activity() {
             "Тип" to if (intent.getBooleanExtra("tv", false)) "Сериал" else "Фильм",
             // the year stands here until the details arrive with the full date
             RELEASE to intent.getStringExtra("year").orEmpty(),
-            // on a phone the rating stands on the poster corner instead
-            "Рейтинг" to if (mobile) "" else shownRating,
         )
 
         val root = FrameLayout(this)
@@ -347,15 +345,13 @@ class DetailsActivity : Activity() {
             }
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-            // on a phone the rating sits on the poster corner, as on the cards of the lists
-            if (mobile && shownRating.isNotEmpty()) addView(TextView(this@DetailsActivity).apply {
-                text = "★ $shownRating"
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
-                setTextColor(Color.WHITE)
-                typeface = Typeface.DEFAULT_BOLD
-                setBackgroundResource(R.drawable.bg_rating_pill)
-                setPadding(dp(8), dp(3), dp(8), dp(3))
-            }, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(6); bottomMargin = dp(6) })
+            // the rating sits on the poster corner, as on the cards of the lists
+            RatingBadge.label(shownRating)?.let { label ->
+                addView(TextView(this@DetailsActivity).apply {
+                    text = label
+                    RatingBadge.style(this, m(18, 14) * scale, dp(m(10, 8)), dp(m(5, 4)))
+                }, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(m(10, 6)); bottomMargin = dp(m(10, 6)) })
+            }
             // the same label as on the cards: the film is in the cinemas now or comes soon
             val mark = Cinema.caption(currentTitle.id, currentTitle.tv)
             if (mark != null) {
@@ -660,13 +656,6 @@ class DetailsActivity : Activity() {
                     addView(cards)
                 }
                 row.addView(cardsScroll, LinearLayout.LayoutParams(0, -2, 1f))
-            } else if (caption == "Рейтинг") {
-                val ratingVal = value.replace(',', '.').toDoubleOrNull()
-                val color = if (ratingVal != null && ratingVal < 6.0) 0x99FFFFFF.toInt() else Color.WHITE
-                val ratingView = text("★ $value", 18f, color).apply {
-                    typeface = Typeface.DEFAULT_BOLD
-                }
-                row.addView(ratingView, LinearLayout.LayoutParams(0, -2, 1f))
             } else {
                 val valueView = text(value, 18f, Color.WHITE).apply {
                     if (caption in listOf(RELEASE, "Длительность", "Сезонов")) typeface = Typeface.DEFAULT_BOLD
