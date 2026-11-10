@@ -9,7 +9,7 @@
     <!-- the progress bar of the player: the halo around the focused thumb takes the colour of the focus instead of grey -->
     <style name="PlayerSeekOverlay">
         <!-- the halo round the thumb under the cursor: the light plate of the active season, like the white line, round the indigo thumb -->
-        <item name="android:colorControlHighlight">#80E2E8F0</item>
+        <item name="android:colorControlHighlight">#66E2E8F0</item>
     </style>
     <!-- the filters lie over the list as a panel: the window is transparent, the catalogue stays behind it, dimmed -->
     <style name="Theme.LazyTV.Filters" parent="@style/Theme.LazyTV">
