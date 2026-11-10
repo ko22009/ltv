@@ -51,10 +51,10 @@ class DetailsActivity : Activity() {
     private val openedAt = android.os.SystemClock.elapsedRealtime()
 
     /** The flat button of the bar under the banner: it keeps the bar's own look and fits all the buttons in one line. */
-    private fun button(icon: String, label: String, action: () -> Unit) = TextView(this).apply {
-        // on a phone all the buttons are icons, so the six fit one line
-        val iconOnly = mobile
-        text = if (iconOnly) "" else label.uppercase()
+    private fun button(icon: String, label: String, labeled: Boolean = false, action: () -> Unit) = TextView(this).apply {
+        // on a phone the bookmark is an icon tile; [labeled] buttons are the row of actions with a caption under the icon
+        val iconOnly = mobile && !labeled
+        text = if (iconOnly) "" else if (labeled) label else label.uppercase()
         contentDescription = label
         setSingleLine()
         ellipsize = android.text.TextUtils.TruncateAt.END
@@ -62,8 +62,14 @@ class DetailsActivity : Activity() {
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
         setPadding(dp(if (iconOnly) 16 else 12), 0, dp(if (iconOnly) 16 else 12), 0)
-        setCompoundDrawables(PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }, null, null, null)
-        compoundDrawablePadding = dp(if (iconOnly) 0 else 8)
+        val firstIcon = PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }
+        if (labeled) {
+            setCompoundDrawables(null, firstIcon, null, null)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
+            setPadding(0, dp(8), 0, dp(8))
+            tag = "top"
+        } else setCompoundDrawables(firstIcon, null, null, null)
+        compoundDrawablePadding = dp(if (iconOnly) 0 else if (labeled) 6 else 8)
         // a left drawable sticks to the left edge of a wide button: the padding puts the lone icon in the middle
         if (iconOnly) addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
             val pad = (((r - l) - dp(22)) / 2).coerceAtLeast(0)
@@ -74,7 +80,7 @@ class DetailsActivity : Activity() {
         background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
                 setColor(FOCUS_FILL)
-                cornerRadius = dp(if (iconOnly) 14 else 2).toFloat()
+                cornerRadius = dp(if (mobile) 14 else 2).toFloat()
             })
             // on a phone the icons are dark rounded tiles
             if (iconOnly) addState(intArrayOf(), GradientDrawable().apply {
@@ -87,7 +93,8 @@ class DetailsActivity : Activity() {
             if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
         }
         // on a phone the five icons share the width of the row evenly
-        layoutParams = if (iconOnly) LinearLayout.LayoutParams(0, dp(52), 1f).apply { rightMargin = dp(8) } else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
+        layoutParams = if (labeled) LinearLayout.LayoutParams(0, -1, 1f)
+        else if (iconOnly) LinearLayout.LayoutParams(0, dp(52), 1f).apply { rightMargin = dp(8) } else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -267,38 +274,45 @@ class DetailsActivity : Activity() {
         // filled bookmark: the title is saved in a folder; outline: it is not
         fun bookmarkIcon() = PathDrawable(if (Favorites.folderOf(this, title) != null) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER)
             .apply { setBounds(0, 0, dp(22), dp(22)) }
+        // the icon of a captioned button stands above its caption, of the others at the left
+        fun TextView.putIcon(d: Drawable) = if (tag == "top") setCompoundDrawables(null, d, null, null) else setCompoundDrawables(d, null, null, null)
         // one bookmark: the title is either in the favorites or not, no folders to choose from
         favorite = button(MenuIcons.BOOKMARK, "Закладки") {
             val saved = Favorites.folderOf(this, title) != null
             Favorites.set(this, title, if (saved) null else Folder.FAVORITES)
-            favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
+            favorite.putIcon(bookmarkIcon())
             toast(if (saved) "Убрано из закладок" else "В закладках")
         }
         favorite.nextFocusUpId = back.id
-        favorite.setCompoundDrawables(bookmarkIcon(), null, null, null)
-        bar.addView(favorite)
+        favorite.putIcon(bookmarkIcon())
+        // on a phone the bookmark stands beside the watch button, not in the row of actions
+        if (!mobile) bar.addView(favorite)
         // "watched": filled while marked; the lists show a marked title dimmed so it does not draw the eye
         lateinit var seen: TextView
         fun seenIcon() = PathDrawable(if (Watched.has(this, title)) MenuIcons.CHECK else MenuIcons.CHECK_BORDER)
             .apply { setBounds(0, 0, dp(22), dp(22)) }
-        seen = button(MenuIcons.CHECK_BORDER, "Просмотрено") {
+        seen = button(MenuIcons.CHECK_BORDER, "Просмотрено", labeled = mobile) {
             Watched.set(this, title, !Watched.has(this, title))
-            seen.setCompoundDrawables(seenIcon(), null, null, null)
+            seen.putIcon(seenIcon())
             toast(if (Watched.has(this, title)) "Отмечено просмотренным" else "Отметка снята")
         }
         seen.nextFocusUpId = back.id
-        seen.setCompoundDrawables(seenIcon(), null, null, null)
+        seen.putIcon(seenIcon())
         bar.addView(seen)
-        val torrentButton = button(MenuIcons.DOWNLOAD, "Торрент") { openTorrents(name) }.apply {
+        // thin line between the captioned actions of the phone
+        fun divider() { if (mobile) bar.addView(View(this).apply { setBackgroundColor(0x22FFFFFF) }, LinearLayout.LayoutParams(1, dp(32))) }
+        divider()
+        val torrentButton = button(MenuIcons.DOWNLOAD, if (mobile) "Скачать" else "Торрент", labeled = mobile) { openTorrents(name) }.apply {
             nextFocusUpId = back.id
             // the cursor is on the button: the torrent search starts now, not after the press
             setOnFocusChangeListener { _, has -> if (has) startTorrentSearch(name) }
         }
-        val trailerButton = button(MenuIcons.TRAILER, "Трейлер") { openTrailer(title) }.apply {
+        val trailerButton = button(MenuIcons.TRAILER, "Трейлер", labeled = mobile) { openTrailer(title) }.apply {
             (layoutParams as LinearLayout.LayoutParams).rightMargin = 0
             nextFocusUpId = back.id
         }
         bar.addView(torrentButton)
+        divider()
         bar.addView(trailerButton)
         // left and right walk the buttons of the bar: at the right end there is nothing to go to, the focus stays;
         // at the left end the key goes on to the back button as usual
@@ -378,7 +392,10 @@ class DetailsActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 addView(text(name, 24f, bold = true))
                 addView(original)
-                addView(watchSlot, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+                addView(genresLine)
+                addView(metaLine)
             }
             val head = LinearLayout(this).apply {
                 setPadding(0, dp(20), 0, 0)
@@ -386,7 +403,12 @@ class DetailsActivity : Activity() {
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
             }
             info.addView(head)
-            info.addView(bar, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(16) })
+            // the wide watch button with the square bookmark beside it, under them the row of three captioned actions
+            info.addView(LinearLayout(this).apply {
+                addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
+                addView(favorite, LinearLayout.LayoutParams(dp(52), dp(52)).apply { leftMargin = dp(10) })
+            }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+            info.addView(bar, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(12) })
         } else {
             info.addView(text(name, 34f))
         }
@@ -394,8 +416,10 @@ class DetailsActivity : Activity() {
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
         fillTable(table, baseRows)
-        if (!mobile) info.addView(original)
-        info.addView(table)
+        if (!mobile) {
+            info.addView(original)
+            info.addView(table)
+        }
 
         val rawOverview = intent.getStringExtra("overview").orEmpty()
         overviewView = text(rawOverview, 18f, 0xFFE2E8F0.toInt()).apply {
@@ -452,7 +476,12 @@ class DetailsActivity : Activity() {
             }
             } else setPadding(0, dp(8), 0, dp(8))
         }
-        info.addView(overviewView)
+        info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
+        // on a phone the description comes first, then the facts under the heading "О фильме"
+        if (mobile) {
+            info.addView(text("О фильме", 20f, bold = true), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+            info.addView(table)
+        }
 
         loadDetails(title, name, baseRows, original, table, scroll)
         if (mobile) {
@@ -478,6 +507,10 @@ class DetailsActivity : Activity() {
         setContentView(root)
         if (!mobile) watchButton.requestFocus()
     }
+
+    /** Phone only: the genres and the "year, age, length" lines to the right of the poster, filled when the details arrive. */
+    private lateinit var genresLine: TextView
+    private lateinit var metaLine: TextView
 
     private var bannerSpinnerTask: Runnable? = null
 
@@ -531,6 +564,11 @@ class DetailsActivity : Activity() {
         }
         if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
+        if (mobile) {
+            genresLine.text = d.genres.joinToString(", ")
+            val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
+            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ")
+        }
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
         // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
         val rows = baseRows.flatMap { (caption, value) ->
