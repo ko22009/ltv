@@ -11,11 +11,13 @@ class LazyApp : Application() {
     companion object {
         /** Resources of the app for the colours that the XML styles share with the code (see colors.xml). */
         lateinit var res: android.content.res.Resources
+        lateinit var app: Application
     }
 
     override fun onCreate() {
         super.onCreate()
         res = resources
+        app = this
         // the screen behind the cursor is remembered to come back to it after an update (docs/workflow.md)
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {

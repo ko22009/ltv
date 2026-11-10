@@ -20,7 +20,8 @@ fun outlinedCardBackground(
     val width = maxOf(1, dp(1))
     return StateListDrawable().apply {
         addState(intArrayOf(state), GradientDrawable().apply {
-            setColor(FOCUS_FILL); cornerRadius = dp(radius).toFloat(); setStroke(width, FOCUS_FILL)
+            val cursor = cursorFill(LazyApp.app)
+            setColor(cursor); cornerRadius = dp(radius).toFloat(); setStroke(width, cursor)
         })
         addState(intArrayOf(), GradientDrawable().apply {
             setColor(fill); cornerRadius = dp(radius).toFloat(); if (outline) setStroke(width, line)

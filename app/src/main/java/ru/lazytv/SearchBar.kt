@@ -28,7 +28,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 /** Flat or round background that turns teal while the view has focus. */
-fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = FOCUS_FILL) = StateListDrawable().apply {
+fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = cursorFill(LazyApp.app)) = StateListDrawable().apply {
     fun shape(color: Int) = GradientDrawable().apply {
         setColor(color)
         if (circle) this.shape = GradientDrawable.OVAL else cornerRadius = radius * scale
