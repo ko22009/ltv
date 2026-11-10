@@ -54,6 +54,8 @@ class PlayerTouchOverlay(
     private val hideIndicatorRunnable: Runnable
 
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
+    /** One distance from the side edge for the seek bubbles and the brightness / volume sign: 15% of the screen width. */
+    private val sideInset = (resources.displayMetrics.widthPixels * 0.15f).toInt()
     private var downX = 0f
     private var downY = 0f
     private var dragMode = DRAG_NONE
@@ -90,18 +92,17 @@ class PlayerTouchOverlay(
         track.addView(dragFill, LayoutParams(-1, 0, Gravity.BOTTOM))
         dragSign.addView(track, LinearLayout.LayoutParams(dp(6), barHeight))
         addView(dragSign, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START).apply {
-            marginStart = dp(56)
+            marginStart = sideInset
         })
 
         // Double-tap seek bubbles (-10s / +10s): about 15% of the screen from the edge, so the bubble sits near the middle of its tap zone
-        val bubbleInset = (resources.displayMetrics.widthPixels * 0.15f).toInt()
         seekBubbleLeft = createSeekBubble("-10 сек")
         seekBubbleRight = createSeekBubble("+10 сек")
         addView(seekBubbleLeft, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START).apply {
-            marginStart = bubbleInset
+            marginStart = sideInset
         })
         addView(seekBubbleRight, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END).apply {
-            marginEnd = bubbleInset
+            marginEnd = sideInset
         })
 
         // the big play / pause sign that flashes in the middle after a double tap
@@ -204,8 +205,8 @@ class PlayerTouchOverlay(
         (dragSign.layoutParams as LayoutParams).apply {
             gravity = Gravity.CENTER_VERTICAL or (if (dragMode == DRAG_BRIGHTNESS) Gravity.START else Gravity.END)
             // left/right margins, not start/end: start/end changed on live params are not resolved again and the right one got lost
-            leftMargin = if (dragMode == DRAG_BRIGHTNESS) dp(80) else 0
-            rightMargin = if (dragMode == DRAG_VOLUME) dp(80) else 0
+            leftMargin = if (dragMode == DRAG_BRIGHTNESS) sideInset else 0
+            rightMargin = if (dragMode == DRAG_VOLUME) sideInset else 0
             marginStart = leftMargin
             marginEnd = rightMargin
         }
