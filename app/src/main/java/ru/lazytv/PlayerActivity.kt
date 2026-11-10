@@ -391,21 +391,10 @@ class PlayerActivity : Activity() {
 
     private fun updateSeekColors() {
         if (!::seek.isInitialized) return
-        val exo = player
-        val isBuffering = exo?.playbackState == Player.STATE_BUFFERING
-        val isSeeking = userSeeking
-        val isPending = isBuffering || isSeeking
-        val progressColor = when {
-            isPending -> 0xFF64748B.toInt()
-            // the same vivid indigo focused or not: the pale shade it had under the cursor is gone
-            else -> 0xFF6366F1.toInt()
-        }
-        val thumbColor = when {
-            isPending -> 0xFF94A3B8.toInt()
-            // theme colours only: the dark indigo of the focus under the cursor, the vivid indigo of the track at rest
-            seek.isFocused -> FOCUS_FILL
-            else -> 0xFF6366F1.toInt()
-        }
+        // theme indigo in every state (the grey of buffering and seeking is gone): the vivid indigo of the track,
+        // the dark indigo of the focus under the cursor
+        val progressColor = 0xFF6366F1.toInt()
+        val thumbColor = if (seek.isFocused) FOCUS_FILL else 0xFF6366F1.toInt()
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
         seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x4464748B.toInt())
