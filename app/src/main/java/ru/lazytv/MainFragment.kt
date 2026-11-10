@@ -66,10 +66,6 @@ class MainFragment : Fragment() {
 
     private val pages = HashMap<String, ArrayObjectAdapter>()
     private var shown = ""
-    /** Adapter of the page that changes when a title or episode is bookmarked. */
-    private var favoritesRows: ArrayObjectAdapter? = null
-    private var favoritesSignature = ""
-    private var torrentsSignature = ""
     private var watchedMarks = ""
 
     private var currentPage = ""
@@ -242,7 +238,6 @@ class MainFragment : Fragment() {
 
     private fun rebuildNavRail() {
         pages.clear()
-        favoritesRows = null
         val tx = childFragmentManager.beginTransaction()
         childFragmentManager.fragments.forEach { tx.remove(it) }
         tx.commitAllowingStateLoss()
@@ -275,6 +270,7 @@ class MainFragment : Fragment() {
         // on a cold start the system has already put the focus on the first button by then
         val catalog = childFragmentManager.findFragmentByTag(currentPage) as? CatalogPageFragment
         if (catalog != null && catalog.focusFirstCard()) return
+        if ((childFragmentManager.findFragmentByTag(currentPage) as? FavoritesPageFragment)?.focusFirst() == true) return
         if (contentContainer.findFocus() != null) return
         if (currentPage == SEARCH_HEADER) {
             val mic = searchPage?.micView
@@ -491,9 +487,6 @@ class MainFragment : Fragment() {
         Tmdb.visibleCategories(ctx).joinToString(",") { it.id } + "|" +
             Settings.string(ctx, Settings.LANGUAGE, "ru-RU")
 
-    private fun favoritesState(ctx: Context): String =
-        Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx)
-
     private var clockDialog: android.app.AlertDialog? = null
 
     /**
@@ -547,18 +540,6 @@ class MainFragment : Fragment() {
         if (shown != menuSignature(ctx)) {
             rebuildNavRail()
             return
-        }
-        val favNow = favoritesState(ctx)
-        if (favNow != favoritesSignature) {
-            favoritesSignature = favNow
-            favoritesRows?.let { rows ->
-                fillFavorites(rows, ctx)
-            }
-        }
-        val torNow = Settings.string(ctx, "favorite_torrents", "[]")
-        if (torNow != torrentsSignature) {
-            torrentsSignature = torNow
-            favoritesRows?.let { fillFavorites(it, ctx) }
         }
         val marks = Watched.revision(ctx)
         if (marks != watchedMarks) {
@@ -620,51 +601,13 @@ class MainFragment : Fragment() {
         // no dimming of the rows without focus: the overlay is a plain rectangle and spoils the rounded corners of the cards
         val rows = ArrayObjectAdapter(pageRows(dimOthers = false))
         val ctx = requireContext()
-        when (name) {
-            FAVORITES -> {
-                favoritesRows = rows
-                favoritesSignature = favoritesState(ctx)
-                fillFavorites(rows, ctx)
-            }
-            else -> Unit
-        }
         rows
-    }
-
-    private fun fillFavorites(rows: ArrayObjectAdapter, ctx: Context) {
-        rows.clear()
-        torrentsSignature = Settings.string(ctx, "favorite_torrents", "[]")
-        val saved = Favorites.all(ctx)
-        val savedCards = ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }
-        if (saved.isNotEmpty()) rows.add(ListRow(savedCards))
-        // a bookmark without a poster asks TMDB for it once; the cards are replaced one by one, so the focus stays where it is
-        if (saved.any { it.poster == null }) {
-            val app = ctx.applicationContext
-            Thread {
-                val fixed = Favorites.withPosters(app, saved)
-                activity?.runOnUiThread {
-                    if (isAdded && fixed != saved && savedCards.size() == fixed.size) {
-                        fixed.forEachIndexed { i, t -> if (savedCards.get(i) != t) savedCards.replace(i, t) }
-                    }
-                }
-            }.start()
-        }
-        val episodes = EpisodeState.favorites(ctx)
-        if (episodes.isNotEmpty()) {
-            rows.add(ListRow(HeaderItem("Избранные серии"), ArrayObjectAdapter(FavoriteEpisodePresenter()).apply {
-                addAll(0, episodes)
-            }))
-        }
-        val favTorrents = FavoriteTorrents.all(ctx)
-        if (favTorrents.isNotEmpty()) {
-            rows.add(ListRow(HeaderItem("Избранные раздачи"), ArrayObjectAdapter(TorrentCardPresenter()).apply { addAll(0, favTorrents) }))
-        }
-        if (rows.size() == 0) rows.add(PageNoteRow("Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"))
     }
 
     private fun createPageFragment(name: String): Fragment {
         if (name == SEARCH_HEADER) return SearchPageFragment().also { searchPage = it }
         if (name == SETTINGS) return SettingsPageFragment()
+        if (name == FAVORITES) return FavoritesPageFragment()
         val category = Tmdb.visibleCategories(requireContext()).firstOrNull { it.title.uppercase() == name }
         if (category != null) {
             return CatalogPageFragment().apply {
