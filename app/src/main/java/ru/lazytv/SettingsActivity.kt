@@ -308,8 +308,8 @@ open class SettingsScreen : Fragment() {
                     isFocusable = false
                     val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
                     // neutral greys: the switch does not take the blue of the page
-                    trackTintList = android.content.res.ColorStateList(states, intArrayOf(0xFF6B7280.toInt(), 0xFF3A3D42.toInt()))
-                    thumbTintList = android.content.res.ColorStateList(states, intArrayOf(0xFFFFFFFF.toInt(), 0xFFB4B7BC.toInt()))
+                    trackTintList = android.content.res.ColorStateList(states, intArrayOf(SWITCH_TRACK_ON, SWITCH_TRACK_OFF))
+                    thumbTintList = android.content.res.ColorStateList(states, intArrayOf(Color.WHITE, SWITCH_THUMB_OFF))
                 }
                 row.toggle = toggle
                 addView(toggle, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })

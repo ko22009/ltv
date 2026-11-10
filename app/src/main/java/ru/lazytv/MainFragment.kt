@@ -760,7 +760,7 @@ class FavoriteEpisodePresenter : Presenter() {
         val episode = TextView(parent.context).apply {
             setTextColor(TEXT_SECONDARY); textSize = 13f; maxLines = 2; setPadding(0, dp(8), 0, 0)
         }
-        val mark = TextView(parent.context).apply { setTextColor(0xFFE0B94F.toInt()); textSize = 13f }
+        val mark = TextView(parent.context).apply { setTextColor(RATING_GOLD); textSize = 13f }
         texts.addView(series)
         texts.addView(episode)
         texts.addView(mark)

@@ -84,6 +84,15 @@ const val WATCH_PLATE = 0xFF272C36.toInt()
 const val PLACEHOLDER_FROM = 0xFF283048.toInt()
 const val PLACEHOLDER_TO = 0xFF181D2A.toInt()
 
+/** One-off roles: the dim scrim over the banner picture, the neutral grey switch (no teal), the red of the stop-listening microphone, the gold mark. */
+const val OVERLAY_SCRIM = 0x40000000
+const val SWITCH_TRACK_ON = 0xFF6B7280.toInt()
+const val SWITCH_TRACK_OFF = 0xFF3A3D42.toInt()
+const val SWITCH_THUMB_OFF = 0xFFB4B7BC.toInt()
+const val DANGER_FILL = 0xFFC62828.toInt()
+const val DANGER_FOCUS = 0xFFE53935.toInt()
+const val RATING_GOLD = 0xFFE0B94F.toInt()
+
 /** The muted grey of captions and inactive icons. */
 val TEXT_MUTED: Int get() = LazyApp.res.getColor(R.color.text_muted, null)
 

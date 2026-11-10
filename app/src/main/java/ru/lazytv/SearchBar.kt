@@ -93,7 +93,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
             intArrayOf(0xCCFFFFFF.toInt(), TEXT_DIM)
         ))
-        input.setTextColor(0xFFF1F5F9.toInt())
+        input.setTextColor(TEXT_LIGHT)
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
         input.setPadding(px(16), 0, px(16), 0)
@@ -290,7 +290,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
 
     private fun updateMicVisuals(isListening: Boolean) {
         if (isListening) {
-            mic.background = focusShape(scale, 0xFFC62828.toInt(), circle = true, focused = 0xFFE53935.toInt())
+            mic.background = focusShape(scale, DANGER_FILL, circle = true, focused = DANGER_FOCUS)
             micIcon.colorFilter = PorterDuffColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
             pulseAnimator?.cancel()
             pulseAnimator = ObjectAnimator.ofFloat(micIcon, "scaleX", 1f, 1.22f).apply {
