@@ -403,8 +403,8 @@ class PlayerActivity : Activity() {
         // the same size at rest (the plate is clear) so the bar does not shift when the focus comes
         val halo = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
-            if (seek.isFocused) {
-                // the light plate of the active season at 40%
+            // the halo is off for now (the owner wants to see the thumb without it); on: the light plate at 40%
+            if (SEEK_HALO && seek.isFocused) {
                 setColor(0x66E2E8F0)
             } else setColor(Color.TRANSPARENT)
         }
@@ -1173,3 +1173,6 @@ class PlayerActivity : Activity() {
         finish()
     }
 }
+
+/** Whether the thumb of the player shows a plate round it under the cursor. */
+private const val SEEK_HALO = false
