@@ -349,6 +349,12 @@ class DetailsActivity : Activity() {
             }
             addView(posterView, FrameLayout.LayoutParams(-1, -1))
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
+            // on a phone a magnifier in the upper right corner tells that a tap enlarges the poster
+            if (mobile) addView(ImageView(this@DetailsActivity).apply {
+                setImageDrawable(PathDrawable(MenuIcons.SEARCH_ICON).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+                setPadding(dp(6), dp(6), dp(6), dp(6))
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0x99000000.toInt()) }
+            }, FrameLayout.LayoutParams(dp(30), dp(30), Gravity.END or Gravity.TOP).apply { topMargin = dp(6); rightMargin = dp(6) })
             // the rating sits on the poster corner, as on the cards of the lists
             RatingBadge.label(shownRating)?.let { label ->
                 addView(TextView(this@DetailsActivity).apply {
