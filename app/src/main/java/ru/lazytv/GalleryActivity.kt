@@ -155,12 +155,14 @@ class GalleryActivity : Activity() {
         headerVisible = false
         val side = dp(16)
         val width = resources.displayMetrics.widthPixels - 2 * side
-        // the gallery lies over the card as a dimmed layer: a tap beside the frame closes it; the frame keeps its own shape
+        // the gallery lies over the card as a dimmed layer; the frame keeps its own shape
         root.background = android.graphics.drawable.ColorDrawable(0xF0101216.toInt())
-        root.setOnClickListener { finish() }
+        // a tap anywhere (on the frame or beside it) shows the next picture, after the last one the first; the cross closes
+        val nextPicture = { if (backdrops.size > 1) showImage((selectedIndex + 1) % backdrops.size) }
+        root.setOnClickListener { nextPicture() }
         mainImage.scaleType = ImageView.ScaleType.FIT_CENTER
         mainImage.adjustViewBounds = true
-        mainImage.setOnClickListener { }
+        mainImage.setOnClickListener { nextPicture() }
         mainImage.outlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(view: View, outline: android.graphics.Outline) {
                 outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
