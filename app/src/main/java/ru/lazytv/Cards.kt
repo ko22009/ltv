@@ -163,16 +163,16 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         includeFontPadding = false
     }
 
-    /** "2008 · 2 ч 32 мин": the last line of the plate under the poster, grey; off the poster, so it never fights with the picture. */
+    /** "2008 · 2 ч 32 мин": the last line of the plate under the poster, white; off the poster, so it never fights with the picture. */
     private val year = TextView(context).apply {
-        setTextColor(0xFF94A3B8.toInt())
+        setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         maxLines = 1
         includeFontPadding = false
     }
 
     private val genre = TextView(context).apply {
-        setTextColor(0xFFCBD5E1.toInt())
+        setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
