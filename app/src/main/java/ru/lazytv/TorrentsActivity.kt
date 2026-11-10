@@ -597,10 +597,10 @@ class TorrentsActivity : Activity() {
         }
 
         fun update(s: TorrentStat) {
-            // two short lines, none wraps and the card keeps its height: peers and seeds, then the speed and the size together
+            // two short lines, none wraps and the card keeps its height: peers and seeds, then the size and the speed together
             info.text = "Пиры ${s.activePeers}/${s.totalPeers}   Сиды ${s.seeders}\n" +
-                "Скорость ${"%.1f".format(s.speed * 8 / 1_000_000)} Мбит/с" +
-                (if (s.size > 0) "   Размер ${"%.1f".format(s.size / 1_073_741_824.0)} ГБ" else "")
+                (if (s.size > 0) "Размер ${"%.1f".format(s.size / 1_073_741_824.0)} ГБ   " else "") +
+                "Скорость ${"%.1f".format(s.speed * 8 / 1_000_000)} Мбит/с"
             if (s.preloadSize > 0) {
                 val percent = s.preloaded * 100.0 / s.preloadSize
                 buffer.text = "Буфер ${"%.1f".format(percent)}% ${"%.1f".format(s.preloaded / 1_048_576.0)} МБ/${s.preloadSize / 1_048_576} МБ"
