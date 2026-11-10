@@ -346,6 +346,8 @@ fun formatRuntime(minutes: Int): String = when {
 private const val GRID_EDGE_SIDE = 20
 /** The grid's top padding: the room the enlarged card grows into above the first row. */
 private const val GRID_EDGE_TOP = 14
+/** The grid's bottom padding: the focused card of the last visible row grows down into it (the card grows by 14%, about 24 dp at its height), so the page does not cut it. */
+private const val GRID_EDGE_BOTTOM = 28
 /** The grid starts this much below the header, so a scrolling list is cut with a gap instead of sticking to it. */
 private const val GRID_TOP_GAP = 14
 
@@ -410,7 +412,7 @@ fun titleCardGrid(context: Context, scale: Float, list: ItemList, columns: Int, 
         }
     }.apply {
         id = View.generateViewId()
-        setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (16 * scale).toInt())
+        setPadding(side, (GRID_EDGE_TOP * scale).toInt(), side, (GRID_EDGE_BOTTOM * scale).toInt())
         // the focused card grows into the padding: clipping it there would cut the enlarged card at the page's edge
         clipToPadding = false
         clipChildren = false
