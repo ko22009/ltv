@@ -234,7 +234,7 @@ class DetailsActivity : Activity() {
         }
         watchButton.nextFocusUpId = back.id
         watchButton.nextFocusLeftId = back.id
-        watchSpinner = Spinner(this, dp(24), Color.WHITE).apply {
+        watchSpinner = Spinner(this, dp(24)).apply {
             visibility = View.GONE
             isFocusable = false
             isClickable = false
