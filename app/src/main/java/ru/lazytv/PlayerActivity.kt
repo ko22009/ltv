@@ -399,7 +399,25 @@ class PlayerActivity : Activity() {
         // as the season buttons of the design system: the light plate at rest, the dark indigo of the focus under the cursor
         val thumbColor = if (seek.isFocused) FOCUS_FILL else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
-        seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
+        // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
+        // the same size at rest (the plate is clear) so the bar does not shift when the focus comes
+        val halo = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            if (seek.isFocused) {
+                setColor(0x8C101216.toInt())
+                setStroke(dp(2).coerceAtLeast(1), ACTIVE_PLATE)
+            } else setColor(Color.TRANSPARENT)
+        }
+        val dot = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(thumbColor)
+        }
+        seek.thumbTintList = null
+        seek.thumb = android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
+            setLayerSize(0, dp(40), dp(40))
+            setLayerSize(1, dp(18), dp(18))
+            setLayerGravity(1, android.view.Gravity.CENTER)
+        }
         seek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66FFFFFF)
         seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt())
     }
