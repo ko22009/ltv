@@ -95,7 +95,7 @@ class SettingsActivity : FragmentActivity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(px(22), px(14), px(22), px(14))
-                background = focusShape(scale, 0x33000000, radius = 6f)
+                background = textTilePlate(scale)
                 isFocusable = true
                 addView(TextView(this@SettingsActivity).apply {
                     text = topicTitle
@@ -137,7 +137,8 @@ class SettingsActivity : FragmentActivity() {
             cardsList.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(10) })
         }
         scroll.addView(cardsList)
-        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        // air between the back button row and the first card
+        page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = px(20) })
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         back.setOnKeyListener { _, code, event ->
