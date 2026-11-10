@@ -519,4 +519,4 @@ object Tmdb {
 }
 
 /** TMDB sends `null` for missing fields: `optString` would turn it into the text "null" (a "null" poster path, "null • null"). */
-private fun JSONObject.str(name: String): String = if (isNull(name)) "" else optString(name)
+internal fun JSONObject.str(name: String): String = if (isNull(name)) "" else optString(name)

@@ -945,7 +945,7 @@ class FavoriteEpisodePresenter : Presenter() {
         val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(190))
+        tile.layoutParams = ViewGroup.LayoutParams(dp(280), dp(150))
         tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
@@ -985,7 +985,7 @@ class TorrentCardPresenter : Presenter() {
         val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(180))
+        tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(150))
         tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
@@ -1083,6 +1083,8 @@ class TitledRowsFragment : RowsSupportFragment() {
         super.onViewCreated(view, savedInstanceState)
         adapter?.registerObserver(noteWatcher)
         showNote()
+        // rows that fit on the screen stay still when the focus goes from one row to another (no row captions jumping)
+        verticalGridView?.focusScrollStrategy = androidx.leanback.widget.BaseGridView.FOCUS_SCROLL_PAGE
 
         val scale = resources.displayMetrics.widthPixels / 1280f
         val compact = requireArguments().getBoolean("compact")

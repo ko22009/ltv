@@ -186,7 +186,7 @@ object ExtraTorrents {
         if (json.isEmpty()) return emptyList()
         val array = JSONArray(json.replace("\\\"", "\""))
         return (0 until array.length()).map { array.getJSONObject(it) }.map { o ->
-            val label = listOf(o.optString("qualityLabel"), o.optString("translation")).filter { it.isNotEmpty() }.joinToString(", ")
+            val label = listOf(o.str("qualityLabel"), o.str("translation")).filter { it.isNotEmpty() }.joinToString(", ")
             Torrent("$name, $label", o.optString("size").replace("ГБ", "GB").replace("МБ", "MB").replace(',', '.'),
                 o.optInt("seeds"), o.optInt("peers"), "${tk()}/api/sources/${o.optLong("id")}", "TorrentKino")
         }

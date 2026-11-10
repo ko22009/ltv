@@ -12,7 +12,7 @@ object FavoriteTorrents {
         val array = runCatching { JSONArray(Settings.string(context, KEY, "[]")) }.getOrDefault(JSONArray())
         return (0 until array.length()).map { array.getJSONObject(it) }.map {
             // records saved before the separator became a comma still carry " • "
-            Torrent(it.optString("title").replace(" • ", ", "),it.optString("size"), it.optInt("seeds"), it.optInt("leeches"), it.optString("magnet"), it.optString("source"))
+            Torrent(it.optString("title").replace(" • ", ", ").removeSuffix(", null"),it.optString("size"), it.optInt("seeds"), it.optInt("leeches"), it.optString("magnet"), it.optString("source"))
         }
     }
 
