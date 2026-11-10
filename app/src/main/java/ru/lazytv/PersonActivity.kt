@@ -166,7 +166,7 @@ class PersonActivity : Activity() {
             val image = ImageView(this@PersonActivity).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
             addView(image, FrameLayout.LayoutParams(-1, -1))
             if (!person.photo.isNullOrEmpty()) {
-                val photoSpinner = Spinner(this@PersonActivity, px(32))
+                val photoSpinner = Spinner(this@PersonActivity, px(SPINNER_CARD))
                 addView(photoSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
                 Glide.with(image).load("https://image.tmdb.org/t/p/w342${person.photo}")
                     .transition(DrawableTransitionOptions.withCrossFade())

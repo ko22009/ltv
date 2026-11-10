@@ -58,7 +58,7 @@ class MobileTitleAdapter(
             // the same plate as on the TV and on the poster of the title card
             val d = binding.root.resources.displayMetrics.density
             RatingBadge.style(binding.cardRating, 12f * d, (8 * d).toInt(), (4 * d).toInt())
-            binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (36 * d).toInt()))
+            binding.cardSpinnerHolder.addView(ru.lazytv.Spinner(binding.root.context, (ru.lazytv.SPINNER_CARD * d).toInt()))
         }
 
         fun bind(title: Title) {

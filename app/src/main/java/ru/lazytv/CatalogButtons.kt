@@ -53,6 +53,12 @@ fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_C
 /** The one dark plate of cards and tiles: the text strip of a title card, the "show all" tile, the text tile. */
 val PLATE_FILL = 0xFF1C2029.toInt()
 
+/** The darker plate of a page block (the banner, the bar of buttons, the cast cards, the left menu) and the colours of a watched episode. */
+val BACKDROP_PLATE = 0xFF161920.toInt()
+val PLATE_LINE = 0xFF232836.toInt()
+val PLATE_WATCHED = 0xFF121418.toInt()
+val PLATE_WATCHED_LINE = 0xFF1B1F2A.toInt()
+
 /** The plate of the chosen item among equals (the open season, the playing episode, the picked source, the current choice in a list). */
 const val ACTIVE_PLATE = 0xFFE2E8F0.toInt()
 /** The caption on [ACTIVE_PLATE]: the colour of the page. */
@@ -63,7 +69,7 @@ const val ACTIVE_TEXT = 0xFF101216.toInt()
  * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the teal [FOCUS_FILL]
  * with a white caption. [text] is the caption view (the item itself or its child); the chip takes the focus, the caption follows it.
  */
-fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = 0xFF1C2029.toInt(), restText: Int = 0xFF94A3B8.toInt()) {
+fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = PLATE_FILL, restText: Int = 0xFF94A3B8.toInt()) {
     val corner = radius * scale
     view.background = android.graphics.drawable.StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply { setColor(cursorFill(view.context)); cornerRadius = corner })
@@ -94,7 +100,7 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         isFocusable = !context.isMobileUi()
         isFocusableInTouchMode = !context.isMobileUi()
         isClickable = true
-        background = focusShape(scale, 0xFF1C2029.toInt(), radius = 6f)
+        background = focusShape(scale, PLATE_FILL, radius = 6f)
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {

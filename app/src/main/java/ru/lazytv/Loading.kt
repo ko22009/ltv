@@ -13,6 +13,12 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
+/** Spinner sizes (dp): inside a button or a field, on a card, over a picture (poster, banner, gallery), over a whole screen. */
+const val SPINNER_INLINE = 24
+const val SPINNER_CARD = 36
+const val SPINNER_IMAGE = 44
+const val SPINNER_SCREEN = 64
+
 /** Rotating arc: the preloader of lists, the card and the torrent screens. */
 class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFFFFFFFF.toInt()) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -59,7 +65,7 @@ class LoadingView(context: Context, scale: Float, caption: String = "Загру�
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        addView(Spinner(context, (72 * scale).toInt()))
+        addView(Spinner(context, (SPINNER_SCREEN * scale).toInt()))
         label.text = caption
         label.gravity = Gravity.CENTER
         label.setTextColor(0xFFCBD5E1.toInt())

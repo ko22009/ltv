@@ -108,7 +108,7 @@ class MainFragment : Fragment() {
         rootLayout.addView(contentContainer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val railPanel = FrameLayout(ctx).apply {
-            setBackgroundColor(0xFF161920.toInt())
+            setBackgroundColor(BACKDROP_PLATE)
         }
 
         val railScroll = object : ScrollView(ctx) {

@@ -374,8 +374,8 @@ class EpisodesActivity : Activity() {
         // the common outlined card; a watched episode is visibly dimmer than an unseen one
         card.background = outlinedCardBackground(
             uiScale(), android.R.attr.state_selected, 12,
-            fill = if (watched) 0xFF121418.toInt() else 0xFF161920.toInt(),
-            line = if (watched) 0xFF1B1F2A.toInt() else 0xFF232836.toInt(),
+            fill = if (watched) PLATE_WATCHED else BACKDROP_PLATE,
+            line = if (watched) PLATE_WATCHED_LINE else PLATE_LINE,
         )
         if (editMode) card.addView(label(if (watched) "☑" else "☐", 20f, 0)
             .apply { setPadding(0, 0, px(14), 0); setTextColor(whiteWhenSelected(if (watched) Color.WHITE else 0xFF94A3B8.toInt())) })

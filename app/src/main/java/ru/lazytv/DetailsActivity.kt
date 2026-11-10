@@ -89,7 +89,7 @@ class DetailsActivity : Activity() {
             })
             // on a phone the icons are dark rounded tiles
             if (iconOnly) addState(intArrayOf(), GradientDrawable().apply {
-                setColor(0xFF1C2029.toInt())
+                setColor(PLATE_FILL)
                 cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat()
             })
         }
@@ -129,7 +129,7 @@ class DetailsActivity : Activity() {
 
         // a calm dark band; the frame of the film (TMDB backdrop) fades in under a dark veil once it is known
         val banner = FrameLayout(this)
-        banner.setBackgroundColor(0xFF161920.toInt())
+        banner.setBackgroundColor(BACKDROP_PLATE)
         // the stub stands under the frame from the start: the spinner turns on it, and the frame fades in over it
         banner.addView(ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageResource(R.drawable.no_backdrop) },
             FrameLayout.LayoutParams(-1, -1))
@@ -137,7 +137,7 @@ class DetailsActivity : Activity() {
         banner.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
         // a light dim on the frame: the white logo and the buttons stay readable on a bright still
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
-        bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
+        bannerSpinner = Spinner(this, dp(SPINNER_IMAGE)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         if (mobile) {
             // on a phone the banner is a rounded card under the back button: a gallery icon in the middle,
@@ -214,7 +214,7 @@ class DetailsActivity : Activity() {
         })
 
         val bar = LinearLayout(this)
-        if (!mobile) bar.setBackgroundColor(0xFF161920.toInt())
+        if (!mobile) bar.setBackgroundColor(BACKDROP_PLATE)
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(m(389, 0)), 0, dp(m(24, 0)), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
@@ -239,7 +239,7 @@ class DetailsActivity : Activity() {
         }
         watchButton.nextFocusUpId = back.id
         watchButton.nextFocusLeftId = back.id
-        watchSpinner = Spinner(this, dp(24)).apply {
+        watchSpinner = Spinner(this, dp(SPINNER_INLINE)).apply {
             visibility = View.GONE
             isFocusable = false
             isClickable = false
@@ -353,8 +353,8 @@ class DetailsActivity : Activity() {
 
         posterView = ImageView(this)
         posterView.scaleType = ImageView.ScaleType.CENTER_CROP
-        posterView.setBackgroundColor(0xFF1C2029.toInt())
-        posterSpinner = Spinner(this, dp(40))
+        posterView.setBackgroundColor(PLATE_FILL)
+        posterSpinner = Spinner(this, dp(SPINNER_IMAGE))
         posterView.showPoster(posterPath, posterSpinner)
         val posterBox = FrameLayout(this).apply {
             // a tap enlarges the poster in the gallery layer; the TV poster is not focusable, so only the phone uses it
@@ -840,7 +840,7 @@ class DetailsActivity : Activity() {
                             background = StateListDrawable().apply {
                                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() })
                                 addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() })
-                                addState(intArrayOf(), GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() })
+                                addState(intArrayOf(), GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() })
                             }
                             typeface = Typeface.DEFAULT
                             minimumHeight = dp(44)

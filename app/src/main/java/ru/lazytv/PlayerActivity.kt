@@ -209,7 +209,7 @@ class PlayerActivity : Activity() {
         // the buffering circle is the app's own spinner (the same as on the card and in the lists), not the default blue one of the player
         view.setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
         root.addView(view, FrameLayout.LayoutParams(-1, -1))
-        bufferSpinner = Spinner(this, dp(64))
+        bufferSpinner = Spinner(this, dp(SPINNER_SCREEN))
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->

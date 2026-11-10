@@ -45,7 +45,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     val mic = LinearLayout(activity)
     val input = EditText(activity)
     private val micIcon = ImageView(activity)
-    private val spinner = Spinner(activity, (24 * scale).toInt()).apply {
+    private val spinner = Spinner(activity, (SPINNER_INLINE * scale).toInt()).apply {
         visibility = View.GONE
         isFocusable = false
         isClickable = false
@@ -75,7 +75,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.gravity = Gravity.CENTER
         mic.isFocusable = true
         mic.isClickable = true
-        mic.background = focusShape(scale, 0xFF1C2029.toInt(), circle = true)
+        mic.background = focusShape(scale, PLATE_FILL, circle = true)
         micIcon.setImageDrawable(PathDrawable(MenuIcons.MIC).apply { colorFilter = PorterDuffColorFilter(0xFFCBD5E1.toInt(), PorterDuff.Mode.SRC_IN) })
         mic.addView(micIcon, LayoutParams(px(30), px(30)))
         mic.setOnClickListener {
@@ -307,7 +307,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
             micIcon.scaleY = 1f
             mic.scaleX = 1f
             mic.scaleY = 1f
-            mic.background = focusShape(scale, 0xFF1C2029.toInt(), circle = true)
+            mic.background = focusShape(scale, PLATE_FILL, circle = true)
             micIcon.colorFilter = PorterDuffColorFilter(0xFFCBD5E1.toInt(), PorterDuff.Mode.SRC_IN)
         }
     }

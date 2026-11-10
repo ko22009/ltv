@@ -50,7 +50,7 @@ class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = TIT
             bottomMargin = (12 * scale).toInt()
         }
         background = GradientDrawable().apply {
-            setColor(0xFF1C2029.toInt())
+            setColor(PLATE_FILL)
             cornerRadius = TITLE_CARD_RADIUS * scale
         }
         // the same heights as the poster and the text plate of a real card
@@ -92,11 +92,11 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     val poster = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
         // a title without a poster shows the dark surface, not a hole that looks like a failed load
-        setBackgroundColor(0xFF1C2029.toInt())
+        setBackgroundColor(PLATE_FILL)
     }
 
     /** Shown over the poster while it loads (only when the poster is not in the cache, so a cached one never flashes it). */
-    private val posterSpinner = Spinner(context, px(36f)).apply {
+    private val posterSpinner = Spinner(context, px(SPINNER_CARD.toFloat())).apply {
         visibility = View.GONE
         isFocusable = false
         isClickable = false
@@ -234,7 +234,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         addView(info, LayoutParams(-1, px(TITLE_INFO_HEIGHT)))
         // a solid background gives the card an outline, so the focus shadow below has a shape to be cast from
         background = GradientDrawable().apply {
-            setColor(0xFF1C2029.toInt())
+            setColor(PLATE_FILL)
             cornerRadius = px(TITLE_CARD_RADIUS).toFloat()
         }
         clipToOutline = true

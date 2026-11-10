@@ -12,8 +12,8 @@ fun outlinedCardBackground(
     scale: Float,
     state: Int = android.R.attr.state_focused,
     radius: Int = 14,
-    fill: Int = 0xFF161920.toInt(),
-    line: Int = 0xFF232836.toInt(),
+    fill: Int = BACKDROP_PLATE,
+    line: Int = PLATE_LINE,
     outline: Boolean = true,
 ): StateListDrawable {
     fun dp(value: Int) = (value * scale).toInt()
