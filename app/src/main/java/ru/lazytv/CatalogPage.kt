@@ -136,8 +136,6 @@ class CatalogPageFragment : Fragment() {
         // the browse screen does not pass the focus between the neighbours of the header: right and left walk the buttons,
         // at the ends the focus stays instead of jumping to a view that is not beside them
         for (chip in listOf(resetChip, filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
-            // the user is steering among the buttons: the cards that arrive later must not take the focus away from them
-            if (event.action == android.view.KeyEvent.ACTION_DOWN) wantCardFocus = false
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                 val visible = (0 until buttons.childCount).map { buttons.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
@@ -193,14 +191,16 @@ class CatalogPageFragment : Fragment() {
     }
 
     /**
-     * Gives the focus to the grid when nobody has it or it sits on a button; the menu or another page keeps theirs.
+     * Gives the focus to the grid when nobody has it. A button that already has it keeps it: whoever reached the buttons
+     * before the cards stood did it on purpose (or was put there by the menu), and the cards must not pull the focus away.
+     * The menu or another page keeps theirs too.
      * Repeated after the next layout and the frame that follows it: on a fresh page the grid is not laid out yet, the
      * first request does nothing and the system then focuses the first button by itself.
      */
     private fun claimGrid(force: Boolean = false) {
         fun take(always: Boolean = false) {
             val held = activity?.currentFocus
-            if (always || held == null || listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }) grid.requestFocus()
+            if (always || held == null) grid.requestFocus()
         }
         // [force]: the user pressed "right" or OK on the menu, the focus sits on the menu item and must leave it; the
         // delayed repeats below stay careful so they do not pull the focus back after the user has gone to the menu
@@ -342,7 +342,7 @@ class CatalogPageFragment : Fragment() {
                 val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
                 if (loaded.ended) finished = true else nextPage = page + 1
                 if (fresh.isNotEmpty()) cards.addAll(cards.size(), fresh)
-                // only while the focus still sits on a button: if the user went elsewhere meanwhile, it is not taken away
+                // only while nobody has the focus: if the user went elsewhere meanwhile (a button, the menu), it is not taken away
                 if (wantCardFocus && cards.size() > 0) {
                     wantCardFocus = false
                     claimGrid()
