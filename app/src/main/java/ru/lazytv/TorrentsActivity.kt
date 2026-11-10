@@ -162,7 +162,10 @@ class TorrentsActivity : Activity() {
                 true
             } else false
         }
-        loading = LoadingView(this, scale, "Ищем раздачи…")
+        loading = LoadingView(this, scale, "Ищем раздачи…").apply {
+            // the list area starts below the chips, so its middle looks low: lifted by the height of the buttons above it
+            setPadding(0, 0, 0, px(110))
+        }
         val body = FrameLayout(this)
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
         body.addView(loading, FrameLayout.LayoutParams(-1, -1))
@@ -399,15 +402,16 @@ class TorrentsActivity : Activity() {
         numbers.orientation = LinearLayout.VERTICAL
         numbers.gravity = Gravity.END
         numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
-        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFFCBD5E1.toInt()))
-        numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFEF9A9A.toInt()))
+        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFF4ADE80.toInt()))
+        numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFF87171.toInt()))
         card.addView(numbers, LinearLayout.LayoutParams(px(if (isMobileUi()) 80 else 110), -2))
 
-        // the star right of the seeds: gold when the torrent is in the favorites; "right" on the row or a long press toggles it
+        // the bookmark right of the seeds, the same icon as the bookmark button of the title card: filled white when the torrent
+        // is in the favorites, an outline when not; "right" on the row or a long press toggles it
         val marked = FavoriteTorrents.has(this, torrent)
         val star = ImageView(this)
-        star.setImageDrawable(PathDrawable(if (marked) MenuIcons.STAR else MenuIcons.STAR_BORDER).apply {
-            setColorFilter(if (marked) 0xFFE0B94F.toInt() else 0x66FFFFFF, android.graphics.PorterDuff.Mode.SRC_IN)
+        star.setImageDrawable(PathDrawable(if (marked) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER).apply {
+            setColorFilter(if (marked) Color.WHITE else 0x99FFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
         })
         card.addView(star, LinearLayout.LayoutParams(px(30), px(30)).apply { leftMargin = px(16) })
         // on a touch screen the star is a button of its own (there is no "right" key)
