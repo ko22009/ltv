@@ -413,11 +413,12 @@ class PlayerActivity : Activity() {
             setColor(thumbColor)
         }
         seek.thumbTintList = null
-        seek.thumb = android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
+        // no reserved space at rest: the dot alone, the plate is added only while the thumb is under the cursor
+        seek.thumb = if (seek.isFocused) android.graphics.drawable.LayerDrawable(arrayOf(halo, dot)).apply {
             setLayerSize(0, dp(40), dp(40))
             setLayerSize(1, dp(18), dp(18))
             setLayerGravity(1, android.view.Gravity.CENTER)
-        }
+        } else dot.apply { setSize(dp(18), dp(18)) }
         seek.progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x66FFFFFF)
         seek.secondaryProgressTintList = android.content.res.ColorStateList.valueOf(0x99FFFFFF.toInt())
     }
