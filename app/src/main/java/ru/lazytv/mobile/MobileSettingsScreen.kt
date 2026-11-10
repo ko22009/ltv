@@ -73,7 +73,10 @@ class MobileSettingsScreen : SettingsScreen() {
     // the stylists of the TV layout have no views here: nothing to focus, nothing to restore
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {}
 
-    private fun row(title: CharSequence, description: CharSequence?, onClick: (() -> Unit)?, trailing: View? = null): View {
+    private fun row(
+        title: CharSequence, description: CharSequence?, onClick: (() -> Unit)?, trailing: View? = null,
+        plate: Int = 0xFF1C2029.toInt(),
+    ): View {
         val ctx = requireContext()
         val texts = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -83,7 +86,7 @@ class MobileSettingsScreen : SettingsScreen() {
         return LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(px(14), px(12), px(14), px(12))
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = px(8).toFloat() }
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(plate); cornerRadius = px(8).toFloat() }
             addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
             if (trailing != null) addView(trailing, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = px(12) })
             if (onClick != null) {
@@ -109,15 +112,16 @@ class MobileSettingsScreen : SettingsScreen() {
                         isChecked = action.isChecked
                         if (Build.VERSION.SDK_INT >= 23) {
                             val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
-                            trackTintList = android.content.res.ColorStateList(states, intArrayOf(0xFF4338CA.toInt(), 0xFF475569.toInt()))
-                            thumbTintList = android.content.res.ColorStateList(states, intArrayOf(0xFFFFFFFF.toInt(), 0xFFCBD5E1.toInt()))
+                            // neutral greys: the switch does not take the blue of the page
+                            trackTintList = android.content.res.ColorStateList(states, intArrayOf(0xFF6B7280.toInt(), 0xFF3A3D42.toInt()))
+                            thumbTintList = android.content.res.ColorStateList(states, intArrayOf(0xFFFFFFFF.toInt(), 0xFFB4B7BC.toInt()))
                         }
                     }
                     row(action.title, action.description, {
                         action.isChecked = !action.isChecked
                         toggle.isChecked = action.isChecked
                         onGuidedActionClicked(action)
-                    }, toggle).also { toggle.isClickable = false }
+                    }, toggle, plate = 0xFF1F2023.toInt()).also { toggle.isClickable = false }
                 }
                 !action.subActions.isNullOrEmpty() -> row(action.title, action.description, {
                     val subs = action.subActions
