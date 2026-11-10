@@ -70,9 +70,9 @@ class LogoView(context: Context, private val capHeightDp: Float, markColor: Int 
     companion object {
         const val LOGO_COLOR = 0xFFFFF4E3.toInt()
         /** The arc under the letters (as parts of a letter height): the gap to the letters, how much the middle stands above the ends, thickness, the width as a part of the word, and the height of the whole mark. */
-        const val ARC_GAP = 0.28f
-        const val ARC_RISE = 0.17f
-        const val ARC_STROKE = 0.09f
+        const val ARC_GAP = 0.32f
+        const val ARC_RISE = 0.21f
+        const val ARC_STROKE = 0.10f
         const val ARC_WIDTH = 0.82f
         const val ARC_TOTAL = 1f + ARC_GAP + ARC_RISE + ARC_STROKE / 2f
         /** Width of "LTV" as a part of the height of a letter. */
@@ -100,4 +100,35 @@ class LogoView(context: Context, private val capHeightDp: Float, markColor: Int 
 object Logo {
     /** The mark; [textSizeSp] is kept from the old text logo and gives the height of the letters (dp). */
     fun create(context: Context, textSizeSp: Float = 16f, color: Int = LogoView.LOGO_COLOR, arcColor: Int? = null): View = LogoView(context, textSizeSp, color, arcColor)
+}
+
+/**
+ * The glow of the app icon for a tall narrow strip (the TV menu): a wide ellipse whose source sits in the middle of the lower edge,
+ * a little beyond it. The brightest at the edge, a bright core and a soft long tail, fading upwards and to the sides.
+ */
+class BottomGlowView(context: Context) : View(context) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    init {
+        isFocusable = false
+        isClickable = false
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val shader = android.graphics.RadialGradient(
+            0f, 0f, 1f,
+            intArrayOf(0xF200EBC3.toInt(), 0x9000EBC3.toInt(), 0x3000EBC3, 0x0000EBC3),
+            floatArrayOf(0f, 0.35f, 0.7f, 1f),
+            android.graphics.Shader.TileMode.CLAMP,
+        )
+        // a unit circle stretched into the ellipse: wider than the strip, the centre just under the lower edge
+        shader.setLocalMatrix(android.graphics.Matrix().apply {
+            postScale(w * 0.75f, h * 0.95f)
+            postTranslate(w / 2f, h * 1.05f)
+        })
+        paint.shader = shader
+        canvas.drawRect(0f, 0f, w, h, paint)
+    }
 }

@@ -129,25 +129,15 @@ class MainFragment : Fragment() {
         railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
         // the glow of the app icon: it rises from the lower edge of the menu, the brightest at the edge, fading upwards and to the sides
-        val railGlow = View(ctx).apply {
-            isFocusable = false
-            isClickable = false
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                gradientType = android.graphics.drawable.GradientDrawable.RADIAL_GRADIENT
-                gradientRadius = 66 * scale
-                setGradientCenter(0.5f, 1f)
-                colors = intArrayOf(0xA000EBC3.toInt(), 0x4000EBC3, 0x0000EBC3)
-            }
-        }
-        railPanel.addView(railGlow, FrameLayout.LayoutParams(railWidth, (72 * scale).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+        val railGlow = BottomGlowView(ctx)
+        railPanel.addView(railGlow, FrameLayout.LayoutParams(railWidth, (56 * scale).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
         // the same as on the app icon: white letters and the teal arc under them
         val railLogo = Logo.create(ctx, textSizeSp = 9f, color = Color.WHITE, arcColor = 0xFF00EBC3.toInt()).apply {
             isFocusable = false
             isClickable = false
         }
         railPanel.addView(railLogo, FrameLayout.LayoutParams(railWidth, (36 * scale).toInt(), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-            bottomMargin = (14 * scale).toInt()
+            bottomMargin = (30 * scale).toInt()  // the logo stands above the glow, as on the icon
         })
 
         rootLayout.addView(railPanel, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START or Gravity.TOP))
