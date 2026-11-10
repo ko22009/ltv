@@ -75,7 +75,14 @@ class PlayerActivity : Activity() {
 
     private var player: ExoPlayer? = null
     private var resumeWhenOnline = false
+    private lateinit var waitingDots: View
+    private fun showWaiting(offline: Boolean) {
+        if (!::waitingDots.isInitialized) return
+        waitingDots.visibility = if (offline) View.VISIBLE else View.GONE
+        if (offline) bufferSpinner.visibility = View.GONE
+    }
     private val onlineListener: (Boolean) -> Unit = { online ->
+        showWaiting(!online)
         if (online && resumeWhenOnline && !isFinishing) {
             resumeWhenOnline = false
             player?.let { it.prepare(); it.play() }
@@ -211,11 +218,17 @@ class PlayerActivity : Activity() {
         root.addView(view, FrameLayout.LayoutParams(-1, -1))
         bufferSpinner = Spinner(this, dp(SPINNER_SCREEN))
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
+        // no internet: the same place, a circle with three moving dots; the playback goes on by itself when the network is back
+        waitingDots = WaitingDots(this, dp(84))
+        waitingDots.visibility = if (Connectivity.online) View.GONE else View.VISIBLE
+        root.addView(waitingDots, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val at = IntArray(2)
             root.getLocationOnScreen(at)
-            bufferSpinner.translationY = resources.displayMetrics.heightPixels / 2f - (at[1] + root.height / 2f)
+            val shift = resources.displayMetrics.heightPixels / 2f - (at[1] + root.height / 2f)
+            bufferSpinner.translationY = shift
+            waitingDots.translationY = shift
         }
 
         val touchOverlay = PlayerTouchOverlay(
@@ -255,7 +268,7 @@ class PlayerActivity : Activity() {
                 // the connection dropped: no error dialog, the playback goes on from the same place when the network is back
                 if (!Connectivity.online) {
                     resumeWhenOnline = true
-                    Toast.makeText(this@PlayerActivity, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
+                    showWaiting(true)
                     return
                 }
                 showErrorDialog(error)
@@ -263,7 +276,7 @@ class PlayerActivity : Activity() {
 
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
-                bufferSpinner.visibility = if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
+                bufferSpinner.visibility = if (state == Player.STATE_BUFFERING && Connectivity.online) View.VISIBLE else View.GONE
                 updateSeekColors()
                 if (state == Player.STATE_ENDED) {
                     clearPosition()

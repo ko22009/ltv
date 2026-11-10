@@ -58,6 +58,42 @@ class Spinner(context: Context, private val size: Int, arcColor: Int = 0xFFFFFFF
     }
 }
 
+/** A dark circle with three white dots that light up one after another: shown over the video while there is no internet. */
+class WaitingDots(context: Context, private val size: Int) : View(context) {
+    private val plate = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = OVERLAY_DENSE }
+    private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+    private var phase = 0f
+    private val animator = ValueAnimator.ofFloat(0f, 3f).apply {
+        duration = 1200
+        repeatCount = ValueAnimator.INFINITE
+        interpolator = LinearInterpolator()
+        addUpdateListener { phase = it.animatedValue as Float; invalidate() }
+    }
+
+    override fun onMeasure(w: Int, h: Int) = setMeasuredDimension(size, size)
+
+    override fun onDraw(canvas: Canvas) {
+        val c = size / 2f
+        canvas.drawCircle(c, c, c, plate)
+        val step = size * 0.2f
+        for (i in 0 until 3) {
+            // the dot being "on" is bigger and brighter, the others are small and faint
+            val d = ((phase - i + 3f) % 3f).let { if (it > 1.5f) 3f - it else it }.coerceIn(0f, 1f)
+            val lit = 1f - d
+            dot.alpha = (90 + 165 * lit).toInt()
+            canvas.drawCircle(c + (i - 1) * step, c, size * (0.04f + 0.03f * lit), dot)
+        }
+    }
+
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); if (visibility == VISIBLE) animator.start() }
+    override fun onDetachedFromWindow() { animator.cancel(); super.onDetachedFromWindow() }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (visibility == VISIBLE) { if (!animator.isStarted) animator.start() } else animator.cancel()
+    }
+}
+
 /** Centered spinner with a caption; `scale` is the 1280-wide design scale of the host screen. */
 class LoadingView(context: Context, scale: Float, caption: String = "Загрузка…") : LinearLayout(context) {
     private val label = TextView(context)
