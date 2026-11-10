@@ -146,26 +146,28 @@ class GalleryActivity : Activity() {
 
     private val mobile by lazy { isMobileUi() }
     private lateinit var phoneCounter: TextView
-    private lateinit var phoneDots: LinearLayout
     private lateinit var arrowLeft: View
     private lateinit var arrowRight: View
 
-    /** Phone look: a close cross, "1 / 5" on top, the frame as a rounded card with round arrows, dots below, swipe to turn. */
+    /** Phone look: a close cross, "1 / 5" on top, the frame as a rounded card with round arrows, swipe to turn. */
     private fun setupPhoneChrome() {
         header.visibility = View.GONE
         headerVisible = false
         val side = dp(16)
         val width = resources.displayMetrics.widthPixels - 2 * side
-        mainImage.scaleType = ImageView.ScaleType.CENTER_CROP
-        mainImage.setOnClickListener(null)
-        mainImage.isClickable = false
+        // the gallery lies over the card as a dimmed layer: a tap beside the frame closes it; the frame keeps its own shape
+        root.background = android.graphics.drawable.ColorDrawable(0xF0101216.toInt())
+        root.setOnClickListener { finish() }
+        mainImage.scaleType = ImageView.ScaleType.FIT_CENTER
+        mainImage.adjustViewBounds = true
+        mainImage.setOnClickListener { }
         mainImage.outlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(view: View, outline: android.graphics.Outline) {
                 outline.setRoundRect(0, 0, view.width, view.height, dp(18).toFloat())
             }
         }
         mainImage.clipToOutline = true
-        mainImage.layoutParams = FrameLayout.LayoutParams(width, width * 9 / 16, Gravity.CENTER)
+        mainImage.layoutParams = FrameLayout.LayoutParams(width, -2, Gravity.CENTER)
 
         fun round(icon: String, size: Int, pad: Int, fill: Int, action: () -> Unit) = ImageView(this).apply {
             setImageDrawable(PathDrawable(icon))
@@ -186,8 +188,6 @@ class GalleryActivity : Activity() {
         arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
         root.addView(arrowLeft, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.START).apply { leftMargin = side + dp(8) })
         root.addView(arrowRight, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.END).apply { rightMargin = side + dp(8) })
-        phoneDots = LinearLayout(this).apply { gravity = Gravity.CENTER }
-        root.addView(phoneDots, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(90) })
     }
 
     private fun updatePhoneChrome() {
@@ -195,15 +195,6 @@ class GalleryActivity : Activity() {
         phoneCounter.text = "${selectedIndex + 1} / ${backdrops.size}"
         arrowLeft.alpha = if (selectedIndex > 0) 1f else 0.3f
         arrowRight.alpha = if (selectedIndex < backdrops.size - 1) 1f else 0.3f
-        phoneDots.removeAllViews()
-        for (i in backdrops.indices) {
-            phoneDots.addView(View(this).apply {
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.OVAL
-                    setColor(if (i == selectedIndex) Color.WHITE else 0x55FFFFFF)
-                }
-            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { leftMargin = dp(6); rightMargin = dp(6) })
-        }
     }
 
     private val swipe by lazy {
