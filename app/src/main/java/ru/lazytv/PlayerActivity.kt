@@ -231,6 +231,7 @@ class PlayerActivity : Activity() {
         overlay = buildOverlay(name, meta)
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        hideSystemBars()
 
         val exo = ExoPlayer.Builder(this).build()
         view.player = exo
@@ -752,6 +753,27 @@ class PlayerActivity : Activity() {
         episodeViews.forEachIndexed { index, view ->
             styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = 0xFFCBD5E1.toInt())
         }
+    }
+
+    /** The video fills the whole phone screen: the status and navigation bars are hidden (a swipe from the edge shows them for a moment). */
+    private fun hideSystemBars() {
+        if (DeviceType.isTv(this)) return
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    // the bars come back after a dialog, a notification shade or a swipe: hide them again when the window has the focus
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
     }
 
     override fun finish() {
