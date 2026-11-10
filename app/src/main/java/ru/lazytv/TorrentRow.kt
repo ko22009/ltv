@@ -14,10 +14,6 @@ import android.widget.TextView
 /** Colours of the seeds and the peers: green and red, the same in every list of torrents. */
 const val SEEDS_COLOR = 0xFF4ADE80.toInt()
 const val PEERS_COLOR = 0xFFF87171.toInt()
-/** The same two on the light plate of the TV cursor (the selected row): darker, so they stay readable. */
-const val SEEDS_COLOR_ON_LIGHT = 0xFF15803D.toInt()
-const val PEERS_COLOR_ON_LIGHT = 0xFFB91C1C.toInt()
-
 /**
  * One torrent as a card: the Russian title (bold), the rest of the name, the source; on the right the size, the seeds
  * (green) and the peers (red), then the bookmark (filled white when the torrent is in the favorites).
@@ -62,15 +58,16 @@ fun torrentRowCard(context: Context, torrent: Torrent, marked: Boolean, compact:
     numbers.gravity = Gravity.END
     numbers.isDuplicateParentStateEnabled = true
     numbers.addView(label(torrent.size, 14f, Color.WHITE, true).onSelected(Color.WHITE))
-    // on the light plate of the TV cursor the bright green and red wash out: the selected row gets their darker twins
-    fun TextView.signalOnSelected(rest: Int, onLight: Int): TextView = apply {
+    // on the light plate of the TV cursor the green and red wash out: the selected row shows them in the plain dark caption colour,
+    // the arrows ▲ ▼ still tell which is which
+    fun TextView.signalOnSelected(rest: Int): TextView = apply {
         isDuplicateParentStateEnabled = true
         setTextColor(android.content.res.ColorStateList(
             arrayOf(intArrayOf(selected), intArrayOf()),
-            intArrayOf(if (DeviceType.isTv(context)) onLight else rest, rest)))
+            intArrayOf(if (DeviceType.isTv(context)) ON_FOCUS else rest, rest)))
     }
-    numbers.addView(label("▲ ${torrent.seeds}", 13f, SEEDS_COLOR).signalOnSelected(SEEDS_COLOR, SEEDS_COLOR_ON_LIGHT))
-    numbers.addView(label("▼ ${torrent.leeches}", 13f, PEERS_COLOR).signalOnSelected(PEERS_COLOR, PEERS_COLOR_ON_LIGHT))
+    numbers.addView(label("▲ ${torrent.seeds}", 13f, SEEDS_COLOR).signalOnSelected(SEEDS_COLOR))
+    numbers.addView(label("▼ ${torrent.leeches}", 13f, PEERS_COLOR).signalOnSelected(PEERS_COLOR))
     card.addView(numbers, LinearLayout.LayoutParams(px(if (mobile || compact) 80 else 110), -2))
 
     val star = ImageView(context)
