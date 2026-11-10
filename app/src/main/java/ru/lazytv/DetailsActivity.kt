@@ -450,7 +450,7 @@ class DetailsActivity : Activity() {
                 addState(intArrayOf(), normal)
             }
             setOnClickListener {
-                if (text.isNotEmpty() && text.toString() != DASH) {
+                if (text.isNotEmpty()) {
                     android.app.AlertDialog.Builder(this@DetailsActivity)
                         .setTitle(name)
                         .setMessage(text)
@@ -488,7 +488,7 @@ class DetailsActivity : Activity() {
         overviewView.maxLines = 3
         overviewView.ellipsize = android.text.TextUtils.TruncateAt.END
         fun showFullOverview() {
-            if (overviewView.text.isNotEmpty() && overviewView.text.toString() != DASH) {
+            if (overviewView.text.isNotEmpty()) {
                 android.app.AlertDialog.Builder(this@DetailsActivity)
                     .setTitle(name)
                     .setMessage(overviewView.text)
@@ -571,12 +571,17 @@ class DetailsActivity : Activity() {
     private lateinit var moreRow: LinearLayout
 
     /** The details are in (or failed): a line that stays empty is taken out, so no blank gap is left where the data is missing. */
-    private fun dropEmpty(original: TextView) {
-        // the original title is only a repeat when it is missing: its line goes; the rest that has no data shows a dash
-        original.visibility = if (original.text.isEmpty()) View.GONE else View.VISIBLE
-        overviewView.visibility = View.VISIBLE
-        if (overviewView.text.isEmpty()) overviewView.text = DASH
-        if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.toString() == DASH) View.GONE else View.VISIBLE
+    private fun dropEmpty(original: TextView, sameTitle: Boolean = false) {
+        // the lines by the poster show a dash when TMDB has nothing (an original title equal to the title is no gap: its line goes);
+        // a missing description is not marked, the block just is not there
+        if (sameTitle) original.visibility = View.GONE
+        else {
+            original.visibility = View.VISIBLE
+            if (original.text.isEmpty()) original.text = DASH
+        }
+        val noOverview = overviewView.text.isEmpty()
+        overviewView.visibility = if (noOverview) View.GONE else View.VISIBLE
+        if (::moreRow.isInitialized) moreRow.visibility = if (noOverview) View.GONE else View.VISIBLE
         if (::genresLine.isInitialized) {
             genresLine.visibility = View.VISIBLE
             if (genresLine.text.isEmpty()) genresLine.text = DASH
@@ -670,7 +675,7 @@ class DetailsActivity : Activity() {
         if (mobile) {
             genresLine.text = d.genres.joinToString(", ")
             val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
-            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ")
+            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).joinToString(", ") { it.ifBlank { DASH } }
         }
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
         // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
@@ -698,7 +703,7 @@ class DetailsActivity : Activity() {
             row.tag = "cast"
             info.addView(row)
         }
-        dropEmpty(original)
+        dropEmpty(original, d.originalTitle.isNotEmpty() && d.originalTitle.equals(name, true))
         galleryPosters = d.posters
         galleryBackdrops = d.allBackdrops
         startBackdrops(d.backdrops)
