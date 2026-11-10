@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#101216">
 
-    <!-- the sort, then the filters, then the basket (reset), from the left: nothing runs off the screen -->
+    <!-- the sort, then the filters (take all the room that is left), then the basket (reset): nothing runs off the screen -->
     <LinearLayout
         android:id="@+id/categoriesScroll"
         android:layout_width="0dp"
@@ -32,7 +32,8 @@
         <com.google.android.material.chip.Chip
             android:id="@+id/filterButton"
             style="@style/Widget.LazyMobile.Chip"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:checkable="false"
