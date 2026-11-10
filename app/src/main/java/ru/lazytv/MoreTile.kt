@@ -81,14 +81,16 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
             addState(intArrayOf(), plate(PLATE_FILL))
         }
         tile.elevation = 0f
-        val linkIcon = PathDrawable(MenuIcons.LINK).apply {
-            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
-        }
-        tile.addView(ImageView(context).apply { setImageDrawable(linkIcon) }, LinearLayout.LayoutParams(px(64f), px(64f)))
+        tile.addView(ImageView(context).apply {
+            isDuplicateParentStateEnabled = true
+            setImageDrawable(PathDrawable(MenuIcons.LINK))
+            imageTintList = cursorColors(context, Color.WHITE)
+        }, LinearLayout.LayoutParams(px(64f), px(64f)))
         // only the name of the row, as written over it
         tile.addView(TextView(context).apply {
             tag = "caption"
-            setTextColor(Color.WHITE)
+            isDuplicateParentStateEnabled = true
+            setTextColor(cursorColors(context, Color.WHITE))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER

@@ -93,17 +93,16 @@ class SettingsActivity : FragmentActivity() {
                 isFocusable = true
                 addView(TextView(this@SettingsActivity).apply {
                     text = topicTitle
-                    setTextColor(Color.WHITE)
+                    isDuplicateParentStateEnabled = true
+                    setTextColor(cursorColors(this@SettingsActivity, Color.WHITE))
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                     typeface = Typeface.DEFAULT_BOLD
                 })
                 addView(TextView(this@SettingsActivity).apply {
                     text = body
-                    // white while the card is focused: the grey is hard to read on the focus colour
+                    // the caption colour of the cursor while the card is focused: the grey is hard to read on the focus colour
                     isDuplicateParentStateEnabled = true
-                    setTextColor(android.content.res.ColorStateList(
-                        arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                        intArrayOf(Color.WHITE, TEXT_SECONDARY)))
+                    setTextColor(cursorColors(this@SettingsActivity, TEXT_SECONDARY))
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scale)
                     setLineSpacing(0f, 1.2f)
                     setPadding(0, px(8), 0, 0)
@@ -280,19 +279,22 @@ open class SettingsScreen : Fragment() {
                 setPadding(px(4), px(16), 0, px(8))
             }
         }
-        val titleView = label(row.title, if (mobile) 15f else 18f, Color.WHITE, bold = true)
+        val titleView = label(row.title, if (mobile) 15f else 18f, Color.WHITE, bold = true).apply {
+            isDuplicateParentStateEnabled = true
+            setTextColor(cursorColors(ctx, Color.WHITE))
+        }
         val desc = label(row.description, if (mobile) 13f else 15f, TEXT_MUTED).apply {
             setPadding(0, px(4), 0, 0)
             visibility = if (row.description.isEmpty()) View.GONE else View.VISIBLE
-            // white while the row is focused: the grey is hard to read on the focus colour
+            // the caption colour of the cursor while the row is focused: the grey is hard to read on the focus colour
             isDuplicateParentStateEnabled = true
-            setTextColor(android.content.res.ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-                intArrayOf(Color.WHITE, TEXT_MUTED)))
+            setTextColor(cursorColors(ctx, TEXT_MUTED))
         }
         row.descView = desc
         val texts = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
+            // the row's focus reaches the captions through this block
+            isDuplicateParentStateEnabled = true
             addView(titleView)
             addView(desc)
         }

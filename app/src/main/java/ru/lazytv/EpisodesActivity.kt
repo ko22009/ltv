@@ -48,10 +48,8 @@ class EpisodesActivity : Activity() {
     private lateinit var actionCancel: View
     private lateinit var actionAll: View
 
-    /** [normal] colour, white while the row is selected (the focus plate behind it is bright). */
-    private fun whiteWhenSelected(normal: Int) = android.content.res.ColorStateList(
-        arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()), intArrayOf(Color.WHITE, normal),
-    )
+    /** [normal] colour, the caption colour of the cursor while the row is selected (the cursor plate sits behind it). */
+    private fun whiteWhenSelected(normal: Int) = cursorColors(this, normal, android.R.attr.state_selected)
 
     private fun label(value: String, size: Float, color: Int, bold: Boolean = false) = TextView(this).apply {
         text = value

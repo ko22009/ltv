@@ -137,6 +137,24 @@ class PathDrawable(data: String) : Drawable() {
 
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
     override fun setColorFilter(filter: ColorFilter?) { paint.colorFilter = filter }
+
+    // a tint list makes the icon follow the state of its view (focused: the colour of the cursor's caption)
+    private var tint: android.content.res.ColorStateList? = null
+    override fun setTintList(tint: android.content.res.ColorStateList?) {
+        this.tint = tint
+        applyTint(state)
+        invalidateSelf()
+    }
+    private fun applyTint(states: IntArray) {
+        val list = tint ?: return
+        paint.colorFilter = android.graphics.PorterDuffColorFilter(list.getColorForState(states, list.defaultColor), android.graphics.PorterDuff.Mode.SRC_IN)
+    }
+    override fun isStateful() = tint?.isStateful == true
+    override fun onStateChange(stateSet: IntArray): Boolean {
+        if (tint == null) return false
+        applyTint(stateSet)
+        return true
+    }
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = PixelFormat.TRANSLUCENT
 }

@@ -40,26 +40,34 @@ fun torrentRowCard(context: Context, torrent: Torrent, marked: Boolean, compact:
     card.gravity = Gravity.CENTER_VERTICAL
     if (mobile || compact) card.setPadding(px(12), px(12), px(12), px(12)) else card.setPadding(px(16), px(12), px(16), px(12))
     card.background = outlinedCardBackground(scale, android.R.attr.state_selected, 12)
+    // the selected row sits on the cursor plate: its texts take the caption colour of the cursor (the state goes down through the blocks)
+    val selected = android.R.attr.state_selected
+    fun TextView.onSelected(rest: Int): TextView = apply {
+        isDuplicateParentStateEnabled = true
+        setTextColor(cursorColors(context, rest, selected))
+    }
     val texts = LinearLayout(context)
     texts.orientation = LinearLayout.VERTICAL
-    texts.addView(label(main, if (mobile || compact) 16f else 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
-    texts.addView(label(rest, 14f, TEXT_SECONDARY).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
-    texts.addView(label(torrent.source, 13f, TEXT_MUTED))
+    texts.isDuplicateParentStateEnabled = true
+    texts.addView(label(main, if (mobile || compact) 16f else 19f, Color.WHITE, true).onSelected(Color.WHITE).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
+    texts.addView(label(rest, 14f, TEXT_SECONDARY).onSelected(TEXT_SECONDARY).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
+    texts.addView(label(torrent.source, 13f, TEXT_MUTED).onSelected(TEXT_MUTED))
     card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
 
     val numbers = LinearLayout(context)
     numbers.orientation = LinearLayout.VERTICAL
     numbers.gravity = Gravity.END
-    numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
+    numbers.isDuplicateParentStateEnabled = true
+    numbers.addView(label(torrent.size, 14f, Color.WHITE, true).onSelected(Color.WHITE))
     numbers.addView(label("▲ ${torrent.seeds}", 13f, SEEDS_COLOR))
     numbers.addView(label("▼ ${torrent.leeches}", 13f, PEERS_COLOR))
     card.addView(numbers, LinearLayout.LayoutParams(px(if (mobile || compact) 80 else 110), -2))
 
     val star = ImageView(context)
     star.tag = "star"
-    star.setImageDrawable(PathDrawable(if (marked) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER).apply {
-        setColorFilter(if (marked) Color.WHITE else 0x99FFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-    })
+    star.isDuplicateParentStateEnabled = true
+    star.setImageDrawable(PathDrawable(if (marked) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER))
+    star.imageTintList = cursorColors(context, if (marked) Color.WHITE else 0x99FFFFFF.toInt(), selected)
     card.addView(star, LinearLayout.LayoutParams(px(30), px(30)).apply { leftMargin = px(if (compact) 8 else 16) })
     return card
 }

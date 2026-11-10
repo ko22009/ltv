@@ -76,7 +76,9 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         mic.isFocusable = true
         mic.isClickable = true
         mic.background = focusShape(scale, PLATE_FILL, circle = true)
-        micIcon.setImageDrawable(PathDrawable(MenuIcons.MIC).apply { colorFilter = PorterDuffColorFilter(TEXT_SECONDARY, PorterDuff.Mode.SRC_IN) })
+        micIcon.isDuplicateParentStateEnabled = true
+        micIcon.setImageDrawable(PathDrawable(MenuIcons.MIC))
+        micIcon.imageTintList = cursorColors(activity, TEXT_SECONDARY)
         mic.addView(micIcon, LayoutParams(px(30), px(30)))
         mic.setOnClickListener {
             if (listening) cancelListening() else listen()
@@ -88,12 +90,12 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
 
         input.setSingleLine()
         input.hint = "Поиск"
-        // on the teal focused plate the grey hint is hard to read: it turns almost white there
+        // on the focused plate the grey hint is hard to read: it takes the caption colour of the cursor, a little softer
         input.setHintTextColor(android.content.res.ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-            intArrayOf(0xCCFFFFFF.toInt(), TEXT_DIM)
+            intArrayOf((cursorText(activity) and 0x00FFFFFF) or 0xCC000000.toInt(), TEXT_DIM)
         ))
-        input.setTextColor(TEXT_LIGHT)
+        input.setTextColor(cursorColors(activity, TEXT_LIGHT))
         input.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scale)
         input.imeOptions = EditorInfo.IME_ACTION_SEARCH
         input.setPadding(px(16), 0, px(16), 0)
@@ -291,7 +293,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
     private fun updateMicVisuals(isListening: Boolean) {
         if (isListening) {
             mic.background = focusShape(scale, DANGER_FILL, circle = true, focused = DANGER_FOCUS)
-            micIcon.colorFilter = PorterDuffColorFilter(0xFFFFFFFF.toInt(), PorterDuff.Mode.SRC_IN)
+            micIcon.imageTintList = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
             pulseAnimator?.cancel()
             pulseAnimator = ObjectAnimator.ofFloat(micIcon, "scaleX", 1f, 1.22f).apply {
                 duration = 500
@@ -308,7 +310,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
             mic.scaleX = 1f
             mic.scaleY = 1f
             mic.background = focusShape(scale, PLATE_FILL, circle = true)
-            micIcon.colorFilter = PorterDuffColorFilter(TEXT_SECONDARY, PorterDuff.Mode.SRC_IN)
+            micIcon.imageTintList = cursorColors(activity, TEXT_SECONDARY)
         }
     }
 

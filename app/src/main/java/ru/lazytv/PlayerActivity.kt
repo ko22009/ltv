@@ -160,9 +160,7 @@ class PlayerActivity : Activity() {
                     duration.text = stamp(dur)
                 }
                 position.text = stamp(exo.currentPosition)
-                playPause.setImageDrawable(PathDrawable(if (exo.isPlaying) MenuIcons.PAUSE else MenuIcons.PLAY).apply {
-                    setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
-                })
+                playPause.setImageDrawable(PathDrawable(if (exo.isPlaying) MenuIcons.PAUSE else MenuIcons.PLAY))
                 updateStreamMeta(exo)
             }
             updateSeekColors()
@@ -255,7 +253,9 @@ class PlayerActivity : Activity() {
             background = GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL }
             visibility = View.GONE
         }
-        root.addView(pauseBadge, FrameLayout.LayoutParams((84 * resources.displayMetrics.density).toInt(), (84 * resources.displayMetrics.density).toInt(), android.view.Gravity.CENTER))
+        // the sign is added above the touch layer and the controls (below): it must catch the tap itself, one tap resumes the video
+        pauseBadge.isClickable = true
+        pauseBadge.setOnClickListener { togglePlay(); resetHideTimer() }
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val at = IntArray(2)
@@ -278,6 +278,9 @@ class PlayerActivity : Activity() {
 
         overlay = buildOverlay(name, meta)
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        // above the controls too (they are a full-screen layer): the sign catches its own tap
+        val badgeSize = (84 * resources.displayMetrics.density).toInt()
+        root.addView(pauseBadge, FrameLayout.LayoutParams(badgeSize, badgeSize, android.view.Gravity.CENTER))
         // with the controls shown the empty part of the panel passes the touches on to the gesture layer below it:
         // the double tap (pause in the middle, 10 seconds on the sides) and the drags work with the panel open too,
         // a single tap hides the panel as before
@@ -455,7 +458,9 @@ class PlayerActivity : Activity() {
     }
 
     private fun round(icon: String, big: Boolean = false, action: () -> Unit) = ImageView(this).apply {
-        setImageDrawable(PathDrawable(icon).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+        setImageDrawable(PathDrawable(icon))
+        // dark on the light cursor of a TV, white otherwise
+        imageTintList = cursorColors(this@PlayerActivity, Color.WHITE)
         val pad = dp(if (big) 14 else 10)
         setPadding(pad, pad, pad, pad)
         isFocusable = true

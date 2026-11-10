@@ -59,7 +59,7 @@ class DetailsActivity : Activity() {
         setSingleLine()
         ellipsize = android.text.TextUtils.TruncateAt.END
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
-        setTextColor(Color.WHITE)
+        setTextColor(cursorColors(context, Color.WHITE))
         gravity = Gravity.CENTER
         setPadding(dp(if (iconOnly) 16 else 12), 0, dp(if (iconOnly) 16 else 12), 0)
         val firstIcon = PathDrawable(icon).apply { setBounds(0, 0, dp(22), dp(22)) }
@@ -70,6 +70,8 @@ class DetailsActivity : Activity() {
             tag = "top"
         } else setCompoundDrawables(firstIcon, null, null, null)
         compoundDrawablePadding = dp(if (iconOnly) 0 else if (labeled) 6 else 8)
+        // the icon follows the focus like the caption (dark on the light cursor)
+        compoundDrawableTintList = cursorColors(context, Color.WHITE)
         // a left drawable sticks to the left edge of a wide button: the padding puts the lone icon in the middle
         if (iconOnly) addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
             val pad = (((r - l) - dp(22)) / 2).coerceAtLeast(0)
@@ -196,7 +198,8 @@ class DetailsActivity : Activity() {
         }
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
         val back = ImageView(this).apply {
-            setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+            setImageDrawable(PathDrawable(MenuIcons.BACK))
+            imageTintList = cursorColors(this@DetailsActivity, Color.WHITE)
             setPadding(dp(12), dp(12), dp(12), dp(12))
             background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), softDisc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
@@ -830,6 +833,7 @@ class DetailsActivity : Activity() {
                 linkedDirectors.forEachIndexed { idx, dir ->
                     // the same card as the cast (outline, teal under the cursor), but the name only
                     val card = text(dir.name, 16f, Color.WHITE, bold = true).apply {
+                        setTextColor(cursorColors(this@DetailsActivity, Color.WHITE))
                         gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(16), dp(8), dp(16), dp(8))
                         isFocusable = true
@@ -1109,10 +1113,16 @@ class DetailsActivity : Activity() {
             }
             card.addView(photo, LinearLayout.LayoutParams(photoSize, photoSize))
             // one line each: with two-line names and roles the tallest card made all the others tall, with empty space under the text
-            card.addView(text(person.name, 16f, bold = true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
-                LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
+            // the texts take the caption colour of the cursor while the card is focused (they follow the state of the card)
+            card.addView(text(person.name, 16f, bold = true).apply {
+                maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                isDuplicateParentStateEnabled = true
+                setTextColor(cursorColors(this@DetailsActivity, Color.WHITE))
+            }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(8) })
             if (person.role.isNotEmpty()) card.addView(text(person.role, 13f, TEXT_MUTED).apply {
                 maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                isDuplicateParentStateEnabled = true
+                setTextColor(cursorColors(this@DetailsActivity, TEXT_MUTED))
             }, LinearLayout.LayoutParams(dp(112), -2).apply { topMargin = dp(4) })
             // all the cards of the row are as tall as the tallest one
             row.addView(card, LinearLayout.LayoutParams(-2, -1).apply { rightMargin = dp(12) })
@@ -1134,7 +1144,7 @@ class DetailsActivity : Activity() {
     private fun setWatchLoading(loading: Boolean) {
         opening = loading
         watchSpinner.visibility = if (loading) View.VISIBLE else View.GONE
-        watchButton.setTextColor(if (loading) 0x44FFFFFF else Color.WHITE)
+        watchButton.setTextColor(if (loading) android.content.res.ColorStateList.valueOf(0x44FFFFFF) else cursorColors(this, Color.WHITE))
         watchButton.compoundDrawables[0]?.alpha = if (loading) 68 else 255
     }
 

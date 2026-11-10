@@ -141,12 +141,12 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     /** The mark of a card chosen for deletion (edit mode of the history): a teal veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
-        setBackgroundColor((FOCUS_FILL and 0x00FFFFFF) or OVERLAY_LIGHT)
+        setBackgroundColor((cursorFill(context) and 0x00FFFFFF) or OVERLAY_LIGHT)
         visibility = View.GONE
         // a square of its own: the icon is drawn by width, a stretched view would cut it
         addView(ImageView(context).apply {
             setImageDrawable(PathDrawable(MenuIcons.CHECK).apply {
-                setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+                setColorFilter(cursorText(context), android.graphics.PorterDuff.Mode.SRC_IN)
             })
         }, android.widget.FrameLayout.LayoutParams(px(72f), px(72f), Gravity.CENTER))
     }

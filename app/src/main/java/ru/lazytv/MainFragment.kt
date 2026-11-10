@@ -367,7 +367,8 @@ class MainFragment : Fragment() {
                 else -> null
             }
             val iconColor = when {
-                focused || isCur -> Color.WHITE
+                focused -> cursorText(context)
+                isCur -> Color.WHITE
                 else -> NAV_INACTIVE_COLOR
             }
             iconView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)

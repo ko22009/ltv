@@ -19,7 +19,9 @@ const val CHIP_HEIGHT = 44
 fun backButton(context: Context, scale: Float, normalColor: Int = OVERLAY_SOFT, onClick: () -> Unit): ImageView {
     val pad = (12 * scale).toInt()
     return ImageView(context).apply {
-        setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
+        setImageDrawable(PathDrawable(MenuIcons.BACK))
+        // the icon sits on the view that takes the focus, so no need to pass the state down
+        imageTintList = cursorColors(context, Color.WHITE)
         setPadding(pad, pad, pad, pad)
         background = focusShape(scale, normalColor, circle = true)
         // a touch screen has no cursor: the teal focus plate would stay on the button after the first tap
@@ -44,8 +46,48 @@ val FOCUS_FILL: Int get() = LazyApp.res.getColor(R.color.focus_fill, null)
 /** The plate of a pressed or focused button on a phone: a lighter grey, not the teal that belongs to the cursor of a TV remote. */
 val TOUCH_FILL: Int get() = LazyApp.res.getColor(R.color.touch_fill, null)
 
-/** The highlight under the cursor or the finger: teal on a TV, the neutral lighter plate on a phone. */
+/** The highlight under the cursor or the finger: [FOCUS_FILL] on a TV, the neutral lighter plate on a phone. */
 fun cursorFill(context: android.content.Context): Int = if (DeviceType.isTv(context)) FOCUS_FILL else TOUCH_FILL
+
+/** What is drawn on [FOCUS_FILL] (caption, icon). Changes together with it: a light plate needs a dark caption. */
+val ON_FOCUS: Int get() = LazyApp.res.getColor(R.color.on_focus, null)
+
+/** The caption colour on the plate of [cursorFill]: [ON_FOCUS] on a TV, white on the dark touch plate of a phone. */
+fun cursorText(context: android.content.Context): Int = if (DeviceType.isTv(context)) ON_FOCUS else Color.WHITE
+
+/** Text or icon colours: [rest] normally, the caption colour of the cursor while the view (or its parent, see [passParentState]) is focused. */
+fun cursorColors(context: android.content.Context, rest: Int, state: Int = android.R.attr.state_focused) = android.content.res.ColorStateList(
+    arrayOf(intArrayOf(state), intArrayOf()),
+    intArrayOf(cursorText(context), rest),
+)
+
+/**
+ * Makes a child follow the state (focus) of its parent. The parent starts to pass its state down only if the child had the flag
+ * when it was added, so an already added child is added again.
+ */
+fun View.passParentState() {
+    if (isDuplicateParentStateEnabled) return
+    val parent = parent as? ViewGroup
+    if (parent != null) {
+        val at = parent.indexOfChild(this)
+        val params = layoutParams
+        parent.removeViewAt(at)
+        isDuplicateParentStateEnabled = true
+        parent.addView(this, at, params)
+    } else isDuplicateParentStateEnabled = true
+}
+
+/** An icon of [PathDrawable] that is [rest] normally and the caption colour of the cursor while its parent is focused. */
+fun ImageView.followCursor(rest: Int = Color.WHITE) {
+    passParentState()
+    imageTintList = cursorColors(context, rest)
+}
+
+/** A caption that is [rest] normally and the caption colour of the cursor while its parent is focused. */
+fun TextView.followCursor(rest: Int = Color.WHITE) {
+    passParentState()
+    setTextColor(cursorColors(context, rest))
+}
 
 /** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, teal under focus. */
 fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
@@ -107,21 +149,8 @@ fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radi
         addState(intArrayOf(), android.graphics.drawable.GradientDrawable().apply { setColor(if (active) ACTIVE_PLATE else plate); cornerRadius = corner })
     }
     if (text == null) return
-    if (text !== view && !text.isDuplicateParentStateEnabled) {
-        // the parent starts to pass its state down to a child only if the child had the flag when it was added: add it again
-        val parent = text.parent as? ViewGroup
-        if (parent != null) {
-            val at = parent.indexOfChild(text)
-            val params = text.layoutParams
-            parent.removeViewAt(at)
-            text.isDuplicateParentStateEnabled = true
-            parent.addView(text, at, params)
-        } else text.isDuplicateParentStateEnabled = true
-    }
-    text.setTextColor(android.content.res.ColorStateList(
-        arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
-        intArrayOf(Color.WHITE, if (active) ACTIVE_TEXT else restText),
-    ))
+    if (text !== view) text.passParentState()
+    text.setTextColor(cursorColors(view.context, if (active) ACTIVE_TEXT else restText))
 }
 
 fun chipButton(context: Context, scale: Float, caption: String, icon: String? = null): LinearLayout {
@@ -136,12 +165,14 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {
             tag = "icon"
+            isDuplicateParentStateEnabled = true
             setChipIcon(icon)
         }, LinearLayout.LayoutParams(px(18), px(18)).apply { rightMargin = px(8) })
         addView(TextView(context).apply {
             tag = "caption"
             text = caption
-            setTextColor(Color.WHITE)
+            isDuplicateParentStateEnabled = true
+            setTextColor(cursorColors(context, Color.WHITE))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
@@ -150,8 +181,10 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
     }
 }
 
-private fun ImageView.setChipIcon(icon: String) =
-    setImageDrawable(PathDrawable(icon).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
+private fun ImageView.setChipIcon(icon: String) {
+    setImageDrawable(PathDrawable(icon))
+    imageTintList = cursorColors(context, Color.WHITE)
+}
 
 /** The caption and the icon of a chip can change after it is made (a bookmark that is saved, a watched mark). */
 var View.chipCaption: CharSequence
