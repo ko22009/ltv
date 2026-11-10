@@ -65,6 +65,29 @@ object Favorites {
         val app = context.applicationContext
         Thread { runCatching { Recommendations.refreshBookmarks(app) } }.start()
     }
+
+    /** Fills in the poster of a record saved before the card knew it (the folder of the record stays). */
+    private fun setPoster(context: Context, id: Long, tv: Boolean, poster: String) {
+        val list = records(context)
+        if (list.none { it.second.id == id && it.second.tv == tv && it.second.poster == null }) return
+        save(context, list.map { (folder, t) -> if (t.id == id && t.tv == tv && t.poster == null) folder to t.copy(poster = poster) else folder to t })
+    }
+
+    /**
+     * A bookmark saved from a place that had no poster yet (a search answer, an old record) showed the stub "Нет картинки".
+     * The posters are asked for once, saved into the record and returned; call it off the main thread.
+     */
+    fun withPosters(context: Context, titles: List<Title>): List<Title> {
+        if (titles.none { it.poster == null }) return titles
+        return titles.map { title ->
+            if (title.poster != null) return@map title
+            val poster = runCatching { Tmdb.detailsCached(context, title.id, title.tv) }.getOrNull()?.poster.orEmpty()
+            if (poster.isNotEmpty()) {
+                setPoster(context, title.id, title.tv, poster)
+                title.copy(poster = poster)
+            } else title
+        }
+    }
 }
 
 /** Titles the user started watching, the latest first. Kept on the device, at most [LIMIT]. */

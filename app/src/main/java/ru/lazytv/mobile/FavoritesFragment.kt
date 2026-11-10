@@ -82,6 +82,14 @@ class FavoritesFragment : Fragment() {
         val ctx = requireContext()
         val saved = Favorites.all(ctx)
         titles.setItems(saved)
+        // a bookmark without a poster asks TMDB for it once, then the list is drawn again
+        if (saved.any { it.poster == null }) {
+            val app = ctx.applicationContext
+            Thread {
+                val fixed = Favorites.withPosters(app, saved)
+                activity?.runOnUiThread { if (isAdded && fixed != saved) titles.setItems(fixed) }
+            }.start()
+        }
 
         episodeRows.rows.clear()
         EpisodeState.favorites(ctx).forEach { item ->

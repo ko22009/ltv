@@ -631,7 +631,20 @@ class MainFragment : Fragment() {
         rows.clear()
         torrentsSignature = Settings.string(ctx, "favorite_torrents", "[]")
         val saved = Favorites.all(ctx)
-        if (saved.isNotEmpty()) rows.add(ListRow(ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }))
+        val savedCards = ArrayObjectAdapter(CardPresenter()).apply { addAll(0, saved) }
+        if (saved.isNotEmpty()) rows.add(ListRow(savedCards))
+        // a bookmark without a poster asks TMDB for it once; the cards are replaced one by one, so the focus stays where it is
+        if (saved.any { it.poster == null }) {
+            val app = ctx.applicationContext
+            Thread {
+                val fixed = Favorites.withPosters(app, saved)
+                activity?.runOnUiThread {
+                    if (isAdded && fixed != saved && savedCards.size() == fixed.size) {
+                        fixed.forEachIndexed { i, t -> if (savedCards.get(i) != t) savedCards.replace(i, t) }
+                    }
+                }
+            }.start()
+        }
         val episodes = EpisodeState.favorites(ctx)
         if (episodes.isNotEmpty()) {
             rows.add(ListRow(HeaderItem("Избранные серии"), ArrayObjectAdapter(FavoriteEpisodePresenter()).apply {
