@@ -204,15 +204,6 @@ class GalleryActivity : Activity() {
         phoneCounter.setPadding(dp(12), dp(4), dp(12), dp(4))
         phoneCounter.background = android.graphics.drawable.GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
         root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
-        val placeCounter = {
-            val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
-            val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
-            val inset = dp(10)
-            val right = minOf(imageAt[0] - rootAt[0] + mainImage.width, root.width) - inset
-            val top = maxOf(imageAt[1] - rootAt[1], 0) + inset
-            phoneCounter.translationX = (right - phoneCounter.width).toFloat()
-            phoneCounter.translationY = top.toFloat()
-        }
         mainImage.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         phoneCounter.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
@@ -232,9 +223,28 @@ class GalleryActivity : Activity() {
         zone(arrowRight, Gravity.END, 1)
     }
 
+    /** The counter sits in the upper right corner of the picture as it is drawn (not of the view, which can be wider), inside the screen. */
+    private fun placeCounter() {
+        if (!::phoneCounter.isInitialized) return
+        val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
+        val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
+        val drawn = android.graphics.RectF(0f, 0f, mainImage.width.toFloat(), mainImage.height.toFloat())
+        mainImage.drawable?.let { d ->
+            drawn.set(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+            mainImage.imageMatrix.mapRect(drawn)
+        }
+        val inset = dp(10)
+        val right = minOf(imageAt[0] - rootAt[0] + drawn.right, root.width.toFloat()) - inset
+        val top = maxOf(imageAt[1] - rootAt[1] + drawn.top, 0f) + inset
+        phoneCounter.translationX = right - phoneCounter.width
+        phoneCounter.translationY = top
+    }
+
     private fun updatePhoneChrome() {
         if (!mobile || !::phoneCounter.isInitialized) return
         phoneCounter.text = "${selectedIndex + 1} / ${backdrops.size}"
+        // the picture may not be set yet: place the counter once it is
+        mainImage.post { placeCounter() }
         arrowLeft.alpha = if (selectedIndex > 0) 1f else 0.3f
         arrowRight.alpha = if (selectedIndex < backdrops.size - 1) 1f else 0.3f
     }
