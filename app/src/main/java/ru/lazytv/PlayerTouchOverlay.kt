@@ -203,8 +203,11 @@ class PlayerTouchOverlay(
         // the sign stands on the side of the finger: the sun on the left, the speaker on the right
         (dragSign.layoutParams as LayoutParams).apply {
             gravity = Gravity.CENTER_VERTICAL or (if (dragMode == DRAG_BRIGHTNESS) Gravity.START else Gravity.END)
-            marginStart = if (dragMode == DRAG_BRIGHTNESS) dp(56) else 0
-            marginEnd = if (dragMode == DRAG_VOLUME) dp(56) else 0
+            // left/right margins, not start/end: start/end changed on live params are not resolved again and the right one got lost
+            leftMargin = if (dragMode == DRAG_BRIGHTNESS) dp(56) else 0
+            rightMargin = if (dragMode == DRAG_VOLUME) dp(56) else 0
+            marginStart = leftMargin
+            marginEnd = rightMargin
         }
         dragSign.requestLayout()
         dragIcon.setImageDrawable(PathDrawable(if (dragMode == DRAG_BRIGHTNESS) MenuIcons.BRIGHTNESS else MenuIcons.VOLUME).apply {
