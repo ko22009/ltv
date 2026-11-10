@@ -393,10 +393,10 @@ class PlayerActivity : Activity() {
 
     private fun updateSeekColors() {
         if (!::seek.isInitialized) return
-        // the colours of the loading spinner (Loading.kt): vivid indigo arc on a faint white track, in every state
+        // the colours of the loading spinner (Loading.kt): white arc on a faint white track, in every state
         val progressColor = Color.WHITE
-        // as the season buttons of the design system: the light plate at rest, the indigo of the focus under the cursor
-        // as the season buttons of the design system: the light plate at rest, the dark indigo of the focus under the cursor
+        // as the season buttons of the design system: the light plate at rest, the teal of the focus under the cursor
+        // as the season buttons of the design system: the light plate at rest, the dark teal of the focus under the cursor
         val thumbColor = if (seek.isFocused) FOCUS_FILL else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
@@ -727,7 +727,7 @@ class PlayerActivity : Activity() {
         Toast.makeText(this, "Источник: ${v.source}", Toast.LENGTH_SHORT).show()
     }
 
-    /** Repaints the episode strip: the current episode is the light plate like the active season on the series page, the focused one is indigo. */
+    /** Repaints the episode strip: the current episode is the light plate like the active season on the series page, the focused one is teal. */
     private fun updateEpisodeButtons() {
         episodeViews.forEachIndexed { index, view ->
             styleChoice(view, view, index == queueIndex, scale, plate = 0x55000000, restText = 0xFFCBD5E1.toInt())

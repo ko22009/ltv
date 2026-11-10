@@ -433,7 +433,7 @@ class DetailsActivity : Activity() {
             isFocusable = true
             isClickable = true
             background = StateListDrawable().apply {
-                // a text block is not filled under the cursor (a big indigo slab): a white border shows the focus
+                // a text block is not filled under the cursor (a big teal slab): a white border shows the focus
                 val focused = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
                     setStroke(dp(1).coerceAtLeast(1), Color.WHITE)
@@ -660,7 +660,7 @@ class DetailsActivity : Activity() {
                 val cards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val cardViews = mutableListOf<View>()
                 linkedDirectors.forEachIndexed { idx, dir ->
-                    // the same card as the cast (outline, indigo under the cursor), but the name only
+                    // the same card as the cast (outline, teal under the cursor), but the name only
                     val card = text(dir.name, 16f, Color.WHITE, bold = true).apply {
                         gravity = Gravity.CENTER_VERTICAL
                         setPadding(dp(14), dp(8), dp(14), dp(8))
@@ -907,7 +907,7 @@ class DetailsActivity : Activity() {
                 }
             }
             if (firstCastCard == null) firstCastCard = card
-            // initials on a calm indigo circle sit under the photo: they show while it loads and for an actor who has none
+            // initials on a calm teal circle sit under the photo: they show while it loads and for an actor who has none
             val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
             val photo = FrameLayout(this).apply {
                 background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))

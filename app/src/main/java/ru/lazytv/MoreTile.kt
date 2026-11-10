@@ -71,7 +71,7 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
             topMargin = px(12f)
             bottomMargin = px(12f)
         }
-        // the focused tile has the colour of the focused item of the left menu (#4338CA) and a white icon
+        // the focused tile has the colour of the focused item of the left menu (#0F766E) and a white icon
         fun plate(color: Int) = GradientDrawable().apply {
             setColor(color)
             cornerRadius = px(TITLE_CARD_RADIUS).toFloat()

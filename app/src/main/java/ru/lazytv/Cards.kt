@@ -137,7 +137,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     /** "В КИНО" over the top left corner of the poster of a film that is in the cinemas now (not dimmed with the poster). */
     private val cinema = Cinema.label(context) { px(it) }
 
-    /** The mark of a card chosen for deletion (edit mode of the history): an indigo veil and a big tick. */
+    /** The mark of a card chosen for deletion (edit mode of the history): a teal veil and a big tick. */
     private val pick = android.widget.FrameLayout(context).apply {
         setBackgroundColor((FOCUS_FILL and 0x00FFFFFF) or 0x99000000.toInt())
         visibility = View.GONE

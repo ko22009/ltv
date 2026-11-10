@@ -27,7 +27,7 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
-/** Flat or round background that turns indigo while the view has focus. */
+/** Flat or round background that turns teal while the view has focus. */
 fun focusShape(scale: Float, normal: Int, radius: Float = 3f, circle: Boolean = false, focused: Int = FOCUS_FILL) = StateListDrawable().apply {
     fun shape(color: Int) = GradientDrawable().apply {
         setColor(color)

@@ -340,9 +340,9 @@ class TorrentsActivity : Activity() {
         }
         view.isFocusable = true
         view.isClickable = true
-        // the chosen source is the light plate like the active season; the focus fills it with the indigo
+        // the chosen source is the light plate like the active season; the focus fills it with the teal
         styleChoice(view, view, active, scale, plate = 0x66000000, restText = Color.WHITE)
-        // a dark icon on the light plate (the white one would vanish there); the cursor turns the plate indigo, the icon white again
+        // a dark icon on the light plate (the white one would vanish there); the cursor turns the plate teal, the icon white again
         if (icon != null && active) view.compoundDrawables[0]?.setColorFilter(ACTIVE_TEXT, android.graphics.PorterDuff.Mode.SRC_IN)
         view.setOnClickListener { action() }
         // keep the focused chip inside the visible part of the single-row slider

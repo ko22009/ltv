@@ -5,7 +5,7 @@ import android.graphics.drawable.StateListDrawable
 
 /**
  * The common card plate of the pages (people on the title card, rows of episodes and torrents): a thin outline of the theme
- * on the dark plate; in the [state] (focused or selected) it fills with the indigo of the app and the outline turns light.
+ * on the dark plate; in the [state] (focused or selected) it fills with the teal of the app and the outline turns light.
  * [scale] is the screen scale (`uiScale()`). Described in docs/design-system.md.
  */
 fun outlinedCardBackground(

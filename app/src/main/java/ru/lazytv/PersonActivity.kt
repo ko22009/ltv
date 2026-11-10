@@ -156,7 +156,7 @@ class PersonActivity : Activity() {
         // the band is a card of the same look as the people cards of the title card (not focusable: only the resting outline shows)
         band.background = personCardBackground(scale)
         band.setPadding(px(14), px(14), px(14), px(14))
-        // initials on a calm indigo plate sit under the photo: they show while it loads and for a person who has none
+        // initials on a calm teal plate sit under the photo: they show while it loads and for a person who has none
         val initials = person.name.split(' ').filter { it.isNotEmpty() }.take(2).joinToString("") { it.take(1).uppercase() }
         val photo = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(0xFF283048.toInt(), 0xFF181D2A.toInt()))

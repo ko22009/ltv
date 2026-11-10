@@ -22,7 +22,7 @@ fun backButton(context: Context, scale: Float, normalColor: Int = 0x66000000, on
         setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) })
         setPadding(pad, pad, pad, pad)
         background = focusShape(scale, normalColor, circle = true)
-        // a touch screen has no cursor: the indigo focus plate would stay on the button after the first tap
+        // a touch screen has no cursor: the teal focus plate would stay on the button after the first tap
         isFocusable = !context.isMobileUi()
         isClickable = true
         id = View.generateViewId()
@@ -39,9 +39,9 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
  * like the other tiles. The caption is the child with the tag "caption". Filters, sort and the page header buttons are this one.
  */
 /** The one colour of every focus and selection highlight in the app (menu, tiles, buttons, rows, chips). */
-val FOCUS_FILL = 0xFF4338CA.toInt()
+val FOCUS_FILL = 0xFF0F766E.toInt()
 
-/** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, indigo under focus. */
+/** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, teal under focus. */
 fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
 
 /** The one dark plate of cards and tiles: the text strip of a title card, the "show all" tile, the text tile. */
@@ -54,7 +54,7 @@ const val ACTIVE_TEXT = 0xFF101216.toInt()
 
 /**
  * The one look of "the chosen one among equals": resting it is the usual [plate] with the [restText] caption, the chosen
- * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the indigo [FOCUS_FILL]
+ * one is the light [ACTIVE_PLATE] with a dark caption (seen at once), under the cursor any of them is the teal [FOCUS_FILL]
  * with a white caption. [text] is the caption view (the item itself or its child); the chip takes the focus, the caption follows it.
  */
 fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radius: Float = 10f, plate: Int = 0xFF1C2029.toInt(), restText: Int = 0xFF94A3B8.toInt()) {
