@@ -386,17 +386,19 @@ class DetailsActivity : Activity() {
 
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
-        val original = text("", 16f, 0xFF94A3B8.toInt())
+        val original = text("", 16f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false }
         // the original title is one grey bar of its own line height until the details come, so the lines below do not move
         skeletonText(original, dp(220))
         if (mobile) {
             val titles = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(text(name, 24f, bold = true))
+                // no extra font padding above and below the lines: a tall script (devanagari) otherwise pushes the title and the button down past the poster
+                titleView = text(name, 24f, bold = true).apply { includeFontPadding = false }
+                addView(titleView)
                 addView(original)
-                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false; setPadding(0, dp(5), 0, 0) }
                 skeletonText(genresLine, dp(170))
-                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { includeFontPadding = false; setPadding(0, dp(5), 0, 0) }
                 addView(genresLine)
                 addView(metaLine)
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
@@ -416,7 +418,8 @@ class DetailsActivity : Activity() {
             // under the poster the row of three captioned actions
             info.addView(bar, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(16) })
         } else {
-            info.addView(text(name, 34f))
+            titleView = text(name, 34f)
+            info.addView(titleView)
         }
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
@@ -569,6 +572,8 @@ class DetailsActivity : Activity() {
 
     /** True until the details come: the table shows all its rows, an unknown value as a grey bar. */
     private lateinit var moreRow: LinearLayout
+    /** The heading of the card: it can be replaced by the Russian title once the details are in. */
+    private lateinit var titleView: TextView
 
     /** The details are in (or failed): a line that stays empty is taken out, so no blank gap is left where the data is missing. */
     private fun dropEmpty(original: TextView, sameTitle: Boolean = false) {
@@ -591,7 +596,8 @@ class DetailsActivity : Activity() {
     /** The rows every card has: a value that is not known is shown as a dash, not left out. */
     private fun withDashes(rows: List<Pair<String, String>>): List<Pair<String, String>> {
         val always = setOf(RELEASE, "Рейтинг", "Длительность", "Возраст", "Жанр", "Страна", "Режиссёр") + (if (currentTitle.tv) setOf("Сезонов") else emptySet())
-        return rows.map { (caption, value) -> if (value.isBlank() && caption in always) caption to DASH else caption to value }
+        // no age rating known: the lowest one, as the owner asked
+        return rows.map { (caption, value) -> if (value.isBlank() && caption in always) caption to (if (caption == "Возраст") NO_AGE else DASH) else caption to value }
     }
 
     private fun factRows(base: List<Pair<String, String>>): List<Pair<String, String>> =
@@ -669,20 +675,21 @@ class DetailsActivity : Activity() {
         } else if (currentBackdrop.isEmpty()) {
             hideBannerSpinner()
         }
-        // the same title in another script (hindi, japanese...) is shown twice; a russian one equal to the title is a plain repeat and goes
-        val repeatsRussian = d.originalTitle.equals(name, true) && d.originalTitle.any { it in 'А'..'я' || it == 'ё' || it == 'Ё' }
-// the title in the other script: the line shows the Russian (or English) name of the film when there is one, else the repeat
-        val second = if (d.originalTitle.equals(name, true) && !repeatsRussian)
-            listOf(d.title, d.englishTitle).firstOrNull { it.isNotEmpty() && !it.equals(name, true) } ?: d.originalTitle
-        else d.originalTitle
-        if (second.isNotEmpty() && !repeatsRussian) original.text = second.uppercase()
+        fun hasCyrillic(s: String) = s.any { it in 'А'..'я' || it == 'ё' || it == 'Ё' }
+        // the list gave the title in its own script (hindi...) while TMDB has the Russian one: that is the heading, for us;
+        // the title in the original script goes to the second line
+        if (!hasCyrillic(name) && hasCyrillic(d.title) && !d.title.equals(name, true)) titleView.text = d.title
+        val shownTitle = titleView.text.toString()
+        // a russian original that only repeats the heading is no second line
+        val repeatsRussian = d.originalTitle.equals(shownTitle, true) && hasCyrillic(d.originalTitle)
+        if (d.originalTitle.isNotEmpty() && !repeatsRussian) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
         if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
         if (mobile) {
             genresLine.text = d.genres.joinToString(", ")
             val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
             // a missing part is left out (the table below has its own row with a dash); a dash only when nothing is known
-            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { DASH }
+            metaLine.text = listOf(year, d.age.ifBlank { NO_AGE }, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { DASH }
         }
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
         // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
@@ -1286,3 +1293,6 @@ class DetailsActivity : Activity() {
 
 /** What stands where a fact of the card is not known. */
 private const val DASH = "–"
+
+/** The age rating shown when TMDB has none. */
+private const val NO_AGE = "0+"
