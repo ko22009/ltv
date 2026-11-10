@@ -26,7 +26,7 @@ private fun dialogPanel(activity: Activity, scale: Float, title: String): Linear
     fun px(v: Int) = (v * scale).toInt()
     val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(px(24), px(20), px(24), px(20))
+        if (activity.isMobileUi()) setPadding(px(10), px(12), px(10), px(10)) else setPadding(px(24), px(20), px(24), px(20))
         background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = px(TITLE_CARD_RADIUS.toInt()).toFloat() }
     }
     panel.addView(TextView(activity).apply {
@@ -34,7 +34,7 @@ private fun dialogPanel(activity: Activity, scale: Float, title: String): Linear
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scale)
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(px(8), 0, px(8), px(12))
+        if (activity.isMobileUi()) setPadding(px(8), 0, px(8), px(8)) else setPadding(px(8), 0, px(8), px(12))
     })
     return panel
 }
@@ -52,7 +52,7 @@ private fun dialogRow(activity: Activity, scale: Float, caption: String, active:
         ellipsize = android.text.TextUtils.TruncateAt.END
         gravity = Gravity.CENTER_VERTICAL
         minHeight = px(CHIP_HEIGHT)
-        setPadding(px(18), px(5), px(18), px(5))
+        if (activity.isMobileUi()) setPadding(px(12), px(2), px(12), px(2)) else setPadding(px(18), px(5), px(18), px(5))
         isFocusable = true
         isFocusableInTouchMode = !activity.isMobileUi()
         isClickable = true
@@ -96,7 +96,7 @@ fun showChoice(activity: Activity, title: String, items: List<String>, current: 
                 onPick(index)
             }
         }
-        rows.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(3) })
+        rows.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = px(if (activity.isMobileUi()) 2 else 3) })
         if (index == current || (first == null && current !in items.indices)) first = row
     }
     panel.addView(ScrollView(activity).apply { addView(rows) }, LinearLayout.LayoutParams(-1, -2))
