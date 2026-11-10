@@ -79,7 +79,7 @@ class MoreTilePresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
         }
         tile.background = android.graphics.drawable.StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), plate(FOCUS_FILL))
-            addState(intArrayOf(), plate(0xFF1E222A.toInt()))
+            addState(intArrayOf(), plate(PLATE_FILL))
         }
         tile.elevation = 0f
         val linkIcon = PathDrawable(MenuIcons.LINK).apply {

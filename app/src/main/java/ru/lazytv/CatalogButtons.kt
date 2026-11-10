@@ -43,7 +43,10 @@ data class CatalogButton(val category: String, val filters: Boolean, val caption
 val FOCUS_FILL = 0xFF4338CA.toInt()
 
 /** The plate of a text tile (settings section, saved episode, saved torrent): dark rounded card as on the phone, indigo under focus. */
-fun textTilePlate(scale: Float) = focusShape(scale, 0xFF1C2029.toInt(), radius = 10f)
+fun textTilePlate(scale: Float) = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
+
+/** The one dark plate of cards and tiles: the text strip of a title card, the "show all" tile, the text tile. */
+val PLATE_FILL = 0xFF1C2029.toInt()
 
 /** The plate of the chosen item among equals (the open season, the playing episode, the picked source, the current choice in a list). */
 const val ACTIVE_PLATE = 0xFFE2E8F0.toInt()

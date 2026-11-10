@@ -55,7 +55,7 @@ class SkeletonCardView(context: Context, scale: Float, posterHeight: Float = TIT
         }
         // the same heights as the poster and the text plate of a real card
         addView(View(context), LayoutParams(-1, (posterHeight * scale).toInt()))
-        addView(View(context).apply { setBackgroundColor(0xFF1E222A.toInt()) }, LayoutParams(-1, (infoHeight * scale).toInt()))
+        addView(View(context).apply { setBackgroundColor(PLATE_FILL) }, LayoutParams(-1, (infoHeight * scale).toInt()))
         // the band must not stick out of the rounded corners
         clipToOutline = true
     }
@@ -196,7 +196,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     private val info = LinearLayout(context).apply {
         orientation = VERTICAL
         // the same quiet plate the rows use, so the title and the year read on any poster
-        setBackgroundColor(0xFF1E222A.toInt())
+        setBackgroundColor(PLATE_FILL)
         setPadding(px(16f), px(12f), px(16f), px(10f))
         addView(name, LayoutParams(-1, -2))
         addView(genre, LayoutParams(-1, -2).apply { topMargin = px(5f) })

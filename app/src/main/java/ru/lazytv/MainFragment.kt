@@ -614,7 +614,8 @@ class MainFragment : Fragment() {
     private fun pageTitle(name: String) = name.lowercase().replaceFirstChar { it.uppercase() }
 
     private fun pageFor(name: String): ArrayObjectAdapter = pages.getOrPut(name) {
-        val rows = ArrayObjectAdapter(pageRows(dimOthers = name != SETTINGS))
+        // no dimming of the rows without focus: the overlay is a plain rectangle and spoils the rounded corners of the cards
+        val rows = ArrayObjectAdapter(pageRows(dimOthers = false))
         val ctx = requireContext()
         when (name) {
             FAVORITES -> {
