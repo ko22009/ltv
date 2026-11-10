@@ -62,7 +62,8 @@ class SettingsActivity : FragmentActivity() {
             addView(TextView(this@SettingsActivity).apply {
                 text = "Помощь"
                 setTextColor(Color.WHITE)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, 34f * scale)
+                // the same size as the titles of the other phone pages
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, (if (isMobileUi()) 24f else 34f) * scale)
                 typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
             })
         }
@@ -78,9 +79,16 @@ class SettingsActivity : FragmentActivity() {
             setOnClickListener { Errors.openDateSettings(this@SettingsActivity) }
         }
         val actionsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(retuneBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
-            addView(dateBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
+            if (isMobileUi()) {
+                // two long captions do not fit one line of a phone: the buttons stand one under the other, as wide as the page
+                orientation = LinearLayout.VERTICAL
+                addView(retuneBtn, LinearLayout.LayoutParams(-1, px(CHIP_HEIGHT)).apply { bottomMargin = px(8) })
+                addView(dateBtn, LinearLayout.LayoutParams(-1, px(CHIP_HEIGHT)))
+            } else {
+                orientation = LinearLayout.HORIZONTAL
+                addView(retuneBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
+                addView(dateBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
+            }
         }
         page.addView(actionsRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(16); bottomMargin = px(14) })
 
