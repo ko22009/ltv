@@ -126,11 +126,29 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-        // on a phone the lower edge of the frame melts into the page background
-        if (mobile) banner.addView(View(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xFF101216.toInt()))
-        }, FrameLayout.LayoutParams(-1, dp(110), Gravity.BOTTOM))
-        stage.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 230))))
+        if (mobile) {
+            // on a phone the banner is a rounded card under the back button: a gallery icon in the middle,
+            // the number of the frame in the corner and the dots at the bottom
+            banner.background = GradientDrawable().apply { setColor(0xFF161920.toInt()); cornerRadius = dp(18).toFloat() }
+            banner.clipToOutline = true
+            banner.isClickable = true
+            banner.setOnClickListener { openGallery() }
+            banner.addView(ImageView(this).apply {
+                setImageDrawable(PathDrawable(MenuIcons.GALLERY).apply { setColorFilter(0xCCFFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN) })
+                contentDescription = "Галерея"
+            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
+            bannerCounter = text("", 14f).apply {
+                setPadding(dp(12), dp(4), dp(12), dp(4))
+                background = GradientDrawable().apply { setColor(0x99000000.toInt()); cornerRadius = dp(14).toFloat() }
+                visibility = View.GONE
+            }
+            banner.addView(bannerCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.TOP).apply { topMargin = dp(10); rightMargin = dp(10) })
+            bannerDots = LinearLayout(this).apply { gravity = Gravity.CENTER; visibility = View.GONE }
+            banner.addView(bannerDots, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply { bottomMargin = dp(10) })
+            stage.addView(banner, FrameLayout.LayoutParams(-1, dp(178)).apply { topMargin = dp(68); leftMargin = dp(16); rightMargin = dp(16) })
+        } else {
+            stage.addView(banner, FrameLayout.LayoutParams(-1, dp(360)))
+        }
 
         val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
         if (!passedBackdrop.isNullOrEmpty()) {
@@ -192,17 +210,16 @@ class DetailsActivity : Activity() {
             isClickable = false
         }
         if (mobile) watchButton.apply {
-            // a wide red pill with the caption, as in the mockup
+            // a wide pill in the accent colour of the app with the caption
             text = "Смотреть"
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scale)
             typeface = Typeface.DEFAULT_BOLD
             compoundDrawablePadding = dp(10)
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(FOCUS_FILL); cornerRadius = dp(26).toFloat()
+                    setColor(0xFF6366F1.toInt()); cornerRadius = dp(26).toFloat()
                 })
-                addState(intArrayOf(), GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xFFD81B4A.toInt(), 0xFF9B1238.toInt()))
-                    .apply { cornerRadius = dp(26).toFloat() })
+                addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(26).toFloat() })
             }
             // the icon stays next to the caption: padding puts the pair in the middle of the wide button
             addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
@@ -221,7 +238,7 @@ class DetailsActivity : Activity() {
 
         val galleryButton = button(MenuIcons.GALLERY, "Галерея") { openGallery() }
         galleryButton.nextFocusUpId = back.id
-        bar.addView(galleryButton)
+        if (!mobile) bar.addView(galleryButton)
 
         lateinit var favorite: TextView
         // filled bookmark: the title is saved in a folder; outline: it is not
@@ -262,7 +279,8 @@ class DetailsActivity : Activity() {
         bar.addView(trailerButton)
         // left and right walk the buttons of the bar: at the right end there is nothing to go to, the focus stays;
         // at the left end the key goes on to the back button as usual
-        val barButtons = listOf(watchButton, galleryButton, favorite, seen, torrentButton, trailerButton)
+        // on a phone the gallery opens from the banner, not from the row
+        val barButtons = listOf(watchButton, galleryButton, favorite, seen, torrentButton, trailerButton).filter { !mobile || it !== galleryButton }
         barButtons.forEachIndexed { index, btn ->
             btn.setOnKeyListener { _, code, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) false
@@ -325,7 +343,7 @@ class DetailsActivity : Activity() {
                 addView(watchSlot, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
             }
             val head = LinearLayout(this).apply {
-                setPadding(0, dp(4), 0, 0)
+                setPadding(0, dp(20), 0, 0)
                 addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
             }
@@ -403,7 +421,7 @@ class DetailsActivity : Activity() {
             scroll.addView(LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 clipChildren = false
-                addView(stage, LinearLayout.LayoutParams(-1, dp(230)))
+                addView(stage, LinearLayout.LayoutParams(-1, dp(246)))
                 addView(info, LinearLayout.LayoutParams(-1, -2))
             })
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
@@ -635,6 +653,7 @@ class DetailsActivity : Activity() {
 
                     override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
                         backdropIndex = backdrops.indexOf(url).coerceAtLeast(0)
+                        updateBannerIndicators()
                         return false
                     }
                 }).into(backdrop)
@@ -654,11 +673,29 @@ class DetailsActivity : Activity() {
         backdrops.clear()
         backdrops.addAll(all)
         backdropIndex = 0
+        updateBannerIndicators()
         Glide.with(applicationContext).load(backdrops[1]).preload()
         backdropHandler.postDelayed(backdropTick, 20_000L)
     }
 
     private fun startBackdrops(items: List<String>) = startBackdropSlideshow(items)
+
+    private lateinit var bannerCounter: TextView
+    private lateinit var bannerDots: LinearLayout
+
+    /** Phone banner: "2 / 5" in the corner and the dots at the bottom follow the frame on show. */
+    private fun updateBannerIndicators() {
+        if (!::bannerCounter.isInitialized || backdrops.size < 2) return
+        bannerCounter.text = "${backdropIndex + 1} / ${backdrops.size}"
+        bannerCounter.visibility = View.VISIBLE
+        bannerDots.visibility = View.VISIBLE
+        bannerDots.removeAllViews()
+        for (i in backdrops.indices) {
+            bannerDots.addView(View(this).apply {
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(if (i == backdropIndex) Color.WHITE else 0x66FFFFFF) }
+            }, LinearLayout.LayoutParams(dp(7), dp(7)).apply { leftMargin = dp(4); rightMargin = dp(4) })
+        }
+    }
 
     override fun onResume() {
         super.onResume()
