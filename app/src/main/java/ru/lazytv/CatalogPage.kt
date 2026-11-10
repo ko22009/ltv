@@ -136,6 +136,8 @@ class CatalogPageFragment : Fragment() {
         // the browse screen does not pass the focus between the neighbours of the header: right and left walk the buttons,
         // at the ends the focus stays instead of jumping to a view that is not beside them
         for (chip in listOf(resetChip, filterChip, sortChip)) chip.setOnKeyListener { view, code, event ->
+            // the user is steering among the buttons: the cards that arrive later must not take the focus away from them
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) wantCardFocus = false
             if (event.action != android.view.KeyEvent.ACTION_DOWN) false
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT || code == android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
                 val visible = (0 until buttons.childCount).map { buttons.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
@@ -203,10 +205,9 @@ class CatalogPageFragment : Fragment() {
         // [force]: the user pressed "right" or OK on the menu, the focus sits on the menu item and must leave it; the
         // delayed repeats below stay careful so they do not pull the focus back after the user has gone to the menu
         take(force)
+        // only the frame of the first layout: a later repeat would pull the focus back from the buttons the user has
+        // already reached (there is no browse screen any more that hands the focus to the first button by itself)
         grid.doOnLayout { it.post { if (isAdded) take() } }
-        // the cards come from the cache at once and the browse screen hands the focus to the first button a little
-        // later, at an unknown moment: the request is repeated for the first second (only while the focus is on a button)
-        for (delay in longArrayOf(150, 500, 1200)) grid.postDelayed({ if (isAdded) take() }, delay)
     }
 
     /** The button above the focused card (or the closest one to it): the first cards go up to the filters, the next ones to the sort. */
