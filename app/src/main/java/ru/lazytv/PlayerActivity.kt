@@ -86,7 +86,9 @@ class PlayerActivity : Activity() {
         val paused = player?.let { !it.playWhenReady && it.playbackState == Player.STATE_READY } == true
         // on pause the sign stays in the middle whether the controls are open or hidden (they take the top and the bottom only),
         // so it does not blink when they are shown and hidden
-        pauseBadge.visibility = if (paused) View.VISIBLE else View.GONE
+        // the dots take the same place while the buffer is empty: the pause sign steps aside
+        val dotsShown = ::waitingDots.isInitialized && waitingDots.visibility == View.VISIBLE
+        pauseBadge.visibility = if (paused && !dotsShown) View.VISIBLE else View.GONE
     }
     // the dots only while nothing plays: an empty buffer or a stopped player; offline with a buffer left shows nothing
     private fun showWaiting() {
@@ -99,6 +101,7 @@ class PlayerActivity : Activity() {
             Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
         }
         waitingDots.visibility = if (show) View.VISIBLE else View.GONE
+        updatePauseBadge()
         bufferSpinner.visibility = View.GONE
     }
     private val onlineListener: (Boolean) -> Unit = { online ->
