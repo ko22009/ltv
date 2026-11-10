@@ -337,12 +337,12 @@ class DetailsActivity : Activity() {
             addView(posterSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
             // on a phone the rating sits on the poster corner, as on the cards of the lists
             if (mobile && shownRating.isNotEmpty()) addView(TextView(this@DetailsActivity).apply {
-                text = shownRating
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scale)
-                setTextColor(0xFF818CF8.toInt())
+                text = "★ $shownRating"
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scale)
+                setTextColor(Color.WHITE)
                 typeface = Typeface.DEFAULT_BOLD
-                setBackgroundColor(0xCC101216.toInt())
-                setPadding(dp(7), dp(3), dp(7), dp(3))
+                background = GradientDrawable().apply { setColor(0xB3101216.toInt()); cornerRadius = dp(10).toFloat() }
+                setPadding(dp(8), dp(3), dp(8), dp(3))
             }, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(6); bottomMargin = dp(6) })
             // the same label as on the cards: the film is in the cinemas now or comes soon
             val mark = Cinema.caption(currentTitle.id, currentTitle.tv)
