@@ -669,7 +669,7 @@ class SettingsPageFragment : Fragment() {
         fun px(v: Int) = (v * scale).toInt()
         val page = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(px(92), px(21), px(48), px(16))
+            setPadding(px(92), px(24), px(48), px(16))
             clipChildren = false
             clipToPadding = false
             layoutParams = FrameLayout.LayoutParams(resources.displayMetrics.widthPixels, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -696,7 +696,7 @@ class SettingsPageFragment : Fragment() {
         val gridWidth = COLUMNS * (px(290) + gap) + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
             // half of the gap more to the left: the first tile starts exactly under the caption, like the cards of the other grids
-            setMargins(-side - gap / 2, px(2), 0, 0)
+            setMargins(-side - gap / 2, 0, 0, 0)
         })
         return page
     }
