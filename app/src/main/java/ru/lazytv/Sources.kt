@@ -306,11 +306,10 @@ object Sources {
 
     /**
      * What the source list of a film shows: the variants of its year and how many others (another year, or none known) are kept back
-     * for "Другие годы"; when no variant fits the year, everything is shown. A series, or [all], shows everything.
+     * for "Другие годы"; when no variant fits the year, everything is shown. A series is cut the same way, except that a variant with no known year stays; [all] shows what was kept back.
      */
     fun forYear(variants: List<Variant>, year: String, tv: Boolean, all: Boolean, names: List<String> = emptyList()): Pair<List<Variant>, Int> {
-        if (tv) return variants to 0
-        val main = mainList(variants, year, names)
+        val main = mainList(variants, year, names, tv)
         // the expanded list holds only what the first one kept back: the film of its year is not shown twice
         if (all) return variants.filter { it !in main }.ifEmpty { variants } to 0
         return main to (variants.size - main.size)
@@ -320,8 +319,10 @@ object Sources {
      * The variants of the film itself: of its year, and (when there are any) with exactly its name, so "Сердце зверя" or
      * "Зверь войны" do not stand among the copies of "Зверь". Nothing fits: all of them (the user may want just the title).
      */
-    private fun mainList(variants: List<Variant>, year: String, names: List<String>): List<Variant> {
-        val ofYear = variants.filter { yearRank(it, year, names) == 0 }
+    private fun mainList(variants: List<Variant>, year: String, names: List<String>, tv: Boolean): List<Variant> {
+        // a series is judged by its year too (a film of another year is not the series), but a site that gives no year
+        // for a series (a season list) stays in the main list: only a known different year is kept back
+        val ofYear = variants.filter { if (tv) yearRank(it, year, names) != 2 else yearRank(it, year, names) == 0 }
         if (ofYear.isEmpty()) return variants
         val exact = if (names.isEmpty()) emptyList() else ofYear.filter { hasName(it, names) }
         return exact.ifEmpty { ofYear }
