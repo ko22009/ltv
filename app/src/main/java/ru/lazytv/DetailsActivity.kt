@@ -421,7 +421,7 @@ class DetailsActivity : Activity() {
         val table = LinearLayout(this)
         table.orientation = LinearLayout.VERTICAL
         table.setPadding(0, dp(14), 0, dp(14))
-        fillTable(table, baseRows)
+        fillTable(table, baseRows.map { if (it.first == RELEASE) it.first to "" else it })
         if (!mobile) {
             info.addView(original)
             info.addView(table)
@@ -544,6 +544,9 @@ class DetailsActivity : Activity() {
         skeletons.add(this)
     }
 
+    /** True until the details bring the full release date: the date row shows a grey bar instead of the year alone. */
+    private var releasePending = true
+
     private val skeletonTexts = mutableListOf<TextView>()
 
     /** An empty line of text drawn as a grey bar of exactly its own height (a narrower one), so filling it in moves nothing. */
@@ -601,6 +604,7 @@ class DetailsActivity : Activity() {
         d: Tmdb.Details, name: String, baseRows: List<Pair<String, String>>, original: TextView, table: LinearLayout, scroll: ScrollView,
     ) {
         hideSkeletons()
+        releasePending = false
         if (posterPath.isNullOrEmpty() && d.poster.isNotEmpty()) {
             posterPath = d.poster
             posterView.showPoster(d.poster, posterSpinner)
@@ -666,7 +670,12 @@ class DetailsActivity : Activity() {
                 android.util.Log.i("LazyTV", "card: details ${System.currentTimeMillis() - cardStarted} ms")
                 originalTitle = d?.originalTitle.orEmpty()
                 if (d == null) {
-                    onUi { hideBannerSpinner(); hideSkeletons() }
+                    onUi {
+                        hideBannerSpinner(); hideSkeletons()
+                        // no details: the year of the list is all there is, shown as it is
+                        releasePending = false
+                        fillTable(table, baseRows)
+                    }
                 } else if (cached == null) {
                     onUi { applyDetails(d, name, baseRows, original, table, scroll) }
                 }
@@ -696,13 +705,18 @@ class DetailsActivity : Activity() {
         table.removeAllViews()
         firstDirectorLink = null
         val linkedDirectors = directors.filter { it.id > 0L }
-        rows.filter { it.second.isNotBlank() }.forEachIndexed { i, (caption, value) ->
+        // the release date waits for its full form ("15 марта 2026"): until then its row is a grey bar, not the bare year
+        rows.filter { it.second.isNotBlank() || (it.first == RELEASE && releasePending) }.forEachIndexed { i, (caption, value) ->
             if (i > 0) table.addView(View(this).apply { setBackgroundColor(0x22FFFFFF) }, LinearLayout.LayoutParams(-1, 1))
             val row = LinearLayout(this)
             row.gravity = Gravity.CENTER_VERTICAL
             row.setPadding(0, dp(8), 0, dp(8))
             row.addView(text(caption, m(17, 15).toFloat(), 0xFF94A3B8.toInt()), LinearLayout.LayoutParams(dp(m(160, 120)), -2))
-            if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
+            if (value.isBlank()) {
+                row.addView(View(this).apply {
+                    background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }
+                }, LinearLayout.LayoutParams(dp(140), dp(18)))
+            } else if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
                 val cards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val cardViews = mutableListOf<View>()
                 linkedDirectors.forEachIndexed { idx, dir ->
