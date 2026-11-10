@@ -669,7 +669,9 @@ class DetailsActivity : Activity() {
         } else if (currentBackdrop.isEmpty()) {
             hideBannerSpinner()
         }
-        if (d.originalTitle.isNotEmpty() && !d.originalTitle.equals(name, true)) original.text = d.originalTitle.uppercase()
+        // the same title in another script (hindi, japanese...) is shown twice; a russian one equal to the title is a plain repeat and goes
+        val repeatsRussian = d.originalTitle.equals(name, true) && d.originalTitle.any { it in 'А'..'я' || it == 'ё' || it == 'Ё' }
+        if (d.originalTitle.isNotEmpty() && !repeatsRussian) original.text = d.originalTitle.uppercase()
         if (overviewView.text.isEmpty() && d.overview.isNotEmpty()) overviewView.text = d.overview
         if (::moreRow.isInitialized) moreRow.visibility = if (overviewView.text.isEmpty()) View.GONE else View.VISIBLE
         if (mobile) {
@@ -704,7 +706,7 @@ class DetailsActivity : Activity() {
             row.tag = "cast"
             info.addView(row)
         }
-        dropEmpty(original, d.originalTitle.isNotEmpty() && d.originalTitle.equals(name, true))
+        dropEmpty(original, repeatsRussian)
         galleryPosters = d.posters
         galleryBackdrops = d.allBackdrops
         startBackdrops(d.backdrops)
