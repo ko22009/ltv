@@ -501,22 +501,13 @@ class DetailsActivity : Activity() {
             setOnKeyListener { _, code, event ->
                 if (event.action != android.view.KeyEvent.ACTION_DOWN) false
                 else when (code) {
-                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        if (scroll.canScrollVertically(1)) {
-                            scroll.smoothScrollBy(0, dp(110))
-                            true
-                        } else {
-                            (firstDirectorLink ?: firstCastCard)?.requestFocus() ?: false
-                        }
-                    }
+                    // the description is three lines, nothing to read by scrolling: down goes straight to the director (the page
+                    // brings him into view), without first scrolling the page past him and back
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN -> (firstDirectorLink ?: firstCastCard)?.requestFocus() ?: false
                     android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                        if (scroll.canScrollVertically(-1)) {
-                            scroll.smoothScrollBy(0, -dp(110))
-                            true
-                        } else {
-                            watchButton.requestFocus()
-                            true
-                        }
+                        scroll.smoothScrollTo(0, 0)
+                        watchButton.requestFocus()
+                        true
                     }
                     android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> true
                     else -> false
