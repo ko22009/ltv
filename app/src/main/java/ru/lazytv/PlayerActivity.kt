@@ -397,13 +397,14 @@ class PlayerActivity : Activity() {
         val isPending = isBuffering || isSeeking
         val progressColor = when {
             isPending -> 0xFF64748B.toInt()
-            seek.isFocused -> 0xFF818CF8.toInt()
+            // the same vivid indigo focused or not: the pale shade it had under the cursor is gone
             else -> 0xFF6366F1.toInt()
         }
         val thumbColor = when {
             isPending -> 0xFF94A3B8.toInt()
-            seek.isFocused -> FOCUS_FILL
-            else -> Color.WHITE
+            // under the cursor the thumb is white and bright, at rest a little dimmer
+            seek.isFocused -> Color.WHITE
+            else -> 0xFFCBD5E1.toInt()
         }
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         seek.thumbTintList = android.content.res.ColorStateList.valueOf(thumbColor)
