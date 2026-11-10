@@ -93,8 +93,8 @@ class PlayerTouchOverlay(
             marginStart = dp(56)
         })
 
-        // Double-tap seek bubbles (-10s / +10s): about a fifth of the screen from the edge, so the bubble sits near the middle of its tap zone
-        val bubbleInset = (resources.displayMetrics.widthPixels * 0.2f).toInt()
+        // Double-tap seek bubbles (-10s / +10s): about 15% of the screen from the edge, so the bubble sits near the middle of its tap zone
+        val bubbleInset = (resources.displayMetrics.widthPixels * 0.15f).toInt()
         seekBubbleLeft = createSeekBubble("-10 сек")
         seekBubbleRight = createSeekBubble("+10 сек")
         addView(seekBubbleLeft, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START).apply {
