@@ -342,10 +342,9 @@ class PlayerActivity : Activity() {
         player = exo
         handler.postDelayed(saver, 10_000)
         handler.post(ticker)
-        // on opening the focus stands on the progress bar: left and right rewind at once
-        setControlsVisible(true, focusSeek = true)
-        // the window is not attached yet: the request above can fail, so it is repeated once the first frame is laid out
-        root.post { if (!isFinishing && overlay.visibility == View.VISIBLE && currentFocus == null) seek.requestFocus() }
+        // on opening the controls stay hidden: the film is still loading and the screen shows only that; a tap or the remote's
+        // arrows bring them (down opens the panel on the progress bar)
+        setControlsVisible(false)
     }
 
     /** Applies the default voice/subtitle preference from settings before the stream starts. */
