@@ -6,53 +6,64 @@
     android:layout_height="match_parent"
     android:background="#101216">
 
-    <!-- the filters, the sort and the reset: the same buttons as on the TV page of the list -->
-    <HorizontalScrollView
+    <!-- the filters and the basket (reset) on the left, the sort on the right edge: nothing runs off the screen -->
+    <LinearLayout
         android:id="@+id/categoriesScroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="12dp"
         android:paddingTop="10dp"
         android:paddingEnd="12dp"
         android:paddingBottom="4dp"
-        android:scrollbars="none"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <LinearLayout
+        <com.google.android.material.chip.Chip
+            android:id="@+id/filterButton"
+            style="@style/Widget.LazyMobile.Chip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:checkable="false"
+            android:text="Фильтры" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterButton"
-                style="@style/Widget.LazyMobile.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="false"
-                android:text="Фильтры" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/resetButton"
+            style="@style/Widget.LazyMobile.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:checkable="false"
+            android:contentDescription="Сбросить фильтры"
+            android:text=""
+            app:chipIcon="@drawable/ic_delete"
+            app:chipIconSize="20dp"
+            app:chipIconTint="#FFFFFF"
+            app:chipIconVisible="true"
+            app:chipStartPadding="4dp"
+            app:chipEndPadding="4dp"
+            app:iconStartPadding="4dp"
+            app:iconEndPadding="4dp"
+            app:textEndPadding="0dp"
+            app:textStartPadding="0dp"
+            android:visibility="gone" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/sortButton"
-                style="@style/Widget.LazyMobile.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:checkable="false"
-                android:text="Сортировка" />
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/resetButton"
-                style="@style/Widget.LazyMobile.Chip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:checkable="false"
-                android:text="Сбросить"
-                android:visibility="gone" />
-        </LinearLayout>
-    </HorizontalScrollView>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/sortButton"
+            style="@style/Widget.LazyMobile.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:checkable="false"
+            android:text="Сортировка" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/filtersLine"
