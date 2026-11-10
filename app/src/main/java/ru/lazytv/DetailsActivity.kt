@@ -609,20 +609,18 @@ class DetailsActivity : Activity() {
                 val cards = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 val cardViews = mutableListOf<View>()
                 linkedDirectors.forEachIndexed { idx, dir ->
-                    // the same dark rounded card as the cast, indigo when focused, but the name only
+                    // the same card as the cast (outline, indigo under the cursor, a small arrow), but the name only
                     val card = text(dir.name, 16f, Color.WHITE, bold = true).apply {
-                        gravity = Gravity.CENTER
-                        setPadding(dp(12), dp(8), dp(12), dp(8))
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(14), dp(8), dp(10), dp(8))
+                        setCompoundDrawables(null, null, PathDrawable(MenuIcons.CHEVRON_RIGHT).apply {
+                            setColorFilter(0xFFCBD5E1.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
+                            setBounds(0, 0, dp(20), dp(20))
+                        }, null)
+                        compoundDrawablePadding = dp(4)
                         isFocusable = true
                         isClickable = true
-                        background = StateListDrawable().apply {
-                            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                                setColor(FOCUS_FILL); cornerRadius = dp(6).toFloat()
-                            })
-                            addState(intArrayOf(), GradientDrawable().apply {
-                                setColor(0x33000000); cornerRadius = dp(6).toFloat()
-                            })
-                        }
+                        background = personCardBackground()
                         setOnClickListener {
                             startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                                 .putExtra("id", dir.id).putExtra("name", dir.name))
@@ -819,6 +817,22 @@ class DetailsActivity : Activity() {
         backdropHandler.removeCallbacksAndMessages(null)
     }
 
+    /**
+     * The card of a person (an actor, a director): a thin outline of the theme on the dark plate; under the cursor
+     * it fills with the indigo of the app and the outline turns light.
+     */
+    private fun personCardBackground(): StateListDrawable {
+        val line = maxOf(1, dp(1))
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
+                setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat(); setStroke(line * 2, 0xFFA5B4FC.toInt())
+            })
+            addState(intArrayOf(), GradientDrawable().apply {
+                setColor(0xFF161920.toInt()); cornerRadius = dp(14).toFloat(); setStroke(line, 0xFF2E3445.toInt())
+            })
+        }
+    }
+
     /** Cast of the film: a caption and a carousel of round photos with the name and role; OK opens PersonActivity. */
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
@@ -827,7 +841,6 @@ class DetailsActivity : Activity() {
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         val photoSize = dp(96)
-        val line = maxOf(1, dp(1))
         firstCastCard = null
         people.forEachIndexed { index, person ->
             val card = LinearLayout(this).apply {
@@ -836,15 +849,7 @@ class DetailsActivity : Activity() {
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 isFocusable = true
                 isClickable = true
-                // a card with a thin outline of the theme; under the cursor it fills with the indigo of the app and the outline turns light
-                background = StateListDrawable().apply {
-                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat(); setStroke(line * 2, 0xFFA5B4FC.toInt())
-                    })
-                    addState(intArrayOf(), GradientDrawable().apply {
-                        setColor(0xFF161920.toInt()); cornerRadius = dp(14).toFloat(); setStroke(line, 0xFF2E3445.toInt())
-                    })
-                }
+                background = personCardBackground()
                 setOnClickListener {
                     startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                         .putExtra("id", person.id).putExtra("name", person.name))
