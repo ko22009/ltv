@@ -77,21 +77,23 @@ class PlayerActivity : Activity() {
     private var resumeWhenOnline = false
     private lateinit var waitingDots: View
     private var bufferEmpty = false
-    private fun showWaiting(offline: Boolean) {
+    // the dots only while nothing plays: an empty buffer or a stopped player; offline with a buffer left shows nothing
+    private fun showWaiting() {
         if (!::waitingDots.isInitialized) return
-        waitingDots.visibility = if (offline || bufferEmpty) View.VISIBLE else View.GONE
+        val show = bufferEmpty || resumeWhenOnline
+        // the notice comes when the buffer has run out without a network, once per stall
+        if (show && waitingDots.visibility != View.VISIBLE && !Connectivity.online && !isFinishing) {
+            Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
+        }
+        waitingDots.visibility = if (show) View.VISIBLE else View.GONE
         bufferSpinner.visibility = View.GONE
     }
     private val onlineListener: (Boolean) -> Unit = { online ->
-        showWaiting(!online)
-        // the notice comes as soon as the network is lost, not only when the player fails (it can play on from its buffer for a while)
-        if (!online && !isFinishing) {
-            Toast.makeText(this, "Нет интернета. Просмотр продолжится, когда связь вернётся", Toast.LENGTH_LONG).show()
-        }
         if (online && resumeWhenOnline && !isFinishing) {
             resumeWhenOnline = false
             player?.let { it.prepare(); it.play() }
         }
+        showWaiting()
     }
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var url: String
@@ -225,7 +227,7 @@ class PlayerActivity : Activity() {
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // no internet: the same place, a circle with three moving dots; the playback goes on by itself when the network is back
         waitingDots = WaitingDots(this, dp(84))
-        waitingDots.visibility = if (Connectivity.online) View.GONE else View.VISIBLE
+        waitingDots.visibility = View.GONE
         root.addView(waitingDots, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
@@ -273,7 +275,7 @@ class PlayerActivity : Activity() {
                 // the connection dropped: no error dialog, the playback goes on from the same place when the network is back
                 if (!Connectivity.online) {
                     resumeWhenOnline = true
-                    showWaiting(true)
+                    showWaiting()
                     return
                 }
                 showErrorDialog(error)
@@ -283,7 +285,7 @@ class PlayerActivity : Activity() {
                 android.util.Log.i("LazyTV", "player state " + state)
                 // the buffer is empty: the same circle with dots as without internet (no separate rotating arc over the video)
                 bufferEmpty = state == Player.STATE_BUFFERING
-                showWaiting(!Connectivity.online)
+                showWaiting()
                 updateSeekColors()
                 if (state == Player.STATE_ENDED) {
                     clearPosition()
