@@ -69,15 +69,20 @@ class DetailsActivity : Activity() {
         background = StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
                 setColor(FOCUS_FILL)
-                cornerRadius = dp(2).toFloat()
+                cornerRadius = dp(if (iconOnly) 14 else 2).toFloat()
+            })
+            // on a phone the icons are dark rounded tiles
+            if (iconOnly) addState(intArrayOf(), GradientDrawable().apply {
+                setColor(0xFF1C2029.toInt())
+                cornerRadius = dp(14).toFloat()
             })
         }
         setOnClickListener {
             // a quick double press on the card lands here: the first moments ignore clicks, so the video does not start by itself
             if (android.os.SystemClock.elapsedRealtime() - openedAt > 500) action()
         }
-        // on a phone the six icons share the width of the bar evenly
-        layoutParams = if (iconOnly) LinearLayout.LayoutParams(0, dp(44), 1f) else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
+        // on a phone the five icons share the width of the row evenly
+        layoutParams = if (iconOnly) LinearLayout.LayoutParams(0, dp(52), 1f).apply { rightMargin = dp(8) } else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,7 +121,11 @@ class DetailsActivity : Activity() {
         banner.addView(View(this).apply { setBackgroundColor(0x40000000) }, FrameLayout.LayoutParams(-1, -1))
         bannerSpinner = Spinner(this, dp(44)).apply { visibility = View.GONE }
         banner.addView(bannerSpinner, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
-        stage.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 210))))
+        // on a phone the lower edge of the frame melts into the page background
+        if (mobile) banner.addView(View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, 0xFF101216.toInt()))
+        }, FrameLayout.LayoutParams(-1, dp(110), Gravity.BOTTOM))
+        stage.addView(banner, FrameLayout.LayoutParams(-1, dp(m(360, 230))))
 
         val passedBackdrop = intent.getStringExtra("backdrop") ?: title.backdrop
         if (!passedBackdrop.isNullOrEmpty()) {
@@ -147,9 +156,9 @@ class DetailsActivity : Activity() {
         })
 
         val bar = LinearLayout(this)
-        bar.setBackgroundColor(0xFF161920.toInt())
+        if (!mobile) bar.setBackgroundColor(0xFF161920.toInt())
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setPadding(dp(m(389, 4)), 0, dp(m(24, 4)), 0)
+        bar.setPadding(dp(m(389, 0)), 0, dp(m(24, 0)), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
         watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
             id = View.generateViewId()
@@ -177,11 +186,33 @@ class DetailsActivity : Activity() {
             isFocusable = false
             isClickable = false
         }
+        if (mobile) watchButton.apply {
+            // a wide red pill with the caption, as in the mockup
+            text = "Смотреть"
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scale)
+            typeface = Typeface.DEFAULT_BOLD
+            compoundDrawablePadding = dp(10)
+            background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
+                    setColor(FOCUS_FILL); cornerRadius = dp(26).toFloat()
+                })
+                addState(intArrayOf(), GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xFFD81B4A.toInt(), 0xFF9B1238.toInt()))
+                    .apply { cornerRadius = dp(26).toFloat() })
+            }
+            // the icon stays next to the caption: padding puts the pair in the middle of the wide button
+            addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
+                val tv = v as TextView
+                val pad = (((r - l) - dp(22) - tv.compoundDrawablePadding - tv.paint.measureText(tv.text.toString())) / 2).toInt().coerceAtLeast(0)
+                if (tv.paddingLeft != pad) tv.setPadding(pad, 0, pad, 0)
+            }
+        }
         val watchSlot = FrameLayout(this).apply {
-            addView(watchButton, FrameLayout.LayoutParams(-2, dp(44), Gravity.CENTER))
+            if (mobile) addView(watchButton, FrameLayout.LayoutParams(-1, dp(52)))
+            else addView(watchButton, FrameLayout.LayoutParams(-2, dp(44), Gravity.CENTER))
             addView(watchSpinner, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
         }
-        bar.addView(watchSlot, if (mobile) LinearLayout.LayoutParams(0, dp(44), 1f) else LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
+        // on a phone the watch button stands under the title; the bar below holds the five icons
+        if (!mobile) bar.addView(watchSlot, LinearLayout.LayoutParams(-2, dp(44)).apply { rightMargin = dp(8) })
 
         val galleryButton = button(MenuIcons.GALLERY, "Галерея") { openGallery() }
         galleryButton.nextFocusUpId = back.id
@@ -251,10 +282,8 @@ class DetailsActivity : Activity() {
                 } else false
             }
         }
-        if (mobile) {
-            stage.addView(bar, FrameLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(210) })
-        } else {
-            root.addView(bar, FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
+        if (!mobile) {
+            root.addView(bar,FrameLayout.LayoutParams(-1, dp(72)).apply { topMargin = dp(360) })
         }
 
         posterView = ImageView(this)
@@ -288,13 +317,15 @@ class DetailsActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 addView(text(name, 24f, bold = true))
                 addView(original)
+                addView(watchSlot, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
             }
             val head = LinearLayout(this).apply {
-                setPadding(0, dp(16), 0, 0)
+                setPadding(0, dp(4), 0, 0)
                 addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
             }
             info.addView(head)
+            info.addView(bar, LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(16) })
         } else {
             info.addView(text(name, 34f))
         }
@@ -367,7 +398,7 @@ class DetailsActivity : Activity() {
             scroll.addView(LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 clipChildren = false
-                addView(stage, LinearLayout.LayoutParams(-1, dp(266)))
+                addView(stage, LinearLayout.LayoutParams(-1, dp(230)))
                 addView(info, LinearLayout.LayoutParams(-1, -2))
             })
             root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
