@@ -431,7 +431,7 @@ class DetailsActivity : Activity() {
                 }
                 lines.forEach { it.setOnClickListener(tapOpensWhole) }
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
-                minimumHeight = dp(162)
+                minimumHeight = dp(166)
                 addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
                 // one split button: teal "Смотреть" on the left, the dark bookmark tile on the right, no gap between
                 fun half(color: Int, left: Boolean) = GradientDrawable().apply {
@@ -449,8 +449,8 @@ class DetailsActivity : Activity() {
             val head = LinearLayout(this).apply {
                 setPadding(0, dp(20), 0, 0)
                 addView(posterBox, LinearLayout.LayoutParams(dp(108), dp(162)).apply { rightMargin = dp(14) })
-                // the block is lifted a little: the capital letters of the title stand at the poster's upper edge, and the button ends
-                // slightly above the poster's lower edge instead of at (or below) it
+                // the block is lifted by 4 dp (the capital letters of the title stand at the poster's upper edge) and is 4 dp taller (its minimum
+                // height), so the button ends exactly at the poster's lower edge
                 addView(titles, LinearLayout.LayoutParams(0, -2, 1f).apply { topMargin = -dp(4) })
             }
             info.addView(head)
