@@ -110,7 +110,7 @@ class PlayerActivity : Activity() {
     private var userSeeking = false
     /** True while the screen is closing: ExoPlayer's own "release timed out" is not a playback error then. */
     private var releasing = false
-    private var errorDialog: android.app.AlertDialog? = null
+    private var errorDialog: android.app.Dialog? = null
     private var lastBackAt = 0L
     private var playbackSpeed = 1.0f
 
@@ -230,6 +230,10 @@ class PlayerActivity : Activity() {
 
         overlay = buildOverlay(name, meta)
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        // with the controls shown the empty part of the panel passes the touches on to the gesture layer below it:
+        // the double tap (pause in the middle, 10 seconds on the sides) and the drags work with the panel open too,
+        // a single tap hides the panel as before
+        if (!DeviceType.isTv(this)) overlay.setOnTouchListener { _, ev -> touchOverlay.onTouchEvent(ev) }
         setContentView(root)
         hideSystemBars()
 
@@ -452,7 +456,7 @@ class PlayerActivity : Activity() {
         val overlay = FrameLayout(this).apply {
             isClickable = true
             isFocusable = false
-            setOnClickListener { setControlsVisible(false) }
+            if (DeviceType.isTv(this@PlayerActivity)) setOnClickListener { setControlsVisible(false) }
         }
 
         val top = LinearLayout(this).apply {
@@ -783,9 +787,11 @@ class PlayerActivity : Activity() {
         overridePendingTransition(0, 0)
     }
 
-    private fun togglePlay() {
-        val exo = player ?: return
+    /** Returns whether the video plays now (true) or is stopped (false). */
+    private fun togglePlay(): Boolean {
+        val exo = player ?: return false
         exo.playWhenReady = !exo.playWhenReady
+        return exo.playWhenReady
     }
 
     private fun cycleAspect() {
@@ -858,15 +864,13 @@ class PlayerActivity : Activity() {
                 index++
             }
         }
-        android.app.AlertDialog.Builder(this).setTitle(title)
-            .setSingleChoiceItems(entries.toTypedArray(), checkedIndex) { dialog, which ->
-                val pick = picks[which]
-                val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
-                if (pick != null) builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
-                else builder.setTrackTypeDisabled(type, true)
-                exo.trackSelectionParameters = builder.build()
-                dialog.dismiss()
-            }.show()
+        showChoice(this, title, entries, checkedIndex) { which ->
+            val pick = picks[which]
+            val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
+            if (pick != null) builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
+            else builder.setTrackTypeDisabled(type, true)
+            exo.trackSelectionParameters = builder.build()
+        }
     }
 
     /** Quality and playback speed picker opened by the gear button in the player. */
@@ -881,11 +885,10 @@ class PlayerActivity : Activity() {
             return
         }
         val currentQuality = baseMeta.substringAfterLast(" • ", "").takeIf { it.isNotEmpty() } ?: "Авто"
-        val options = arrayOf("Качество ($currentQuality)", speedLabel)
-        android.app.AlertDialog.Builder(this).setTitle("Параметры воспроизведения")
-            .setItems(options) { _, which ->
-                if (which == 0) qualityDialog(itemStreams, videoGroups) else speedDialog()
-            }.show()
+        val options = listOf("Качество ($currentQuality)", speedLabel)
+        showChoice(this, "Параметры воспроизведения", options, -1) { which ->
+            if (which == 0) qualityDialog(itemStreams, videoGroups) else speedDialog()
+        }
     }
 
     private fun qualityDialog(
@@ -894,27 +897,25 @@ class PlayerActivity : Activity() {
     ) {
         val exo = player ?: return
         if (itemStreams.size > 1) {
-            val labels = itemStreams.map { it.first }.toTypedArray()
+            val labels = itemStreams.map { it.first }
             val checked = itemStreams.indexOfFirst { it.second == url }.coerceAtLeast(0)
-            android.app.AlertDialog.Builder(this).setTitle("Качество потока")
-                .setSingleChoiceItems(labels, checked) { dialog, which ->
-                    val (qName, qUrl) = itemStreams[which]
-                    if (qUrl != url) {
-                        val pos = exo.currentPosition
-                        val wasPlaying = exo.playWhenReady
-                        save()
-                        url = qUrl
-                        val sourcePrefix = baseMeta.substringBefore(" • ", baseMeta)
-                        baseMeta = if (sourcePrefix.isNotEmpty()) "$sourcePrefix • $qName" else qName
-                        updateStreamMeta(exo)
-                        exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
-                        exo.seekTo(pos)
-                        exo.prepare()
-                        exo.playWhenReady = wasPlaying
-                        Toast.makeText(this, "Качество: $qName", Toast.LENGTH_SHORT).show()
-                    }
-                    dialog.dismiss()
-                }.show()
+            showChoice(this, "Качество потока", labels, checked) { which ->
+                val (qName, qUrl) = itemStreams[which]
+                if (qUrl != url) {
+                    val pos = exo.currentPosition
+                    val wasPlaying = exo.playWhenReady
+                    save()
+                    url = qUrl
+                    val sourcePrefix = baseMeta.substringBefore(" • ", baseMeta)
+                    baseMeta = if (sourcePrefix.isNotEmpty()) "$sourcePrefix • $qName" else qName
+                    updateStreamMeta(exo)
+                    exo.setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+                    exo.seekTo(pos)
+                    exo.prepare()
+                    exo.playWhenReady = wasPlaying
+                    Toast.makeText(this, "Качество: $qName", Toast.LENGTH_SHORT).show()
+                }
+            }
             return
         }
         val entries = mutableListOf("Авто")
@@ -932,28 +933,24 @@ class PlayerActivity : Activity() {
                 picks.add(group.mediaTrackGroup to i)
             }
         }
-        android.app.AlertDialog.Builder(this).setTitle("Качество видео")
-            .setSingleChoiceItems(entries.toTypedArray(), checked) { dialog, which ->
-                val pick = picks[which]
-                val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-                if (pick != null) builder.setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
-                exo.trackSelectionParameters = builder.build()
-                dialog.dismiss()
-            }.show()
+        showChoice(this, "Качество видео", entries, checked) { which ->
+            val pick = picks[which]
+            val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+            if (pick != null) builder.setOverrideForType(TrackSelectionOverride(pick.first, pick.second))
+            exo.trackSelectionParameters = builder.build()
+        }
     }
 
     private fun speedDialog() {
         val exo = player ?: return
         val speeds = floatArrayOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-        val labels = arrayOf("0.75×", "1.0× (обычная)", "1.25×", "1.5×", "2.0×")
+        val labels = listOf("0.75×", "1.0× (обычная)", "1.25×", "1.5×", "2.0×")
         val checked = speeds.indexOfFirst { it == playbackSpeed }.coerceAtLeast(1)
-        android.app.AlertDialog.Builder(this).setTitle("Скорость воспроизведения")
-            .setSingleChoiceItems(labels, checked) { dialog, which ->
-                playbackSpeed = speeds[which]
-                exo.setPlaybackSpeed(playbackSpeed)
-                Toast.makeText(this, "Скорость: ${labels[which]}", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
-            }.show()
+        showChoice(this, "Скорость воспроизведения", labels, checked) { which ->
+            playbackSpeed = speeds[which]
+            exo.setPlaybackSpeed(playbackSpeed)
+            Toast.makeText(this, "Скорость: ${labels[which]}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun seekStepMs(repeatCount: Int): Long = when {
@@ -1186,30 +1183,30 @@ class PlayerActivity : Activity() {
 
     private fun showErrorDialog(error: PlaybackException) {
         errorDialog?.dismiss()
-        val builder = android.app.AlertDialog.Builder(this)
-            .setTitle("Ошибка воспроизведения")
-            .setMessage(Errors.explainPlayer(error))
-            .setPositiveButton("Открыть во внешнем плеере") { _, _ ->
+        val buttons = mutableListOf(
+            DialogButton("Открыть во внешнем плеере") {
                 runCatching {
                     startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/*"))
                     finish()
                 }.onFailure {
                     Toast.makeText(this, "Нет внешнего плеера", Toast.LENGTH_LONG).show()
                 }
-            }
-            .setNegativeButton("Закрыть") { _, _ -> finish() }
+            },
+        )
         val cause = error.cause ?: error
         if (Errors.isSsl(cause)) {
-            builder.setNeutralButton("Настройки даты") { _, _ -> Errors.openDateSettings(this) }
+            buttons.add(DialogButton("Настройки даты") { Errors.openDateSettings(this) })
         } else if (intent.getBooleanExtra("resumed", false) && tmdbId > 0L) {
             // started from "continue watching": the saved stream may be gone (an old address, TorrServe off), the card offers other sources
-            builder.setNeutralButton("Открыть карточку") { _, _ ->
+            buttons.add(DialogButton("Открыть карточку") {
                 startActivity(android.content.Intent(this, DetailsActivity::class.java)
                     .putExtras(Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear).toExtras()))
                 finish()
-            }
+            })
         }
-        errorDialog = builder.show()
+        buttons.add(DialogButton("Закрыть") { finish() })
+        // the player is useless after an error: Back or a tap outside closes it like the "Закрыть" button
+        errorDialog = showMessage(this, "Ошибка воспроизведения", message = Errors.explainPlayer(error), buttons = buttons, onCancel = { finish() })
     }
 
     override fun onStop() {

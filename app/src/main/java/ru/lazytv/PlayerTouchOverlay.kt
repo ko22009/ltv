@@ -29,7 +29,7 @@ class PlayerTouchOverlay(
     context: Context,
     private val activity: Activity,
     private val onSeek: (deltaMs: Long) -> Unit,
-    private val onTogglePlay: () -> Unit,
+    private val onTogglePlay: () -> Boolean,
     private val onToggleControls: () -> Unit,
     private val onUserAction: () -> Unit,
 ) : FrameLayout(context) {
@@ -47,6 +47,7 @@ class PlayerTouchOverlay(
     private val seekBubbleRight: TextView
 
     private val hideIndicatorRunnable: Runnable
+    private val pauseSign: ImageView
 
     private var isDragging = false
     private var dragMode = DRAG_NONE
@@ -105,6 +106,14 @@ class PlayerTouchOverlay(
             marginEnd = dp(60)
         })
 
+        // the big play / pause sign that flashes in the middle after a double tap
+        pauseSign = ImageView(context).apply {
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xCC161920.toInt()) }
+            visibility = View.GONE
+        }
+        addView(pauseSign, LayoutParams(dp(84), dp(84), Gravity.CENTER))
+
         hideIndicatorRunnable = Runnable {
             gestureIndicator.visibility = View.GONE
             seekBubbleLeft.visibility = View.GONE
@@ -119,8 +128,9 @@ class PlayerTouchOverlay(
         typeface = Typeface.DEFAULT_BOLD
         setPadding(dp(24), dp(14), dp(24), dp(14))
         background = GradientDrawable().apply {
-            setColor((FOCUS_FILL and 0x00FFFFFF) or 0xB3000000.toInt())
-            cornerRadius = dp(24).toFloat()
+            // a neutral dark plate, the same as the volume and brightness indicator
+            setColor(0xCC161920.toInt())
+            cornerRadius = dp(16).toFloat()
         }
         visibility = View.GONE
     }
@@ -142,9 +152,7 @@ class PlayerTouchOverlay(
                     onSeek(10_000L)
                     showSeekFeedback(isForward = true)
                 }
-                else -> {
-                    onTogglePlay()
-                }
+                else -> showPauseSign(playing = onTogglePlay())
             }
             onUserAction()
             return true
@@ -200,6 +208,23 @@ class PlayerTouchOverlay(
             }
         }
         return handled || super.onTouchEvent(event)
+    }
+
+    /** The sign of the new state (pause bars when the video was just stopped, the triangle when it goes on): grows in, then fades out. */
+    private fun showPauseSign(playing: Boolean) {
+        pauseSign.setImageDrawable(PathDrawable(if (playing) MenuIcons.PLAY else MenuIcons.PAUSE).apply {
+            setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN)
+        })
+        pauseSign.animate().cancel()
+        pauseSign.visibility = View.VISIBLE
+        pauseSign.alpha = 0f
+        pauseSign.scaleX = 0.7f
+        pauseSign.scaleY = 0.7f
+        pauseSign.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(140).withEndAction {
+            pauseSign.animate().alpha(0f).setStartDelay(350).setDuration(250).withEndAction {
+                pauseSign.visibility = View.GONE
+            }.start()
+        }.start()
     }
 
     private fun showSeekFeedback(isForward: Boolean) {
