@@ -96,12 +96,12 @@ class PlayerTouchOverlay(
         })
 
         // Double-tap seek bubbles (-10s / +10s): about 15% of the screen from the edge, so the bubble sits near the middle of its tap zone
-        seekBubbleLeft = createSeekBubble("-10 сек")
-        seekBubbleRight = createSeekBubble("+10 сек")
-        addView(seekBubbleLeft, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.START).apply {
+        seekBubbleLeft = createSeekBubble("-10")
+        seekBubbleRight = createSeekBubble("+10")
+        addView(seekBubbleLeft, LayoutParams(dp(84), dp(84), Gravity.CENTER_VERTICAL or Gravity.START).apply {
             marginStart = sideInset
         })
-        addView(seekBubbleRight, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL or Gravity.END).apply {
+        addView(seekBubbleRight, LayoutParams(dp(84), dp(84), Gravity.CENTER_VERTICAL or Gravity.END).apply {
             marginEnd = sideInset
         })
 
@@ -123,13 +123,14 @@ class PlayerTouchOverlay(
     private fun createSeekBubble(caption: String) = TextView(context).apply {
         text = caption
         setTextColor(Color.WHITE)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(dp(24), dp(16), dp(24), dp(16))
+        gravity = Gravity.CENTER
+        // a round disc of the size of the pause sign (84 dp), the same dark plate
+        layoutParams = LayoutParams(dp(84), dp(84))
         background = GradientDrawable().apply {
-            // a neutral dark plate, the same as the drag sign
+            shape = GradientDrawable.OVAL
             setColor(OVERLAY_SOFT)
-            cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat()
         }
         visibility = View.GONE
     }
