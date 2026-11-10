@@ -386,7 +386,11 @@ class DetailsActivity : Activity() {
 
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
-        val original = text("", 16f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false }
+        val original = text("", 16f, 0xFF94A3B8.toInt()).apply {
+            includeFontPadding = false
+            // one line, like the heading: a long original title must not push the lines below and the button down
+            if (mobile) { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+        }
         // the original title is one grey bar of its own line height until the details come, so the lines below do not move
         skeletonText(original, dp(220))
         if (mobile) {
@@ -408,9 +412,16 @@ class DetailsActivity : Activity() {
                 }
                 addView(titleView)
                 addView(original)
-                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { includeFontPadding = false; setPadding(0, dp(5), 0, 0) }
+                genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply {
+                    includeFontPadding = false; setPadding(0, dp(5), 0, 0)
+                    // the full list of genres stands in the table below
+                    maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                }
                 skeletonText(genresLine, dp(170))
-                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { includeFontPadding = false; setPadding(0, dp(5), 0, 0) }
+                metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply {
+                    includeFontPadding = false; setPadding(0, dp(5), 0, 0)
+                    maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                }
                 addView(genresLine)
                 addView(metaLine)
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
