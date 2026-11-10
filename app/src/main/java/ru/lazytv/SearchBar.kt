@@ -95,7 +95,7 @@ class SearchBar(private val activity: Activity, private val scale: Float, privat
         input.setPadding(px(18), 0, px(18), 0)
         // the field lights up when the remote reaches it and the keyboard comes up at once: the field is active, as when it is clicked;
         // it also goes away when the remote leaves the field, so the phrases below are not covered by it
-        input.background = focusShape(scale, 0xFF1C2029.toInt())
+        input.background = focusShape(scale, PLATE_FILL, radius = TITLE_CARD_RADIUS)
         input.setOnFocusChangeListener { view, hasFocus ->
             if (listening) cancelListening()
             val imm = activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager

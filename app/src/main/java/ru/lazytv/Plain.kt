@@ -127,7 +127,7 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
  * A vertical grid of cards: the focus walks through the views by the arrows, the grid scrolls only as far as the focused card needs.
  * [onSelected] tells which position took the focus, [keyIntercept] sees the keys first (a page leads the arrows out of the grid by hand).
  */
-open class CardGridView(context: Context, columns: Int, private val gap: Int) : RecyclerView(context) {
+open class CardGridView(context: Context, private val columns: Int, private val gap: Int) : RecyclerView(context) {
     var onSelected: ((Int) -> Unit)? = null
     var keyIntercept: ((KeyEvent) -> Boolean)? = null
     private var chosen = 0
@@ -160,5 +160,33 @@ open class CardGridView(context: Context, columns: Int, private val gap: Int) : 
         }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean = keyIntercept?.invoke(event) == true || super.dispatchKeyEvent(event)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (keyIntercept?.invoke(event) == true) return true
+        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && focusedChild != null) {
+            // the next row is not made yet while it is off screen, and the platform search then gives up or jumps away:
+            // the grid walks down by itself, and from the last row the focus stays
+            val count = adapter?.itemCount ?: 0
+            val from = selectedPosition
+            val row = from / columns
+            if (row < (count - 1) / columns) moveTo(minOf(from + columns, count - 1))
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    /** Puts the focus on the card at [position], making it first when it is off screen. */
+    private fun moveTo(position: Int) {
+        val ready = findViewHolderForAdapterPosition(position)
+        if (ready != null) {
+            ready.itemView.requestFocus()
+            return
+        }
+        scrollToPosition(position)
+        addOnLayoutChangeListener(object : OnLayoutChangeListener {
+            override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
+                removeOnLayoutChangeListener(this)
+                findViewHolderForAdapterPosition(position)?.itemView?.requestFocus()
+            }
+        })
+    }
 }
