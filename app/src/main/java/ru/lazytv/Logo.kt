@@ -1,61 +1,75 @@
 package ru.lazytv
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.view.Gravity
+import android.graphics.Canvas
+import android.graphics.CornerPathEffect
+import android.graphics.Paint
+import android.graphics.Path
 import android.view.View
-import android.widget.FrameLayout
-import android.widget.TextView
 
 /**
- * Modern LTV brand logo component.
- * "L" in indigo accent (#818CF8), "TV" in crisp white (#FFFFFF).
- * Non-focusable decorative brand mark.
+ * The LTV brand mark: three fat letters with round ends, one warm cream colour. Drawn as strokes (not a font), so it looks
+ * the same on every device. The same shapes are used for the launcher icon (docs/design-system.md, "Логотип").
+ * Non-focusable decorative mark.
  */
-object Logo {
-    fun create(
-        context: Context,
-        textSizeSp: Float = 16f,
-        badge: Boolean = false,
-        textColorL: Int = 0xFF818CF8.toInt(),
-        textColorTv: Int = Color.WHITE
-    ): View {
-        val tv = TextView(context).apply {
-            val textStr = "LTV"
-            val span = SpannableString(textStr)
-            span.setSpan(ForegroundColorSpan(textColorL), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            span.setSpan(ForegroundColorSpan(textColorTv), 1, 3, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            text = span
-            // dp, not sp: the frame around the logo is counted in dp, and the system font scale must not push the text out of it
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, textSizeSp)
-            typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
-            letterSpacing = 0.12f
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-            isFocusable = false
-            isClickable = false
-        }
+class LogoView(context: Context, private val capHeightDp: Float) : View(context) {
+    private val density = context.resources.displayMetrics.density
 
-        if (!badge) return tv
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        color = LOGO_COLOR
+    }
 
-        val density = context.resources.displayMetrics.density
-        val padH = (8 * density).toInt()
-        val padV = (4 * density).toInt()
-        return FrameLayout(context).apply {
-            isFocusable = false
-            isClickable = false
-            background = GradientDrawable().apply {
-                setColor(0xFF1E222A.toInt())
-                cornerRadius = 6 * density
-                setStroke((1 * density).toInt(), 0x336366F1)
+    init {
+        isFocusable = false
+        isClickable = false
+    }
+
+    override fun onMeasure(widthSpec: Int, heightSpec: Int) {
+        val h = (capHeightDp * density).toInt()
+        setMeasuredDimension(resolveSize((h * WIDTH_PER_HEIGHT).toInt(), widthSpec), resolveSize(h, heightSpec))
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val h = capHeightDp * density
+        val w = h * WIDTH_PER_HEIGHT
+        // centred in whatever room the parent gave
+        canvas.save()
+        canvas.translate((width - w) / 2f, (height - h) / 2f)
+        paint.strokeWidth = STROKE * h
+        // the corner of the L is rounder than the stroke alone gives
+        paint.pathEffect = CornerPathEffect(0.16f * h)
+        canvas.drawPath(letters(h), paint)
+        canvas.restore()
+    }
+
+    companion object {
+        const val LOGO_COLOR = 0xFFFFF4E3.toInt()
+        /** Width of "LTV" as a part of the height of a letter. */
+        const val WIDTH_PER_HEIGHT = 2.74f
+        /** Thickness of a stroke as a part of the height of a letter. */
+        const val STROKE = 0.26f
+
+        /** The strokes of L, T and V on a letter of height [h]; the same numbers draw the launcher icon. */
+        fun letters(h: Float): Path {
+            val half = STROKE / 2f
+            fun x(v: Float) = v * h
+            return Path().apply {
+                // L
+                moveTo(x(half), x(half)); lineTo(x(half), x(1f - half)); lineTo(x(0.81f - half), x(1f - half))
+                // T: the bar, then the stem
+                moveTo(x(0.70f + half), x(half)); lineTo(x(0.70f + 0.91f - half), x(half))
+                moveTo(x(0.70f + 0.455f), x(half)); lineTo(x(0.70f + 0.455f), x(1f - half))
+                // V
+                moveTo(x(1.67f + half), x(half)); lineTo(x(1.67f + 0.535f), x(1f - half)); lineTo(x(1.67f + 1.07f - half), x(half))
             }
-            setPadding(padH, padV, padH, padV)
-            addView(tv, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER))
         }
     }
+}
+
+object Logo {
+    /** The mark; [textSizeSp] is kept from the old text logo and gives the height of the letters (dp). */
+    fun create(context: Context, textSizeSp: Float = 16f): View = LogoView(context, textSizeSp)
 }
