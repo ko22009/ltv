@@ -387,16 +387,17 @@ class DetailsActivity : Activity() {
         val info = LinearLayout(this)
         info.orientation = LinearLayout.VERTICAL
         val original = text("", 16f, 0xFF94A3B8.toInt())
+        // the original title is one grey bar of its own line height until the details come, so the lines below do not move
+        skeletonText(original, dp(220))
         if (mobile) {
             val titles = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(text(name, 24f, bold = true))
                 addView(original)
                 genresLine = text("", 15f, 0xFF94A3B8.toInt()).apply { setPadding(0, dp(6), 0, 0) }
+                skeletonText(genresLine, dp(170))
                 metaLine = text(intent.getStringExtra("year").orEmpty(), 15f, 0xFFE2E8F0.toInt()).apply { setPadding(0, dp(6), 0, 0) }
                 addView(genresLine)
-                // grey bars stand where the genres will be until the details come
-                addView(skeletonBar(dp(150), dp(14), dp(8)))
                 addView(metaLine)
                 // the watch button with the bookmark stands at the level of the poster's lower edge, under the facts line
                 minimumHeight = dp(162)
@@ -486,7 +487,7 @@ class DetailsActivity : Activity() {
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
         if (!mobile) {
             // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
-            repeat(4) { info.addView(skeletonBar(dp(420), dp(22), dp(14)), info.indexOfChild(table) + 1) }
+            repeat(5) { info.addView(skeletonBar(dp(420), dp(22), dp(17)), info.indexOfChild(table) + 1) }
             if (rawOverview.isEmpty()) {
                 overviewView.visibility = View.GONE
                 repeat(3) { info.addView(skeletonBar(-1, dp(18), dp(10))) }
@@ -500,7 +501,9 @@ class DetailsActivity : Activity() {
             // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
             if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
             if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(14), dp(10)), info.indexOfChild(overviewView) + 1) }
-            repeat(4) { info.addView(skeletonBar(-1, dp(18), dp(14))) }
+            // five rows of the pitch of the fact rows (about 39), then the cast block, as the details will fill them
+            repeat(5) { info.addView(skeletonBar(-1, dp(22), dp(17))) }
+            info.addView(skeletonBar(-1, dp(150), dp(24)))
         }
 
         loadDetails(title, name, baseRows, original, table, scroll)
@@ -541,7 +544,19 @@ class DetailsActivity : Activity() {
         skeletons.add(this)
     }
 
+    private val skeletonTexts = mutableListOf<TextView>()
+
+    /** An empty line of text drawn as a grey bar of exactly its own height (a narrower one), so filling it in moves nothing. */
+    private fun skeletonText(tv: TextView, width: Int) {
+        tv.background = android.graphics.drawable.InsetDrawable(
+            GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(6).toFloat() }, 0, dp(3), 0, dp(3))
+        tv.layoutParams = LinearLayout.LayoutParams(width, -2)
+        skeletonTexts.add(tv)
+    }
+
     private fun hideSkeletons() {
+        skeletonTexts.forEach { it.background = null; it.layoutParams = LinearLayout.LayoutParams(-1, -2) }
+        skeletonTexts.clear()
         skeletons.forEach { it.visibility = View.GONE }
         skeletons.clear()
         if (::overviewView.isInitialized) overviewView.visibility = View.VISIBLE
