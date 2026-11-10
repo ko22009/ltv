@@ -242,14 +242,14 @@ class DetailsActivity : Activity() {
         if (mobile) watchButton.apply {
             // a wide pill in the accent colour of the app with the caption
             text = "Смотреть"
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scale)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             typeface = Typeface.DEFAULT_BOLD
             compoundDrawablePadding = dp(10)
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(0xFF6366F1.toInt()); cornerRadius = dp(26).toFloat()
+                    setColor(0xFF6366F1.toInt()); cornerRadius = dp(22).toFloat()
                 })
-                addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(26).toFloat() })
+                addState(intArrayOf(), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(22).toFloat() })
             }
             // the icon stays next to the caption: padding puts the pair in the middle of the wide button
             addOnLayoutChangeListener { v, l, _, r, _, _, _, _, _ ->
@@ -259,7 +259,7 @@ class DetailsActivity : Activity() {
             }
         }
         val watchSlot = FrameLayout(this).apply {
-            if (mobile) addView(watchButton, FrameLayout.LayoutParams(-1, dp(52)))
+            if (mobile) addView(watchButton, FrameLayout.LayoutParams(-1, dp(44)))
             else addView(watchButton, FrameLayout.LayoutParams(-2, dp(44), Gravity.CENTER))
             addView(watchSpinner, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER))
         }
@@ -401,7 +401,7 @@ class DetailsActivity : Activity() {
                 addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
                 addView(LinearLayout(this@DetailsActivity).apply {
                     addView(watchSlot, LinearLayout.LayoutParams(0, -2, 1f))
-                    addView(favorite, LinearLayout.LayoutParams(dp(52), dp(52)).apply { leftMargin = dp(10) })
+                    addView(favorite, LinearLayout.LayoutParams(dp(44), dp(44)).apply { leftMargin = dp(8) })
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
             }
             val head = LinearLayout(this).apply {
