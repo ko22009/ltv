@@ -78,9 +78,14 @@ class DetailsActivity : Activity() {
         isFocusable = true
         isClickable = true
         background = StateListDrawable().apply {
+            // on a phone a tap is shown with a lighter plate, not with the teal of the remote's cursor
             addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(FOCUS_FILL)
+                setColor(if (mobile) TOUCH_FILL else FOCUS_FILL)
                 cornerRadius = dp(if (mobile) 14 else 2).toFloat()
+            })
+            if (mobile) addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply {
+                setColor(TOUCH_FILL)
+                cornerRadius = dp(14).toFloat()
             })
             // on a phone the icons are dark rounded tiles
             if (iconOnly) addState(intArrayOf(), GradientDrawable().apply {
@@ -194,7 +199,7 @@ class DetailsActivity : Activity() {
             setImageDrawable(PathDrawable(MenuIcons.BACK).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), softDisc(FOCUS_FILL))
+                addState(intArrayOf(android.R.attr.state_focused), softDisc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
                 addState(intArrayOf(), softDisc(0x99000000.toInt()))
             }
             isFocusable = true
@@ -434,12 +439,12 @@ class DetailsActivity : Activity() {
                 minimumHeight = dp(166)
                 addView(View(this@DetailsActivity), LinearLayout.LayoutParams(-1, 0, 1f))
                 // one split button, no gap: "Смотреть" on a dark plate (a little lighter) and the bookmark tile on a darker one;
-                // teal only under the cursor or the finger
+                // a lighter plate under the finger
                 fun half(rest: Int, left: Boolean) = StateListDrawable().apply {
                     val r = dp(14).toFloat()
                     val radii = if (left) floatArrayOf(r, r, 0f, 0f, 0f, 0f, r, r) else floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
-                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadii = radii })
-                    addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadii = radii })
+                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadii = radii })
+                    addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadii = radii })
                     addState(intArrayOf(), GradientDrawable().apply { setColor(rest); cornerRadii = radii })
                 }
                 addView(LinearLayout(this@DetailsActivity).apply {
@@ -845,7 +850,8 @@ class DetailsActivity : Activity() {
                         if (mobile) {
                             // on a phone the director is a tile like the bookmark button: the same plate, corner and height
                             background = StateListDrawable().apply {
-                                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat() })
+                                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadius = dp(14).toFloat() })
+                                addState(intArrayOf(android.R.attr.state_pressed), GradientDrawable().apply { setColor(TOUCH_FILL); cornerRadius = dp(14).toFloat() })
                                 addState(intArrayOf(), GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(14).toFloat() })
                             }
                             typeface = Typeface.DEFAULT
@@ -1358,3 +1364,5 @@ class DetailsActivity : Activity() {
 /** What stands where a fact of the card is not known. */
 private const val DASH = "–"
 
+/** The plate of a pressed or tapped button on a phone (the teal FOCUS_FILL belongs to the remote's cursor on a TV). */
+private const val TOUCH_FILL = 0xFF343B47.toInt()

@@ -43,6 +43,8 @@ class GalleryActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // on a phone the covers (wide pictures) are shown sideways, the posters (tall ones) stay upright
+        if (isMobileUi() && !posterMode) requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
         val mediaId = intent.getLongExtra("id", 0L)
         val tv = intent.getBooleanExtra("tv", false)
