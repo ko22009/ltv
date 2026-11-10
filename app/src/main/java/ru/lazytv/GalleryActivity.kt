@@ -150,6 +150,7 @@ class GalleryActivity : Activity() {
     private lateinit var phoneCounter: TextView
     private lateinit var arrowLeft: View
     private lateinit var arrowRight: View
+    private lateinit var closeZone: View
 
     /** Phone look: a close cross, "1 / 5" on top, the frame as a rounded card with round arrows, swipe to turn. */
     private fun setupPhoneChrome() {
@@ -204,7 +205,7 @@ class GalleryActivity : Activity() {
             setOnClickListener { action() }
         }
         // the cross is small to look at, the tap zone around it is wide (the corner of the screen), like the arrows
-        val closeZone = FrameLayout(this).apply {
+        closeZone = FrameLayout(this).apply {
             isClickable = true
             contentDescription = "Закрыть"
             setOnClickListener { finish() }
@@ -257,6 +258,11 @@ class GalleryActivity : Activity() {
         val top = maxOf(imageAt[1] - rootAt[1] + drawn.top, 0f) + inset
         phoneCounter.translationX = right - phoneCounter.width
         phoneCounter.translationY = top
+        // a tall poster leaves a free band above it: the cross stands about in the middle of that band, not under the status bar
+        if (posterMode && ::closeZone.isInitialized) {
+            val band = imageAt[1] - rootAt[1] + drawn.top
+            closeZone.translationY = maxOf(0f, band * 0.62f - dp(48) - dp(2))
+        }
     }
 
     private fun updatePhoneChrome() {
