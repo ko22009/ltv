@@ -199,9 +199,25 @@ class GalleryActivity : Activity() {
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = android.graphics.drawable.GradientDrawable().apply { setColor(0xFF1C2029.toInt()); cornerRadius = dp(18).toFloat() }
         }
-        // the very bottom of the strip beside the frame: it does not lie on the picture
-        phoneCounter.setPadding(dp(10), dp(4), dp(10), dp(4))
-        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(8); bottomMargin = dp(8) })
+        // a tab in the lower right corner of the picture itself: flush with its edges (the part of it that is on the screen), only the upper left corner is round
+        phoneCounter.setPadding(dp(14), dp(8), dp(14), dp(8))
+        phoneCounter.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(0xCC1C2029.toInt())
+            val r = dp(14).toFloat()
+            cornerRadii = floatArrayOf(r, r, 0f, 0f, 0f, 0f, 0f, 0f)
+        }
+        root.addView(phoneCounter, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START))
+        val placeCounter = {
+            val rootAt = IntArray(2); root.getLocationInWindow(rootAt)
+            val imageAt = IntArray(2); mainImage.getLocationInWindow(imageAt)
+            val right = minOf(imageAt[0] - rootAt[0] + mainImage.width, root.width)
+            val bottom = minOf(imageAt[1] - rootAt[1] + mainImage.height, root.height)
+            phoneCounter.translationX = (right - phoneCounter.width).toFloat()
+            phoneCounter.translationY = (bottom - phoneCounter.height).toFloat()
+        }
+        mainImage.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
+        phoneCounter.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
+        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> placeCounter() }
         arrowLeft = round(MenuIcons.CHEVRON_LEFT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex > 0) showImage(selectedIndex - 1) }
         arrowRight = round(MenuIcons.CHEVRON_RIGHT, dp(40), dp(8), 0x99000000.toInt()) { if (selectedIndex < backdrops.size - 1) showImage(selectedIndex + 1) }
         // the round arrow is small to look at, but the tap zone around it is wide and tall: a thumb does not miss when turning the picture
