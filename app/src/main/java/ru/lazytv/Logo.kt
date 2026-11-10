@@ -12,14 +12,14 @@ import android.view.View
  * the same on every device. The same shapes are used for the launcher icon (docs/design-system.md, "Логотип").
  * Non-focusable decorative mark.
  */
-class LogoView(context: Context, private val capHeightDp: Float) : View(context) {
+class LogoView(context: Context, private val capHeightDp: Float, markColor: Int = LOGO_COLOR) : View(context) {
     private val density = context.resources.displayMetrics.density
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
-        color = LOGO_COLOR
+        color = markColor
     }
 
     init {
@@ -71,5 +71,5 @@ class LogoView(context: Context, private val capHeightDp: Float) : View(context)
 
 object Logo {
     /** The mark; [textSizeSp] is kept from the old text logo and gives the height of the letters (dp). */
-    fun create(context: Context, textSizeSp: Float = 16f): View = LogoView(context, textSizeSp)
+    fun create(context: Context, textSizeSp: Float = 16f, color: Int = LogoView.LOGO_COLOR): View = LogoView(context, textSizeSp, color)
 }

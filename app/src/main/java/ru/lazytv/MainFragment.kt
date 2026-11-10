@@ -30,6 +30,8 @@ import kotlinx.coroutines.withContext
 
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
+/** Colour of the inactive left-menu icons; the logo under the menu uses the same one. */
+private const val NAV_INACTIVE_COLOR = 0xFF94A3B8.toInt()
 
 /** One section of the settings, shown as its own card on the settings page. */
 data class SettingsSection(val title: String, val description: String)
@@ -126,7 +128,7 @@ class MainFragment : Fragment() {
         railScroll.addView(railContainer, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
         railPanel.addView(railScroll, FrameLayout.LayoutParams(railWidth, ViewGroup.LayoutParams.MATCH_PARENT))
 
-        val railLogo = Logo.create(ctx, textSizeSp = 9f).apply {
+        val railLogo = Logo.create(ctx, textSizeSp = 9f, color = NAV_INACTIVE_COLOR).apply {
             isFocusable = false
             isClickable = false
         }
@@ -362,7 +364,7 @@ class MainFragment : Fragment() {
             }
             val iconColor = when {
                 focused || isCur -> Color.WHITE
-                else -> 0xFF94A3B8.toInt()
+                else -> NAV_INACTIVE_COLOR
             }
             iconView.setColorFilter(iconColor, PorterDuff.Mode.SRC_IN)
         }
