@@ -675,7 +675,8 @@ class DetailsActivity : Activity() {
         if (mobile) {
             genresLine.text = d.genres.joinToString(", ")
             val year = d.date.take(4).takeIf { it.length == 4 && it.all(Char::isDigit) } ?: baseRows.firstOrNull { it.first == RELEASE }?.second.orEmpty()
-            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).joinToString(", ") { it.ifBlank { DASH } }
+            // a missing part is left out (the table below has its own row with a dash); a dash only when nothing is known
+            metaLine.text = listOf(year, d.age, formatRuntime(d.runtime)).filter { it.isNotBlank() }.joinToString(", ").ifEmpty { DASH }
         }
         // the release date in full ("16 декабря 2026"); the year of the list stays when TMDB has no exact date
         // a film shown in the cinemas again years later gets its own line: the premiere and the cinema run are different dates
