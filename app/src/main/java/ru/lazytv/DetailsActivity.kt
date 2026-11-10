@@ -485,6 +485,18 @@ class DetailsActivity : Activity() {
             }
             } else setPadding(0, dp(8), 0, dp(8))
         }
+        // the page shows three lines (the height of the grey bars that stand in for it); the whole text opens in a window on a tap
+        overviewView.maxLines = 3
+        overviewView.ellipsize = android.text.TextUtils.TruncateAt.END
+        if (mobile) overviewView.setOnClickListener {
+            if (overviewView.text.isNotEmpty()) {
+                android.app.AlertDialog.Builder(this@DetailsActivity)
+                    .setTitle(name)
+                    .setMessage(overviewView.text)
+                    .setPositiveButton("Закрыть", null)
+                    .show()
+            }
+        }
         info.addView(overviewView, LinearLayout.LayoutParams(-1, -2).apply { if (mobile) topMargin = dp(8) })
         if (!mobile) {
             // the same on the TV: grey bars for the facts, the description and the cast until the details come, so the page does not jump
@@ -500,7 +512,7 @@ class DetailsActivity : Activity() {
             info.addView(table)
             // the facts and the description are not there yet: grey bars of the same kind keep the page from jumping
             if (rawOverview.isEmpty()) overviewView.visibility = View.GONE
-            if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(14), dp(10)), info.indexOfChild(overviewView) + 1) }
+            if (rawOverview.isEmpty()) repeat(3) { info.addView(skeletonBar(-1, dp(15), dp(8)), info.indexOfChild(overviewView) + 1) }
             // the cast block, as the details will fill it
             info.addView(skeletonBar(-1, dp(150), dp(24)))
         }
