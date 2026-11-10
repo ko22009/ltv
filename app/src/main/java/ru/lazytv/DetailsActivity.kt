@@ -436,7 +436,7 @@ class DetailsActivity : Activity() {
                 // a text block is not filled under the cursor (a big indigo slab): a white border shows the focus
                 val focused = GradientDrawable().apply {
                     setColor(Color.TRANSPARENT)
-                    setStroke(dp(2).coerceAtLeast(1), Color.WHITE)
+                    setStroke(dp(1).coerceAtLeast(1), Color.WHITE)
                     cornerRadius = dp(6).toFloat()
                 }
                 val normal = GradientDrawable().apply {
