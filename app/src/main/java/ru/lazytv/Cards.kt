@@ -18,7 +18,7 @@ import android.widget.TextView
  * a row is as tall as its tallest card, so a tile or a card that is a few pixels taller makes the rows below jump while it scrolls in and out.
  */
 const val TITLE_POSTER_HEIGHT = 300f
-const val TITLE_INFO_HEIGHT = 84f
+const val TITLE_INFO_HEIGHT = 100f
 /** Corner of the card, the skeleton and the "show all" tile: the same rounding everywhere. */
 const val TITLE_CARD_RADIUS = 12f
 const val CARD_SCALE = 0.82f
@@ -153,7 +153,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         pick.visibility = if (on) View.VISIBLE else View.GONE
     }
 
-    // the plate under the poster holds the name (the main line) and the genre; the year with the runtime is a plate on the poster
+    // the plate under the poster holds the name (the main line), the genre and, as a footer, the year with the runtime
     private val name = TextView(context).apply {
         setTextColor(Color.WHITE)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scale)
@@ -163,12 +163,12 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         includeFontPadding = false
     }
 
-    /** "2008 · 2 ч 32 мин" in the lower left corner of the poster: the same plate as the rating on the right. */
+    /** "2008 · 2 ч 32 мин": the last line of the plate under the poster, grey; off the poster, so it never fights with the picture. */
     private val year = TextView(context).apply {
-        RatingBadge.style(this, 16f * scale, px(10f), px(5f))
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        setTextColor(0xFF94A3B8.toInt())
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
         maxLines = 1
-        visibility = View.GONE
+        includeFontPadding = false
     }
 
     private val genre = TextView(context).apply {
@@ -199,7 +199,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         setBackgroundColor(0xFF1E222A.toInt())
         setPadding(px(16f), px(12f), px(16f), px(10f))
         addView(name, LayoutParams(-1, -2))
-        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(6f) })
+        addView(genre, LayoutParams(-1, -2).apply { topMargin = px(5f) })
+        addView(year, LayoutParams(-1, -2).apply { topMargin = px(5f) })
     }
 
     init {
@@ -220,10 +221,6 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
             addView(badge, android.widget.FrameLayout.LayoutParams(px(36f), px(36f), Gravity.END or Gravity.TOP).apply {
                 topMargin = px(10f)
                 rightMargin = px(10f)
-            })
-            addView(year, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.START or Gravity.BOTTOM).apply {
-                bottomMargin = px(10f)
-                leftMargin = px(10f)
             })
             addView(rating, android.widget.FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.BOTTOM).apply {
                 bottomMargin = px(10f)
@@ -255,7 +252,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     // the poster and the text plate are dimmed, the card itself and the tick badge are not
     private fun dim(value: Float, animated: Boolean) {
-        for (part in listOf<View>(poster, info, rating, year)) {
+        for (part in listOf<View>(poster, info, rating)) {
             if (animated) part.animate().alpha(value).setDuration(150).start() else part.alpha = value
         }
     }
@@ -323,10 +320,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
     }
 
     private fun showYear() {
-        // short form on the plate ("2ч 36м"): the two plates must fit the width of the poster side by side
-        val line = listOf(year0, formatRuntime(runtime0).replace(" ч", "ч").replace(" мин", "м")).filter { it.isNotEmpty() }.joinToString(" · ")
-        year.text = line
-        year.visibility = if (line.isEmpty()) View.GONE else View.VISIBLE
+        year.text = listOf(year0, formatRuntime(runtime0)).filter { it.isNotEmpty() }.joinToString(" · ")
     }
 }
 
