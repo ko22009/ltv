@@ -311,12 +311,15 @@ object Tmdb {
         val uniqueDirectors = directorPeople.distinctBy { if (it.id > 0L) it.id else it.name }
         val director = uniqueDirectors.joinToString(", ") { it.name }
         var age = ""
+        // the American mark, used only when TMDB has no Russian one
+        var usAge = ""
         var cinemaDate = ""
         if (tv) {
             val a = o.optJSONObject("content_ratings")?.optJSONArray("results")
             if (a != null) for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
-                if (r.str("iso_3166_1") == "RU" || (age.isEmpty() && r.str("iso_3166_1") == "US")) age = r.str("rating")
+                if (r.str("iso_3166_1") == "RU") age = r.str("rating")
+                else if (r.str("iso_3166_1") == "US" && usAge.isEmpty()) usAge = r.str("rating")
             }
         } else {
             val a = o.optJSONObject("release_dates")?.optJSONArray("results")
@@ -326,6 +329,13 @@ object Tmdb {
             var theatrical = ""
             if (a != null) for (i in 0 until a.length()) {
                 val r = a.getJSONObject(i)
+                if (r.str("iso_3166_1") == "US" && usAge.isEmpty()) {
+                    val list = r.optJSONArray("release_dates")
+                    if (list != null) for (j in 0 until list.length()) {
+                        val c = list.getJSONObject(j).str("certification")
+                        if (usAge.isEmpty() && c.isNotEmpty()) usAge = c
+                    }
+                }
                 if (r.str("iso_3166_1") == "RU") {
                     val list = r.optJSONArray("release_dates")
                     if (list != null) for (j in 0 until list.length()) {
@@ -342,6 +352,7 @@ object Tmdb {
             val again = theatrical.take(4).toIntOrNull()
             if (first != null && again != null && again - first >= 2) cinemaDate = theatrical
         }
+        if (age.isEmpty()) age = ageFromUs(usAge)
         val runtime = if (tv) o.optJSONArray("episode_run_time")?.optInt(0) ?: 0 else o.optInt("runtime")
         // TMDB names the countries in English whatever the language is: take the name from the country code instead
         val countries = o.optJSONArray("production_countries")?.let { a ->
@@ -523,3 +534,13 @@ object Tmdb {
 
 /** TMDB sends `null` for missing fields: `optString` would turn it into the text "null" (a "null" poster path, "null • null"). */
 internal fun JSONObject.str(name: String): String = if (isNull(name)) "" else optString(name)
+
+/** The American mark of a film or a series as the Russian age mark; empty when there is none or it is unknown. */
+fun ageFromUs(mark: String): String = when (mark.trim().uppercase()) {
+    "G", "TV-G", "TV-Y" -> "0+"
+    "PG", "TV-PG", "TV-Y7", "TV-Y7-FV" -> "6+"
+    "PG-13" -> "12+"
+    "TV-14" -> "16+"
+    "R", "NC-17", "TV-MA" -> "18+"
+    else -> ""
+}
