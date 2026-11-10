@@ -242,7 +242,8 @@ class PlayerActivity : Activity() {
         bufferSpinner = Spinner(this, dp(SPINNER_SCREEN))
         root.addView(bufferSpinner, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // no internet: the same place, a circle with three moving dots; the playback goes on by itself when the network is back
-        waitingDots = WaitingDots(this, dp(84))
+        // the same size as the pause sign (84 real dp), so the two replace each other without a jump
+        waitingDots = WaitingDots(this, (84 * resources.displayMetrics.density).toInt())
         waitingDots.visibility = View.GONE
         root.addView(waitingDots, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // on pause with the controls hidden the sign stays, so nobody takes the still picture for a freeze
