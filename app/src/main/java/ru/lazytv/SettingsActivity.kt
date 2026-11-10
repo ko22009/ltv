@@ -75,22 +75,8 @@ class SettingsActivity : FragmentActivity() {
                 android.widget.Toast.makeText(this@SettingsActivity, "Подбор запущен, занимает до минуты", android.widget.Toast.LENGTH_LONG).show()
             }
         }
-        val dateBtn = chipButton(this, scale, "Настройки даты и времени").apply {
-            setOnClickListener { Errors.openDateSettings(this@SettingsActivity) }
-        }
-        val actionsRow = LinearLayout(this).apply {
-            if (isMobileUi()) {
-                // two long captions do not fit one line of a phone: the buttons stand one under the other, as wide as the page
-                orientation = LinearLayout.VERTICAL
-                addView(retuneBtn, LinearLayout.LayoutParams(-1, px(CHIP_HEIGHT)).apply { bottomMargin = px(8) })
-                addView(dateBtn, LinearLayout.LayoutParams(-1, px(CHIP_HEIGHT)))
-            } else {
-                orientation = LinearLayout.HORIZONTAL
-                addView(retuneBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { rightMargin = px(12) })
-                addView(dateBtn, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)))
-            }
-        }
-        page.addView(actionsRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(16); bottomMargin = px(14) })
+        // no "date settings" button here: when the clock is wrong, the error box itself offers the way to the settings
+        page.addView(retuneBtn, LinearLayout.LayoutParams(if (isMobileUi()) -1 else -2, px(CHIP_HEIGHT)).apply { topMargin = px(16); bottomMargin = px(14) })
 
         val topics = listOf(
             "Сайт не открывается" to
@@ -102,7 +88,7 @@ class SettingsActivity : FragmentActivity() {
             "Управление плеером, звук и субтитры" to
                 "При скрытой панели стрелки влево и вправо перематывают ролик на 10 секунд. Стрелки вверх, вниз или кнопка OK открывают нижнюю панель с выбором звуковой дорожки, субтитров, качества и скорости.",
             "Дата и время на приставке" to
-                "Если после отключения питания на приставке сбились часы, защищённые сайты (HTTPS) перестают открываться. Проверьте системные часы кнопкой «Настройки даты и времени» выше.",
+                "Если после отключения питания на приставке сбились часы, защищённые сайты (HTTPS) перестают открываться. Проверьте дату и время в системных настройках приставки.",
             "Старые приставки (Android 6 и ниже)" to
                 "На старых прошивках истекли системные сертификаты безопасности: часть HTTPS-сайтов не открывается без обновления сертификатов системы.",
         )
@@ -170,20 +156,13 @@ class SettingsActivity : FragmentActivity() {
                 else -> false
             }
         }
-        val topButtons = listOf(retuneBtn, dateBtn)
-        topButtons.forEachIndexed { i, btn ->
-            btn.setOnKeyListener { _, code, event ->
-                if (event.action != KeyEvent.ACTION_DOWN) false
-                else when (code) {
-                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        val step = if (code == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
-                        topButtons.getOrNull(i + step)?.requestFocus()
-                        true
-                    }
-                    KeyEvent.KEYCODE_DPAD_UP -> back.requestFocus()
-                    KeyEvent.KEYCODE_DPAD_DOWN -> cards.firstOrNull()?.requestFocus() ?: true
-                    else -> false
-                }
+        retuneBtn.setOnKeyListener { _, code, event ->
+            if (event.action != KeyEvent.ACTION_DOWN) false
+            else when (code) {
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                KeyEvent.KEYCODE_DPAD_UP -> back.requestFocus()
+                KeyEvent.KEYCODE_DPAD_DOWN -> cards.firstOrNull()?.requestFocus() ?: true
+                else -> false
             }
         }
         setContentView(root)
