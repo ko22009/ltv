@@ -114,7 +114,7 @@ class FiltersActivity : Activity() {
         val line = LinearLayout(this)
         line.gravity = Gravity.CENTER_VERTICAL
         line.setPadding(px(22), px(16), px(22), px(16))
-        line.background = focusShape(scale, if (isMobileUi()) 0xFF1C2029.toInt() else 0x33FFFFFF)
+        line.background = focusShape(scale, PLATE_FILL)
         line.isFocusable = true
         line.isClickable = true
         line.addView(text(name, 20f).apply { typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, -2, 1f))
