@@ -13,13 +13,13 @@ fun outlinedCardBackground(
     state: Int = android.R.attr.state_focused,
     radius: Int = 14,
     fill: Int = 0xFF161920.toInt(),
-    line: Int = 0xFF2E3445.toInt(),
+    line: Int = 0xFF232836.toInt(),
 ): StateListDrawable {
     fun dp(value: Int) = (value * scale).toInt()
     val width = maxOf(1, dp(1))
     return StateListDrawable().apply {
         addState(intArrayOf(state), GradientDrawable().apply {
-            setColor(FOCUS_FILL); cornerRadius = dp(radius).toFloat(); setStroke(width * 2, 0xFFA5B4FC.toInt())
+            setColor(FOCUS_FILL); cornerRadius = dp(radius).toFloat(); setStroke(width, 0xFF6366F1.toInt())
         })
         addState(intArrayOf(), GradientDrawable().apply {
             setColor(fill); cornerRadius = dp(radius).toFloat(); setStroke(width, line)
