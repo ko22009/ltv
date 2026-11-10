@@ -30,21 +30,34 @@ class FavoritesFragment : Fragment() {
     private val torrentRows = TextRows()
 
     /** One line of the episode and torrent lists: a tap opens it, a long press takes it out of the bookmarks. */
-    private class TextRow(val title: String, val info: String, val open: () -> Unit, val remove: () -> Unit)
+    private class TextRow(val title: String, val info: String, val open: () -> Unit, val remove: () -> Unit, val torrent: ru.lazytv.Torrent? = null)
 
     private inner class TextRows : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         val rows = mutableListOf<TextRow>()
 
+        // a torrent is drawn as in the list of torrents (a holder to put the card into), other lines with the simple two-line item
+        override fun getItemViewType(position: Int) = if (rows[position].torrent != null) 1 else 0
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.item_mobile_torrent, parent, false)
+            if (viewType == 1) android.widget.FrameLayout(parent.context).apply {
+                layoutParams = ViewGroup.MarginLayoutParams(-1, -2).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
+            } else LayoutInflater.from(parent.context).inflate(R.layout.item_mobile_torrent, parent, false)
         ) {}
+
+        private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
         override fun getItemCount() = rows.size
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val row = rows[position]
-            holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = row.title
-            holder.itemView.findViewById<TextView>(R.id.torrentInfo).text = row.info
+            if (row.torrent != null) {
+                val holder1 = holder.itemView as android.widget.FrameLayout
+                holder1.removeAllViews()
+                holder1.addView(ru.lazytv.torrentRowCard(requireContext(), row.torrent, marked = true))
+            } else {
+                holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = row.title
+                holder.itemView.findViewById<TextView>(R.id.torrentInfo).text = row.info
+            }
             holder.itemView.setOnClickListener { row.open() }
             holder.itemView.setOnLongClickListener {
                 row.remove()
@@ -114,7 +127,7 @@ class FavoritesFragment : Fragment() {
                         .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
                         .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
                 )
-            }, { FavoriteTorrents.toggle(ctx, torrent) })
+            }, { FavoriteTorrents.toggle(ctx, torrent) }, torrent)
         }
         torrentRows.notifyDataSetChanged()
 

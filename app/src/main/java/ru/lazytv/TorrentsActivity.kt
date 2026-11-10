@@ -164,7 +164,7 @@ class TorrentsActivity : Activity() {
         }
         loading = LoadingView(this, scale, "Ищем раздачи…").apply {
             // the list area starts below the chips, so its middle looks low: lifted by the height of the buttons above it
-            setPadding(0, 0, 0, px(110))
+            setPadding(0, 0, 0, px(190))
         }
         val body = FrameLayout(this)
         body.addView(list, FrameLayout.LayoutParams(-1, -1))
@@ -383,39 +383,10 @@ class TorrentsActivity : Activity() {
 
     /** One row: Russian title (bold), original title and release, source; on the right size, seeds and leeches. */
     private fun row(torrent: Torrent): View {
-        val parts = torrent.title.split(" / ", limit = 2)
-        val main = if (parts.size == 2) parts[0] else torrent.title.substringBefore(" (")
-        val rest = if (parts.size == 2) parts[1] else torrent.title
-
-        val card = LinearLayout(this)
-        card.gravity = Gravity.CENTER_VERTICAL
-        if (isMobileUi()) card.setPadding(px(12), px(10), px(12), px(10)) else card.setPadding(px(20), px(10), px(20), px(10))
-        card.background = outlinedCardBackground(uiScale(), android.R.attr.state_selected, 12)
-        val texts = LinearLayout(this)
-        texts.orientation = LinearLayout.VERTICAL
-        texts.addView(label(main, if (isMobileUi()) 16f else 19f, Color.WHITE, true).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END })
-        texts.addView(label(rest, 14f, 0xFFCBD5E1.toInt()).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END })
-        texts.addView(label(torrent.source, 13f, 0xFF94A3B8.toInt()))
-        card.addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
-
-        val numbers = LinearLayout(this)
-        numbers.orientation = LinearLayout.VERTICAL
-        numbers.gravity = Gravity.END
-        numbers.addView(label(torrent.size, 14f, Color.WHITE, true))
-        numbers.addView(label("▲ ${torrent.seeds}", 13f, 0xFF4ADE80.toInt()))
-        numbers.addView(label("▼ ${torrent.leeches}", 13f, 0xFFF87171.toInt()))
-        card.addView(numbers, LinearLayout.LayoutParams(px(if (isMobileUi()) 80 else 110), -2))
-
-        // the bookmark right of the seeds, the same icon as the bookmark button of the title card: filled white when the torrent
-        // is in the favorites, an outline when not; "right" on the row or a long press toggles it
         val marked = FavoriteTorrents.has(this, torrent)
-        val star = ImageView(this)
-        star.setImageDrawable(PathDrawable(if (marked) MenuIcons.BOOKMARK else MenuIcons.BOOKMARK_BORDER).apply {
-            setColorFilter(if (marked) Color.WHITE else 0x99FFFFFF.toInt(), android.graphics.PorterDuff.Mode.SRC_IN)
-        })
-        card.addView(star, LinearLayout.LayoutParams(px(30), px(30)).apply { leftMargin = px(16) })
-        // on a touch screen the star is a button of its own (there is no "right" key)
-        if (isMobileUi()) star.setOnClickListener { toggleFavorite(shown.indexOf(torrent)) }
+        val card = torrentRowCard(this, torrent, marked)
+        // on a touch screen the bookmark is a button of its own (there is no "right" key)
+        if (isMobileUi()) card.findViewWithTag<View>("star")?.setOnClickListener { toggleFavorite(shown.indexOf(torrent)) }
 
         // ListView marks the focused row as selected: forward that to the card background
         val holder = object : FrameLayout(this) {

@@ -181,7 +181,7 @@ class FavoritesPageFragment : Fragment() {
                     )
                 }
                 holder.view
-            }, pad, pitch)
+            }, pad, pitch * 5 / 3, perRow = 3)
         }
         // room under the last row for the focused card that grows
         content.addView(View(ctx), LinearLayout.LayoutParams(1, (24 * scale).toInt()))
@@ -196,9 +196,9 @@ class FavoritesPageFragment : Fragment() {
         })
     }
 
-    /** Lays the views out in rows of five, each in a cell of the grid pitch. */
-    private fun addGrid(views: List<View>, pad: Int, pitch: Int) {
-        views.chunked(5).forEach { chunk ->
+    /** Lays the views out in rows of [perRow] (five by default), each in a cell of the grid pitch. */
+    private fun addGrid(views: List<View>, pad: Int, pitch: Int, perRow: Int = 5) {
+        views.chunked(perRow).forEach { chunk ->
             val row = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 clipChildren = false

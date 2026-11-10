@@ -794,29 +794,21 @@ class TorrentCardPresenter : Presenter() {
         val scale = parent.context.uiScale()
         fun dp(v: Int) = (v * scale).toInt()
         val tile = FrameLayout(parent.context)
-        tile.layoutParams = ViewGroup.LayoutParams(dp(240), dp(136))
+        // wide: the card of a torrent is the same as in the list of torrents (title, name, source, size, seeds, peers, bookmark)
+        tile.layoutParams = ViewGroup.LayoutParams(dp(340), dp(112))
         tile.background = textTilePlate(scale)
         tile.isFocusable = true
         tile.isFocusableInTouchMode = true
-        val texts = LinearLayout(parent.context)
-        texts.orientation = LinearLayout.VERTICAL
-        texts.setPadding(dp(14), dp(14), dp(14), dp(14))
-        val title = TextView(parent.context).apply { setTextColor(Color.WHITE); textSize = 15f; maxLines = 3; typeface = Typeface.DEFAULT_BOLD }
-        val info = TextView(parent.context).apply { setTextColor(0xFF94A3B8.toInt()); textSize = 12f; setPadding(0, dp(8), 0, 0) }
-        texts.addView(title)
-        texts.addView(info)
-        tile.addView(texts, FrameLayout.LayoutParams(-1, -1))
-        tile.tag = Pair(title, info)
         return ViewHolder(tile)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, item: Any) {
         val torrent = item as Torrent
         val tile = holder.view as FrameLayout
-        @Suppress("UNCHECKED_CAST")
-        val pair = tile.tag as Pair<TextView, TextView>
-        pair.first.text = torrent.title
-        pair.second.text = "${torrent.source}, ${torrent.size}"
+        tile.removeAllViews()
+        // the plate and the focus come from the tile, the card inside has no background of its own
+        val card = torrentRowCard(tile.context, torrent, marked = true, compact = true).apply { background = null }
+        tile.addView(card, FrameLayout.LayoutParams(-1, -1))
     }
 
     override fun onUnbindViewHolder(holder: ViewHolder) {}
