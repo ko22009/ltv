@@ -615,7 +615,7 @@ class DetailsActivity : Activity() {
                         setPadding(dp(14), dp(8), dp(14), dp(8))
                         isFocusable = true
                         isClickable = true
-                        background = personCardBackground()
+                        background = personCardBackground(scale)
                         setOnClickListener {
                             startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                                 .putExtra("id", dir.id).putExtra("name", dir.name))
@@ -812,22 +812,6 @@ class DetailsActivity : Activity() {
         backdropHandler.removeCallbacksAndMessages(null)
     }
 
-    /**
-     * The card of a person (an actor, a director): a thin outline of the theme on the dark plate; under the cursor
-     * it fills with the indigo of the app and the outline turns light.
-     */
-    private fun personCardBackground(): StateListDrawable {
-        val line = maxOf(1, dp(1))
-        return StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                setColor(FOCUS_FILL); cornerRadius = dp(14).toFloat(); setStroke(line * 2, 0xFFA5B4FC.toInt())
-            })
-            addState(intArrayOf(), GradientDrawable().apply {
-                setColor(0xFF161920.toInt()); cornerRadius = dp(14).toFloat(); setStroke(line, 0xFF2E3445.toInt())
-            })
-        }
-    }
-
     /** Cast of the film: a caption and a carousel of round photos with the name and role; OK opens PersonActivity. */
     private fun castRow(people: List<Tmdb.Person>, pageScroll: ScrollView): View {
         val block = LinearLayout(this)
@@ -844,7 +828,7 @@ class DetailsActivity : Activity() {
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 isFocusable = true
                 isClickable = true
-                background = personCardBackground()
+                background = personCardBackground(scale)
                 setOnClickListener {
                     startActivity(Intent(this@DetailsActivity, PersonActivity::class.java)
                         .putExtra("id", person.id).putExtra("name", person.name))
