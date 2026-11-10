@@ -304,7 +304,11 @@ class GalleryActivity : Activity() {
         imageSpinner.visibility = View.GONE
     }
 
-    private fun showImage(index: Int) {
+    /** A small version of the picture (about a tenth of the weight): it shows at once while the big one is coming. */
+    private fun thumbUrl(path: String): String =
+        if (path.startsWith("http")) path else "https://image.tmdb.org/t/p/${if (posterMode) "w342" else "w780"}$path"
+
+    private fun showImage(index: Int, attempt: Int = 0) {
         if (index !in backdrops.indices) return
         selectedIndex = index
         val path = backdrops[index]
@@ -316,10 +320,14 @@ class GalleryActivity : Activity() {
         showImageSpinner()
         Glide.with(this)
             .load(imageUrl(path))
+            // the small picture first: with a slow network the frame changes at once, and quick taps to the next picture are not left without any result
+            .thumbnail(Glide.with(this).load(thumbUrl(path)))
             .let { if (prev != null) it.placeholder(prev) else it }
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean): Boolean {
-                    hideImageSpinner()
+                    // a failed picture is asked for again twice before giving up; the old one stays meanwhile
+                    if (attempt < 2) root.postDelayed({ if (!isDestroyed && selectedIndex == index) showImage(index, attempt + 1) }, 1000L * (attempt + 1))
+                    else hideImageSpinner()
                     return false
                 }
                 override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
@@ -329,12 +337,9 @@ class GalleryActivity : Activity() {
             })
             .into(mainImage)
 
-        // Preload next and previous covers for instant navigation
-        if (index + 1 < backdrops.size) {
-            Glide.with(applicationContext).load(imageUrl(backdrops[index + 1])).preload()
-        }
-        if (index > 0) {
-            Glide.with(applicationContext).load(imageUrl(backdrops[index - 1])).preload()
+        // the next two and the previous picture are loaded ahead for quick turning
+        for (i in listOf(index + 1, index + 2, index - 1)) {
+            if (i in backdrops.indices) Glide.with(applicationContext).load(imageUrl(backdrops[i])).preload()
         }
     }
 
