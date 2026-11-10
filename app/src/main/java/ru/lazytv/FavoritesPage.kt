@@ -175,7 +175,7 @@ class FavoritesPageFragment : Fragment() {
                 presenter.onBindViewHolder(holder, torrent)
                 holder.view.setOnClickListener {
                     startActivity(
-                        Intent(ctx, TorrentsActivity::class.java).putExtra("name", torrent.title)
+                        Intent(ctx, TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
                             .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
                             .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
                     )

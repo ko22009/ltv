@@ -54,6 +54,8 @@
         <activity android:name=".EpisodesActivity" android:exported="false" android:screenOrientation="behind" />
         <activity android:name=".PersonActivity" android:exported="false" android:screenOrientation="behind" />
         <activity android:name=".TorrentsActivity" android:exported="false" android:screenOrientation="behind" />
+        <!-- a saved torrent from the bookmarks: only the preload card, in a translucent window over the screen it was opened from -->
+        <activity android:name=".TorrentsPopupActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV.Filters" />
         <activity android:name=".TitlesGridActivity" android:exported="false" android:screenOrientation="behind" />
         <activity android:name=".FiltersActivity" android:exported="false" android:screenOrientation="behind" android:theme="@style/Theme.LazyTV.Filters" />
         <activity android:name=".PlayerActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:configChanges="orientation|screenSize|keyboardHidden" />

@@ -35,7 +35,7 @@ private const val FAVORITES = "★"
  * title, original title, source, size and seeds. Picking a row sends it to TorrServe, shows the preload
  * dialog and then starts playback.
  */
-class TorrentsActivity : Activity() {
+open class TorrentsActivity : Activity() {
     private val scale get() = uiScale()
     private fun px(value: Int) = (value * scale).toInt()
     private val ui = Handler(Looper.getMainLooper())
@@ -603,7 +603,8 @@ class TorrentsActivity : Activity() {
     private inner class PreloadView {
         val title = label("", 18f, Color.WHITE, true)
         // fixed number of lines for every text: the card keeps its height while the numbers change (a wrapping line made it jump)
-        val file = label("", 16f, Color.WHITE).apply { setLines(2); ellipsize = android.text.TextUtils.TruncateAt.MIDDLE }
+        // two lines on a phone (a long file name wraps there); on a TV the card is wide, one line: a second, empty one was a gap
+        val file = label("", 16f, Color.WHITE).apply { setLines(if (isMobileUi()) 2 else 1); ellipsize = android.text.TextUtils.TruncateAt.MIDDLE }
         val info = label("", 14f, TEXT_SECONDARY).apply { setLines(2) }
         val buffer = label("", 14f, TEXT_SECONDARY).apply { setLines(1); ellipsize = android.text.TextUtils.TruncateAt.END }
         val bar = ProgressBar(this@TorrentsActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
@@ -642,3 +643,9 @@ class TorrentsActivity : Activity() {
         val VIDEO = listOf(".mkv", ".mp4", ".avi", ".mov", ".ts", ".m2ts", ".wmv", ".webm")
     }
 }
+
+/**
+ * The same screen opened from the bookmarks with a magnet: it shows only the preload card. The translucent theme is set in the
+ * manifest (it cannot be changed after the window is started), so the screen it was opened from stays behind the card, dimmed.
+ */
+class TorrentsPopupActivity : TorrentsActivity()

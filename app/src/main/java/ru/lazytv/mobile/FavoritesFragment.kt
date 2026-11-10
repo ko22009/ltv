@@ -17,7 +17,7 @@ import ru.lazytv.EpisodesActivity
 import ru.lazytv.FavoriteTorrents
 import ru.lazytv.Favorites
 import ru.lazytv.R
-import ru.lazytv.TorrentsActivity
+import ru.lazytv.TorrentsPopupActivity
 import ru.lazytv.databinding.FragmentMobileFavoritesBinding
 import ru.lazytv.toExtras
 
@@ -123,7 +123,7 @@ class FavoritesFragment : Fragment() {
             torrentRows.rows += TextRow(torrent.title, listOf(torrent.size, "▲ ${torrent.seeds}", torrent.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
                 // a saved torrent goes straight to the preload, no new search
                 startActivity(
-                    Intent(ctx, TorrentsActivity::class.java).putExtra("name", torrent.title)
+                    Intent(ctx, TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
                         .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
                         .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
                 )
