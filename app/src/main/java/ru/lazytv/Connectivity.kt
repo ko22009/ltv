@@ -201,7 +201,66 @@ object OfflineCover {
         return !dismissed
     }
 
+    private val badges = WeakHashMap<Activity, TextView>()
+    private val tips = WeakHashMap<Activity, TextView>()
+
+    /** After the plate is closed a small mark stays in the top right corner while the access is not back. */
+    private fun updateBadges() {
+        val on = Connectivity.online && !Connectivity.reachable && dismissed
+        badges.forEach { (activity, badge) ->
+            badge.visibility = if (on) android.view.View.VISIBLE else android.view.View.GONE
+            if (!on) tips[activity]?.visibility = android.view.View.GONE
+        }
+    }
+
+    /** A dark half-transparent circle with a white "!", a bit below the status bar; a tap shows a tip that goes away by itself. */
+    private fun buildBadge(activity: Activity) {
+        val density = activity.resources.displayMetrics.density
+        val statusId = activity.resources.getIdentifier("status_bar_height", "dimen", "android")
+        val top = (if (statusId > 0) activity.resources.getDimensionPixelSize(statusId) else 0) + (16 * density).toInt()
+        val size = (36 * density).toInt()
+        val decor = activity.window.decorView as ViewGroup
+        val tip = TextView(activity).apply {
+            text = "Доступ к интернету не восстановлен"
+            setTextColor(Color.WHITE)
+            textSize = 13f
+            setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xE6000000.toInt()); cornerRadius = 8 * density
+            }
+            visibility = android.view.View.GONE
+        }
+        val hideTip = Runnable { tip.visibility = android.view.View.GONE }
+        val badge = TextView(activity).apply {
+            text = "!"
+            setTextColor(Color.WHITE)
+            textSize = 20f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0x99000000.toInt())
+            }
+            visibility = android.view.View.GONE
+            setOnClickListener {
+                tip.visibility = android.view.View.VISIBLE
+                tip.removeCallbacks(hideTip)
+                tip.postDelayed(hideTip, 3000)
+            }
+        }
+        decor.addView(badge, FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.END).apply {
+            topMargin = top; marginEnd = (12 * density).toInt()
+        })
+        // the tip stands next to the mark, to its left
+        decor.addView(tip, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
+            topMargin = top + (size - (36 * density).toInt()) / 2; marginEnd = (12 * density).toInt() + size + (8 * density).toInt()
+        })
+        badges[activity] = badge
+        tips[activity] = tip
+    }
+
     private fun show(cover: FrameLayout, offline: Boolean) {
+        updateBadges()
         // the close button only where there is some network: without any, nothing works under the plate
         cover.findViewWithTag<android.view.View>("close")?.visibility =
             if (Connectivity.online) android.view.View.VISIBLE else android.view.View.GONE
@@ -258,6 +317,7 @@ object OfflineCover {
         }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = (24 * density).toInt() })
         cover.addView(column, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         (activity.window.decorView as ViewGroup).addView(cover, ViewGroup.LayoutParams(-1, -1))
+        buildBadge(activity)
         return cover
     }
 }
