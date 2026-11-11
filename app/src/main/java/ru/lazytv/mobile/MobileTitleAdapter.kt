@@ -38,8 +38,11 @@ class MobileTitleAdapter(
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { recycler = recyclerView }
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) { recycler = null }
 
-    fun addItems(moreItems: List<Title>) {
+    fun addItems(newOnes: List<Title>) {
         val start = items.size
+        // TMDB can repeat a title on the next page (or twice in one): the same title is not shown twice
+        val seen = items.mapTo(HashSet()) { it.id to it.tv }
+        val moreItems = newOnes.filter { seen.add(it.id to it.tv) }
         items.addAll(moreItems)
         notifyItemRangeInserted(start, moreItems.size)
         // the first cards of a list fade in instead of popping up at once (same pace as the page slide)
