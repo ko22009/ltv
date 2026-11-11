@@ -137,7 +137,7 @@ object OfflineCover {
         val density = activity.resources.displayMetrics.density
         val tv = DeviceType.isTv(activity)
         val bar = TextView(activity).apply {
-            text = "Часть сайтов недоступна (возможно, белый список). Включите обход блокировок в настройках"
+            text = "Доступ к интернету потерян"
             setTextColor(Color.WHITE)
             setBackgroundColor(0xE6B45309.toInt())
             textSize = if (tv) 16f else 12f
@@ -147,6 +147,14 @@ object OfflineCover {
             visibility = android.view.View.GONE
         }
         (activity.window.decorView as ViewGroup).addView(bar, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
+        // the decor view reaches under the status bar: without this the upper half of the strip is hidden behind it
+        val padTop = bar.paddingTop
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bar) { v, insets ->
+            val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            v.setPadding(v.paddingLeft, padTop + top, v.paddingRight, v.paddingBottom)
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(bar)
         return bar
     }
 

@@ -134,7 +134,7 @@ object Errors {
             }
         }
         if (isNetwork(root)) {
-            return "Сайт не отвечает. Включите обход блокировок в настройках или выберите другой источник"
+            return "Доступ к интернету потерян. Проверьте соединение или выберите другой источник"
         }
         if (isServerOrFormat(root)) {
             return "Сайт временно не работает. Попробуйте позже или другой источник"
@@ -186,7 +186,7 @@ object Errors {
             PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
                 "Поток не найден на сервере. Попробуйте другой источник или торренты"
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
-                "Поток не открылся: нет связи с сервером видео. Проверьте интернет или обход блокировок"
+                "Поток не открылся: нет связи с сервером видео. Доступ к интернету потерян"
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
             PlaybackException.ERROR_CODE_TIMEOUT ->
                 "Поток не открылся: сервер видео слишком долго не отвечает"
