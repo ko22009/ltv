@@ -216,8 +216,6 @@ object OfflineCover {
     /** A dark half-transparent circle with a white "!", a bit below the status bar; a tap shows a tip that goes away by itself. */
     private fun buildBadge(activity: Activity) {
         val density = activity.resources.displayMetrics.density
-        val statusId = activity.resources.getIdentifier("status_bar_height", "dimen", "android")
-        val top = (if (statusId > 0) activity.resources.getDimensionPixelSize(statusId) else 0) + (56 * density).toInt()
         val size = (36 * density).toInt()
         val decor = activity.window.decorView as ViewGroup
         val tip = TextView(activity).apply {
@@ -248,12 +246,12 @@ object OfflineCover {
                 tip.postDelayed(hideTip, 3000)
             }
         }
-        decor.addView(badge, FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.END).apply {
-            topMargin = top; marginEnd = (12 * density).toInt()
+        decor.addView(badge, FrameLayout.LayoutParams(size, size, Gravity.CENTER_VERTICAL or Gravity.END).apply {
+            marginEnd = (12 * density).toInt()
         })
         // the tip stands next to the mark, to its left
-        decor.addView(tip, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.END).apply {
-            topMargin = top + (size - (36 * density).toInt()) / 2; marginEnd = (12 * density).toInt() + size + (8 * density).toInt()
+        decor.addView(tip, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_VERTICAL or Gravity.END).apply {
+            marginEnd = (12 * density).toInt() + size + (8 * density).toInt()
         })
         badges[activity] = badge
         tips[activity] = tip
