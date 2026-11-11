@@ -63,7 +63,6 @@ object Sync {
         Settings.SHOW_ADULT, Settings.SHOW_HORROR, Settings.LANGUAGE, Settings.QUALITY, Settings.VOICE,
         Settings.REMEMBER_POSITION, Settings.AUTO_NEXT, Settings.SOURCE_MODE, Settings.TORRENT_SORT,
         Settings.TORRENT_EXACT, Settings.TORRENT_MIN_SEEDS,
-        Settings.TORRSERVE, Settings.JACRED_SERVERS, Settings.JACKETT_URL, Settings.JACKETT_KEY,
     )
 
     private fun synced(key: String) = key in SYNCED_KEYS || key.startsWith("service_")
@@ -272,8 +271,14 @@ object Sync {
      * finds our own folder and nothing that merely shares its name.
      */
     private fun folderId(context: Context): String {
+        // oldest first: if two devices made a folder at once, every device settles on the same one
         val query = URLEncoder.encode("name='$FOLDER_NAME' and mimeType='$FOLDER_TYPE' and trashed=false", "UTF-8")
-        val list = authorized(context) { send("$FILES?fields=files(id)&q=$query", "GET", null, null, it) }
+        val list = authorized(context) { send("$FILES?fields=files(id)&orderBy=createdTime&q=$query", "GET", null, null, it) }
+        if (list.code == 403) {
+            // a sign-in made with the old "appdata" scope cannot see Drive files: ask for the sign-in again
+            prefs(context).edit().remove(REFRESH).remove(ACCESS).apply()
+            throw IllegalStateException("Вход в Google устарел, подключите Google заново")
+        }
         if (list.code !in 200..299) throw IllegalStateException("Google Диск не отвечает (${list.code})")
         val found = JSONObject(list.text).optJSONArray("files")?.optJSONObject(0)?.optString("id")
         if (!found.isNullOrEmpty()) return found

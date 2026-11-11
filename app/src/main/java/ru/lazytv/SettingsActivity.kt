@@ -553,6 +553,8 @@ open class SettingsScreen : Fragment() {
         } else {
             button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
         }
+        info("Что переносится", "Закладки, история просмотров, отметки просмотра, история поиска и настройки каталога. " +
+            "Адреса TorrServe, JacRed и Jackett, прокси и код родителя остаются на своём устройстве")
 
         section("О приложении")
         info("Версия", BuildConfig.VERSION_NAME)
@@ -755,7 +757,7 @@ open class SettingsScreen : Fragment() {
         })
     }
 
-    private fun googlePage(code: String) = "https://www.google.com/device?user_code=" + code.replace("-", "")
+    private fun googlePage(code: String) = "https://www.google.com/device?user_code=" + code
 
     /** The code in big letters and the steps around it: no addresses to retype, the page already carries the code. */
     private fun googleCode(ctx: android.content.Context, code: String): View {
