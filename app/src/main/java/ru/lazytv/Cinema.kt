@@ -63,6 +63,9 @@ object Cinema {
         else -> null
     }
 
+    /** The mark of a card: "ТОРРЕНТ" on a saved torrent, otherwise the cinema mark of the film. */
+    fun caption(title: Title): String? = if (title.torrentKey.isNotEmpty()) "ТОРРЕНТ" else caption(title.id, title.tv)
+
     private fun refreshIfStale(context: Context) {
         if (refreshing || System.currentTimeMillis() - loadedAt < TTL_MS) return
         refreshing = true

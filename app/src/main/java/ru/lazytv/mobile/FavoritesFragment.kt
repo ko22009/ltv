@@ -76,10 +76,13 @@ class FavoritesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         titles = MobileTitleAdapter { title ->
-            startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
+            val torrent = torrentOf(title)
+            if (torrent != null) openTorrent(torrent)
+            else startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
         titles.onItemLongClick = { title ->
-            Favorites.set(requireContext(), title, null)
+            val torrent = torrentOf(title)
+            if (torrent != null) FavoriteTorrents.toggle(requireContext(), torrent) else Favorites.set(requireContext(), title, null)
             Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
             refresh()
         }
@@ -91,16 +94,32 @@ class FavoritesFragment : Fragment() {
         binding.torrentsList.adapter = torrentRows
     }
 
+    /** The saved torrents drawn as film cards, by the key of the card. */
+    private var cardTorrents = mapOf<String, ru.lazytv.Torrent>()
+
+    private fun torrentOf(title: ru.lazytv.Title) = if (title.torrentKey.isEmpty()) null else cardTorrents[title.torrentKey]
+
+    // a saved torrent goes straight to the preload, no new search
+    private fun openTorrent(torrent: ru.lazytv.Torrent) {
+        startActivity(
+            Intent(requireContext(), TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
+                .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
+                .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
+        )
+    }
+
     private fun refresh() {
         val ctx = requireContext()
         val saved = Favorites.all(ctx)
-        titles.setItems(saved)
+        val cards = FavoriteTorrents.cards(ctx)
+        cardTorrents = cards.associate { (torrent, film) -> film.torrentKey to torrent }
+        titles.setItems(saved + cards.map { it.second })
         // a bookmark without a poster asks TMDB for it once, then the list is drawn again
         if (saved.any { it.poster == null || it.genre.isEmpty() }) {
             val app = ctx.applicationContext
             Thread {
                 val fixed = Favorites.withPosters(app, saved)
-                activity?.runOnUiThread { if (isAdded && fixed != saved) titles.setItems(fixed) }
+                activity?.runOnUiThread { if (isAdded && fixed != saved) titles.setItems(fixed + cards.map { it.second }) }
             }.start()
         }
 
@@ -119,7 +138,7 @@ class FavoritesFragment : Fragment() {
         episodeRows.notifyDataSetChanged()
 
         torrentRows.rows.clear()
-        FavoriteTorrents.all(ctx).forEach { torrent ->
+        FavoriteTorrents.unlinked(ctx).forEach { torrent ->
             torrentRows.rows += TextRow(torrent.title, listOf(torrent.size, "▲ ${torrent.seeds}", torrent.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
                 // a saved torrent goes straight to the preload, no new search
                 startActivity(
@@ -134,7 +153,7 @@ class FavoritesFragment : Fragment() {
         fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
         show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
         show(torrentRows.rows.isNotEmpty(), binding.torrentsHeader, binding.torrentsList)
-        val empty = saved.isEmpty() && episodeRows.rows.isEmpty() && torrentRows.rows.isEmpty()
+        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && torrentRows.rows.isEmpty()
         binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
         binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }

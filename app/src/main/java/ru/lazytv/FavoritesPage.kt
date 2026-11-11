@@ -122,8 +122,10 @@ class FavoritesPageFragment : Fragment() {
 
         titles = Favorites.all(ctx)
         val episodes = EpisodeState.favorites(ctx)
-        val torrents = FavoriteTorrents.all(ctx)
-        if (titles.isEmpty() && episodes.isEmpty() && torrents.isEmpty()) {
+        val torrents = FavoriteTorrents.unlinked(ctx)
+        // torrents saved from a film card stand among the films, as cards with the mark "ТОРРЕНТ"
+        val torrentCards = FavoriteTorrents.cards(ctx)
+        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty() && torrents.isEmpty()) {
             content.addView(TextView(ctx).apply {
                 text = "Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"
                 setTextColor(TEXT_MUTED)
@@ -136,13 +138,25 @@ class FavoritesPageFragment : Fragment() {
         // the same pitch as the grid of the catalog: five columns over the width of the page
         val pitch = tvGridPitch(scale)
 
-        if (titles.isNotEmpty()) {
+        if (titles.isNotEmpty() || torrentCards.isNotEmpty()) {
             val views = titles.map { title ->
                 val holder = cardPresenter.onCreateViewHolder(content)
                 cardPresenter.onBindViewHolder(holder, title)
                 titleHolders.add(holder)
                 holder.view.setOnClickListener {
                     startActivity(Intent(ctx, DetailsActivity::class.java).putExtras(title.toExtras()))
+                }
+                holder.view
+            } + torrentCards.map { (torrent, film) ->
+                val holder = cardPresenter.onCreateViewHolder(content)
+                cardPresenter.onBindViewHolder(holder, film)
+                holder.view.setOnClickListener {
+                    // a saved torrent goes straight to the preload, no new search
+                    startActivity(
+                        Intent(ctx, TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
+                            .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
+                            .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
+                    )
                 }
                 holder.view
             }

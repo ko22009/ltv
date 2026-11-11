@@ -397,7 +397,14 @@ open class TorrentsActivity : Activity() {
     }
 
     private fun toggleFavorite(position: Int) {
-        val added = FavoriteTorrents.toggle(this, shown.getOrNull(position) ?: return)
+        // opened from a film card: the film goes along with the torrent, so the bookmarks can draw its card
+        val id = intent.getLongExtra("tmdbId", 0L)
+        val film = if (id == 0L) null else Title(
+            id, name, "", intent.getStringExtra("poster"), intent.getBooleanExtra("tv", false),
+            intent.getStringExtra("year").orEmpty(), intent.getStringExtra("rating").orEmpty(),
+            genre = intent.getStringExtra("genre").orEmpty(),
+        )
+        val added = FavoriteTorrents.toggle(this, shown.getOrNull(position) ?: return, film)
         Toast.makeText(this, if (added) "Добавлено в избранное" else "Убрано из избранного", Toast.LENGTH_SHORT).show()
         // the counter of the favorites chip changes too, and in the favorites list a removed row disappears
         select(source)

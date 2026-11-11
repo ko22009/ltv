@@ -153,7 +153,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     private fun applyMarks() {
         val title = shown ?: return
-        fav.visibility = if (Favorites.contains(context, title)) View.VISIBLE else View.GONE
+        fav.visibility = if (title.torrentKey.isNotEmpty() || Favorites.contains(context, title)) View.VISIBLE else View.GONE
     }
 
     /** "В КИНО" over the top left corner of the poster of a film that is in the cinemas now (not dimmed with the poster). */
@@ -319,7 +319,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         shown = title
         applyWatched(title)
         applyMarks()
-        val mark = Cinema.caption(title.id, title.tv)
+        val mark = Cinema.caption(title)
         cinema.text = mark.orEmpty()
         cinema.visibility = if (mark != null) View.VISIBLE else View.GONE
         year0 = title.year

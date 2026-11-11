@@ -84,7 +84,7 @@ class MobileTitleAdapter(
         fun bindWatched(title: Title) {
             val context = binding.root.context
             binding.cardPoster.alpha = if (Watched.has(context, title)) 0.45f else 1f
-            binding.cardFavorite.visibility = if (ru.lazytv.Favorites.contains(context, title)) View.VISIBLE else View.GONE
+            binding.cardFavorite.visibility = if (title.torrentKey.isNotEmpty() || ru.lazytv.Favorites.contains(context, title)) View.VISIBLE else View.GONE
         }
 
         fun bind(title: Title) {
@@ -101,7 +101,7 @@ class MobileTitleAdapter(
             binding.cardRating.visibility = if (ratingLabel != null) View.VISIBLE else View.GONE
 
             // Cinema badge
-            val cinemaCaption = Cinema.caption(title.id, title.tv)
+            val cinemaCaption = Cinema.caption(title)
             if (cinemaCaption != null) {
                 binding.cardCinemaBadge.text = cinemaCaption
                 binding.cardCinemaBadge.visibility = View.VISIBLE

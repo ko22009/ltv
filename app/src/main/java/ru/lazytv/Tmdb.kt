@@ -16,6 +16,8 @@ data class Title(
     /** Up to two genre names taken from the list answer; empty when the list carries none. */
     val genre: String = "",
     val backdrop: String? = null,
+    /** Set only on the card of a saved torrent (the identity of the torrent): it wears the mark "ТОРРЕНТ" and opens the preload. */
+    val torrentKey: String = "",
 )
 
 /** A list or a service category: what to ask TMDB for. */

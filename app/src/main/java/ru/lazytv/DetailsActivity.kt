@@ -1347,6 +1347,7 @@ class DetailsActivity : Activity() {
                 .putExtra("year", intent.getStringExtra("year")).putExtra("tv", intent.getBooleanExtra("tv", false))
                 .putExtra("poster", posterPath)
                 .putExtra("tmdbId", currentTitle.id)
+                .putExtra("rating", currentTitle.rating).putExtra("genre", currentTitle.genre)
         )
     }
 
