@@ -497,7 +497,7 @@ object Tmdb {
         val file = cacheFile(context, address)
         if (file.isFile && System.currentTimeMillis() - file.lastModified() < CACHE_MS) return file.readText()
         val connection = URL(address).openConnection() as HttpURLConnection
-        connection.connectTimeout = 15000
+        connection.connectTimeout = 8000
         connection.readTimeout = 20000
         val body = connection.inputStream.use {
             ClockCheck.observe(connection.date)
