@@ -1,13 +1,15 @@
 package ru.lazytv
 
 import android.app.Activity
-import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 
-/** Calm dark background of the list screens: a barely visible vertical shade, no pattern. */
-fun calmBackground() = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(BACKDROP_PLATE, PAGE_BOTTOM))
+/** Calm dark background of the list screens: one flat colour. A gradient between two near-black greys has only a few
+ *  8-bit steps and shows as visible bands on phone screens. */
+fun calmBackground(): Drawable = ColorDrawable(PAGE_BG)
 
-/** The bars of the phone take the two ends of [calmBackground]: the status bar the top one, the navigation bar the bottom one. */
+/** The bars of the phone take the page colour, so they merge with [calmBackground]. */
 fun Activity.barsLikeCalmBackground() {
-    window.statusBarColor = BACKDROP_PLATE
-    window.navigationBarColor = PAGE_BOTTOM
+    window.statusBarColor = PAGE_BG
+    window.navigationBarColor = PAGE_BG
 }
