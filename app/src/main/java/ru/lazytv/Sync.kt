@@ -10,11 +10,14 @@ import java.util.Locale
 
 /**
  * Bookmarks, watch history, watched marks, search history and some settings shared between the person's devices through
- * the hidden "app data" folder of their own Google Drive. Nothing passes through the app: the account, the permission
- * and the file belong to the user.
+ * a folder of their own Google Drive. Nothing passes through the app: the account, the permission and the file belong to
+ * the user.
  *
  * The sign-in is Google's code flow for TVs: the app shows a short code, the person types it on a phone, the app polls
  * for the token. A TV box needs no Play Services and no keyboard; the same code works on the phone.
+ *
+ * The flow accepts a narrow set of scopes: "drive.appdata" is refused with invalid_scope, so the shared file lives in a
+ * visible "LazyTV" folder and the scope is "drive.file" (files the app itself made). See docs/sync.md.
  *
  * The client id comes from `local.properties` (see docs/sync.md): Google issues it for this app only, and without it the
  * section is switched off.
@@ -34,11 +37,14 @@ object Sync {
 
     private const val DEVICE_URL = "https://oauth2.googleapis.com/device/code"
     private const val TOKEN_URL = "https://oauth2.googleapis.com/token"
-    private const val SCOPE = "https://www.googleapis.com/auth/drive.appdata"
+    private const val SCOPE = "https://www.googleapis.com/auth/drive.file"
     private const val FILES = "https://www.googleapis.com/drive/v3/files"
     private const val UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
     private const val FORM = "application/x-www-form-urlencoded; charset=utf-8"
     private const val FILE_NAME = "lazytv.json"
+    /** Visible folder on the person's Drive: the hidden app folder needs a scope the TV sign-in refuses. */
+    private const val FOLDER_NAME = "LazyTV"
+    private const val FOLDER_TYPE = "application/vnd.google-apps.folder"
     private const val HISTORY_LIMIT = 100
     private const val SEARCH_LIMIT = 20
 
@@ -158,7 +164,7 @@ object Sync {
     private fun problem(body: JSONObject, code: Int): String = when (body.optString("error")) {
         "invalid_client" -> "Ключ Google не подходит, проверьте client id и secret"
         "invalid_grant" -> "Вход в Google истёк, подключите заново"
-        "invalid_scope" -> "Google не разрешил доступ к своей папке приложения"
+        "invalid_scope" -> "Google не разрешил доступ к Диску: в сборке запрошен неподдерживаемый набор прав"
         else -> body.optString("error_description").ifEmpty { "Google ответил отказом ($code)" }
     }
 
@@ -174,14 +180,15 @@ object Sync {
         check(linked(context)) { "Google не подключён" }
         try {
             val base = prefs(context).getString(BASE, null)
-            val remote = download(context)
+            val folder = folderId(context)
+            val remote = download(context, folder)
             val merged = SyncMerge.merge(
                 SyncMerge.parse(base), local(context), SyncMerge.parse(remote),
                 historyLimit = HISTORY_LIMIT, searchLimit = SEARCH_LIMIT,
             )
             apply(context, merged)
             val text = SyncMerge.json(merged, System.currentTimeMillis()).toString()
-            upload(context, text)
+            upload(context, text, folder)
             prefs(context).edit().putString(BASE, text).putLong(LAST_AT, System.currentTimeMillis())
                 .remove(FAILED_TEXT).apply()
             return "Синхронизировано: закладки ${merged.favorites.size}, история ${merged.history.size}, поиск ${merged.search.size}"
@@ -259,8 +266,24 @@ object Sync {
 
     // ---- Drive --------------------------------------------------------------------------------------------------
 
-    private fun download(context: Context): String? {
-        val id = fileId(context) ?: return null
+    /**
+     * The folder of the shared copy: made on the first sync. The scope only shows files this app has made, so the search
+     * finds our own folder and nothing that merely shares its name.
+     */
+    private fun folderId(context: Context): String {
+        val query = URLEncoder.encode("name='$FOLDER_NAME' and mimeType='$FOLDER_TYPE' and trashed=false", "UTF-8")
+        val list = authorized(context) { send("$FILES?fields=files(id)&q=$query", "GET", null, null, it) }
+        if (list.code !in 200..299) throw IllegalStateException("Google Диск не отвечает (${list.code})")
+        val found = JSONObject(list.text).optJSONArray("files")?.optJSONObject(0)?.optString("id")
+        if (!found.isNullOrEmpty()) return found
+        val meta = JSONObject().put("name", FOLDER_NAME).put("mimeType", FOLDER_TYPE).toString()
+        val made = authorized(context) { send("$FILES?fields=id", "POST", meta, null, it) }
+        if (made.code !in 200..299) throw IllegalStateException("Google Диск не создал папку (${made.code})")
+        return JSONObject(made.text).getString("id")
+    }
+
+    private fun download(context: Context, folder: String): String? {
+        val id = fileId(context, folder) ?: return null
         val reply = authorized(context) { send("$FILES/$id?alt=media", "GET", null, null, it) }
         if (reply.code !in 200..299) throw IllegalStateException("Google Диск не отдал файл (${reply.code})")
         return reply.text
@@ -270,9 +293,9 @@ object Sync {
      * A new copy is created and only then the old one removed: a failed upload then leaves the previous copy in place.
      * Drive wants PATCH for a file update, which HttpURLConnection does not speak, so a copy is replaced this way.
      */
-    private fun upload(context: Context, text: String) {
-        val id = fileId(context)
-        val meta = JSONObject().put("name", FILE_NAME).put("parents", JSONArray().put("appDataFolder")).toString()
+    private fun upload(context: Context, text: String, folder: String) {
+        val id = fileId(context, folder)
+        val meta = JSONObject().put("name", FILE_NAME).put("parents", JSONArray().put(folder)).toString()
         val boundary = "lazytv-" + System.currentTimeMillis()
         val body = "--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n$meta" +
             "\r\n--$boundary\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n$text\r\n--$boundary--\r\n"
@@ -283,10 +306,10 @@ object Sync {
         if (id != null) authorized(context) { send("$FILES/$id", "DELETE", null, null, it) }
     }
 
-    /** The copy in the app folder, the newest one if an old removal was interrupted. */
-    private fun fileId(context: Context): String? {
-        val query = URLEncoder.encode("name='$FILE_NAME' and trashed=false", "UTF-8")
-        val url = "$FILES?spaces=appDataFolder&orderBy=modifiedTime%20desc&fields=files(id,name)&q=$query"
+    /** The copy in the folder, the newest one if an old removal was interrupted. */
+    private fun fileId(context: Context, folder: String): String? {
+        val query = URLEncoder.encode("name='$FILE_NAME' and trashed=false and '$folder' in parents", "UTF-8")
+        val url = "$FILES?fields=files(id)&orderBy=modifiedTime%20desc&q=$query"
         val reply = authorized(context) { send(url, "GET", null, null, it) }
         if (reply.code == 404) return null
         if (reply.code !in 200..299) throw IllegalStateException("Google Диск не отвечает (${reply.code})")
