@@ -37,6 +37,8 @@ class MobileMainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.mobileNavHostFragment) as NavHostFragment
         navController = navHostFragment.navController
+        // the indicator is transparent anyway; its first-selection animation moved the icon toward the caption
+        binding.mobileBottomNav.isItemActiveIndicatorEnabled = false
         binding.mobileBottomNav.setupWithNavController(navController)
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
