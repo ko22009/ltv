@@ -92,12 +92,18 @@ class SettingsActivity : FragmentActivity() {
         }
         val cardsList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val cards = mutableListOf<View>()
+        val mobile = isMobileUi()
         topics.forEachIndexed { index, (topicTitle, body) ->
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(px(24), px(16), px(24), px(16))
-                background = textTilePlate(scale)
-                isFocusable = true
+                // on a phone the answers are plain text: a plate without a press looked like a button
+                if (mobile) {
+                    setPadding(px(4), px(12), px(4), px(12))
+                } else {
+                    setPadding(px(24), px(16), px(24), px(16))
+                    background = textTilePlate(scale)
+                    isFocusable = true
+                }
                 addView(TextView(this@SettingsActivity).apply {
                     text = topicTitle
                     isDuplicateParentStateEnabled = true
@@ -439,7 +445,6 @@ open class SettingsScreen : Fragment() {
 
         section("Адреса сайтов")
         editable("Конфиг с адресами (URL)", Settings.REMOTE_URL, "")
-        info("Сейчас", RemoteConfig.status(ctx))
         button("Обновить адреса из конфига", "Скачать JSON и применить сразу") { refreshRemote() }
         button("Сбросить свои адреса", "Вернуть адреса из конфига или встроенные") {
             RemoteConfig.resetManual(ctx)
@@ -471,7 +476,6 @@ open class SettingsScreen : Fragment() {
         editable("Свой Jackett: адрес", Settings.JACKETT_URL, "")
         editable("Свой Jackett: API-ключ", Settings.JACKETT_KEY, "")
         button("Проверить Jackett", "Запрос к своему Jackett с этими адресом и ключом") { checkJackett() }
-        info("TorrServe (отдельная программа)", "LazyTV только просит её скачать раздачу")
         button("Скачать TorrServe", "Страница загрузки в браузере") { downloadTorrServe() }
 
         section("Каталог")
@@ -494,7 +498,8 @@ open class SettingsScreen : Fragment() {
         }
 
         section("Данные")
-        info("Резервная копия", Backup.status(ctx))
+        // the "not made yet" line only reminded; the row stays useful once a copy exists
+        if (Backup.exists(ctx)) info("Резервная копия", Backup.status(ctx))
         button("Сохранить копию в файл", "Закладки, история, отметки, настройки") { exportBackup() }
         button("Восстановить из файла", "Заменит закладки, историю, отметки и настройки") { importBackup() }
         button("Очистить кэш картинок") {
@@ -537,17 +542,21 @@ open class SettingsScreen : Fragment() {
 
         section("Синхронизация")
         info("Состояние", Sync.status(ctx))
-        if (!Sync.configured(ctx)) {
+        val syncReady = Sync.configured(ctx)
+        val syncLinked = syncReady && Sync.linked(ctx)
+        if (!syncReady) {
             info("Нужен ключ Google", "Синхронизация выключена в этой сборке: нет ключа приложения Google")
-        } else if (!Sync.linked(ctx)) {
-            button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
-        } else {
+        } else if (syncLinked) {
             button("Синхронизировать сейчас", "Закладки, история, отметки просмотра, поиск и часть настроек") { syncNow() }
             check("Проверять при запуске", "Тихо в фоне, не чаще раза в 10 минут", Sync.AUTO)
             button("Отключить Google", "Данные на Диске останутся, устройство перестанет синхронизироваться") { unlinkGoogle() }
         }
         info("Что переносится", "Закладки, история просмотров, отметки просмотра, история поиска и настройки каталога. " +
             "Адреса TorrServe, JacRed и Jackett, прокси и код родителя остаются на своём устройстве")
+        // the sign-in stands after the explanation: first what it brings, then the button
+        if (syncReady && !syncLinked) {
+            button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
+        }
 
         section("О приложении")
         info("Версия", BuildConfig.VERSION_NAME)
@@ -725,10 +734,18 @@ open class SettingsScreen : Fragment() {
         var dialog: android.app.Dialog? = null
         Sync.link(ctx, onCode = { code ->
             if (!isAdded || act.isFinishing) return@link
-            dialog = showMessage(act, "Вход в Google",
-                message = "На телефоне откройте google.com/device и введите код:\n\n$code\n\n" +
-                    "Это окно закроется само, когда вход пройдёт.",
-                buttons = listOf(DialogButton("Отмена") { Sync.cancel() }))
+            val buttons = mutableListOf<DialogButton>()
+            if (ctx.isMobileUi()) {
+                // the page takes the code in the address, so nothing has to be typed on the phone
+                buttons.add(DialogButton("Открыть страницу Google") { Links.open(act, googlePage(code)) })
+                buttons.add(DialogButton("Скопировать код", closes = false) {
+                    val clip = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clip.setPrimaryClip(android.content.ClipData.newPlainText("Код Google", code))
+                    toast("Код скопирован")
+                })
+            }
+            buttons.add(DialogButton("Отмена") { Sync.cancel() })
+            dialog = showMessage(act, "Вход в Google", content = googleCode(ctx, code), buttons = buttons)
         }, onDone = { problem ->
             dialog?.dismiss()
             if (isAdded && !act.isFinishing) {
@@ -740,6 +757,31 @@ open class SettingsScreen : Fragment() {
                 }
             }
         })
+    }
+
+    private fun googlePage(code: String) = "https://www.google.com/device?user_code=" + code.replace("-", "")
+
+    /** The code in big letters and the steps around it: no addresses to retype, the page already carries the code. */
+    private fun googleCode(ctx: android.content.Context, code: String): View {
+        val mobile = ctx.isMobileUi()
+        val steps = if (mobile) {
+            "1. Нажмите «Открыть страницу Google»\n2. Войдите в тот же аккаунт, что и здесь\n" +
+                "3. Нажмите «Продолжить» и «Разрешить»"
+        } else {
+            "1. На телефоне в браузере откройте google.com/device\n2. Войдите в тот же аккаунт Google\n" +
+                "3. Введите этот код и нажмите «Продолжить»"
+        }
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(label(steps, 15f, TEXT_SECONDARY))
+            addView(label(code, 34f, Color.WHITE, bold = true).apply {
+                letterSpacing = 0.12f
+                setTextIsSelectable(true)
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding(0, px(16), 0, px(8))
+            })
+            addView(label("Код действует 30 минут. Это окно закроется само, когда вход пройдёт.", 13f, TEXT_MUTED))
+        }
     }
 
     private fun syncNow() {
