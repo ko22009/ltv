@@ -37,14 +37,17 @@ class CatalogPageFragment : Fragment() {
     private lateinit var filtersText: TextView
     private lateinit var grid: CardGridView
     private lateinit var message: TextView
+    private lateinit var retryChip: LinearLayout
+    private lateinit var loading: LoadingView
 
     private val cards = ItemList(
         ClassPresenterSelector()
-            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE))
-            .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(CARD_SCALE)),
+            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE)),
     )
-    /** Grey cards stand in the grid until the first page comes. */
+    /** True while the spinner covers the page and the first page of cards has not come yet. */
     private var skeletons = false
+    /** Failed asks in a row: the page is asked again by itself a few times before the error is shown. */
+    private var failures = 0
     /** The filter and sort the list was built with: compared on return to know when it has to be asked again. */
     private var signature = ""
     private var nextPage = 1
@@ -111,6 +114,12 @@ class CatalogPageFragment : Fragment() {
             visibility = View.GONE
         }
         page.addView(message)
+        // shown under the error text when the first page could not be fetched even after the automatic tries
+        retryChip = chipButton(requireContext(), scale, "Повторить").apply {
+            visibility = View.GONE
+            setOnClickListener { startOver() }
+        }
+        page.addView(retryChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { topMargin = px(12) })
 
         cards.listener = object : ItemList.Listener() {
             override fun onCreate(holder: ItemList.Holder) {
@@ -156,6 +165,10 @@ class CatalogPageFragment : Fragment() {
             clipChildren = true
             clipToPadding = true
             addView(grid, FrameLayout.LayoutParams(-1, -1))
+            // one spinner over the whole page until the first cards come
+            loading = LoadingView(requireContext(), scale)
+            loading.visibility = View.GONE
+            addView(loading, FrameLayout.LayoutParams(-1, -1))
         }
         page.addView(body, titleGridParams(scale))
 
@@ -306,17 +319,20 @@ class CatalogPageFragment : Fragment() {
         busy = false
         finished = false
         message.visibility = View.GONE
+        retryChip.visibility = View.GONE
+        failures = 0
         val ctx = requireContext()
         val filter = CatalogFilter.load(ctx, category.id)
-        // the first page is warmed at the start of the app: it stands at once, without skeletons
+        // the first page is warmed at the start of the app: it stands at once, without a spinner
         val cached = Tmdb.peekPage(ctx, category, CatalogFilter.sort(ctx, category.id).sort, 1, filter.query(category.tv))
         if (cached != null) {
             cards.addAll(0, cached)
             skeletons = false
+            loading.visibility = View.GONE
             nextPage = 2
         } else {
-            repeat(COLUMNS * 4) { cards.add(SkeletonCard) }
             skeletons = true
+            loading.visibility = View.VISIBLE
         }
         loadNext()
     }
@@ -332,10 +348,19 @@ class CatalogPageFragment : Fragment() {
             val result = withContext(Dispatchers.IO) { runCatching { more.loadPage(appContext, page) } }
             if (!isActive || !isAdded) return@launch
             busy = false
+            // a failed ask is repeated after a pause (the spinner keeps turning): one slow or dropped connection of a
+            // set-top box must not leave the page empty or stuck
+            if (result.isFailure && failures < MAX_RETRIES) {
+                failures++
+                kotlinx.coroutines.delay(RETRY_PAUSE_MS)
+                if (isActive && isAdded) loadNext()
+                return@launch
+            }
             if (skeletons) {
-                cards.clear()
+                loading.visibility = View.GONE
                 skeletons = false
             }
+            if (result.isSuccess) failures = 0
             result.onSuccess { loaded ->
                 // titles already shown are not added twice when TMDB repeats one on the next page
                 val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }
@@ -354,11 +379,15 @@ class CatalogPageFragment : Fragment() {
                     loadNext()
                 }
             }.onFailure {
-                finished = true
+                failures = 0
                 if (cards.size() == 0) {
+                    finished = true
                     message.text = Errors.explain(it) + "\n" + Errors.details(it, "api.themoviedb.org")
                     message.visibility = View.VISIBLE
+                    retryChip.visibility = View.VISIBLE
+                    if (activity?.currentFocus == null) retryChip.requestFocus()
                 }
+                // a later page that failed is asked again on the next move of the cursor near the end
             }
         }
     }
@@ -367,5 +396,7 @@ class CatalogPageFragment : Fragment() {
         // the same grid as the "show all" page of a row and the search page
         const val COLUMNS = 5
         const val CARD_SCALE = 0.82f
+        const val MAX_RETRIES = 3
+        const val RETRY_PAUSE_MS = 2000L
     }
 }
