@@ -21,7 +21,7 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/mobileBottomNav"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         style="@style/Widget.LazyMobile.BottomNav"
         app:menu="@menu/mobile_bottom_menu"
         app:labelVisibilityMode="labeled"
