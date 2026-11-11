@@ -53,7 +53,14 @@ class FavoritesFragment : Fragment() {
             if (row.torrent != null) {
                 val holder1 = holder.itemView as android.widget.FrameLayout
                 holder1.removeAllViews()
-                holder1.addView(ru.lazytv.torrentRowCard(requireContext(), row.torrent, marked = true))
+                val card = ru.lazytv.torrentRowCard(requireContext(), row.torrent, marked = true)
+                // the filled bookmark takes the torrent out at once (a tap on the row would start TorrServe)
+                card.findViewWithTag<View>("star")?.setOnClickListener {
+                    row.remove()
+                    Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
+                    refresh()
+                }
+                holder1.addView(card)
             } else {
                 holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = row.title
                 holder.itemView.findViewById<TextView>(R.id.torrentInfo).text = row.info
