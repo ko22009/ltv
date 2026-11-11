@@ -33,10 +33,19 @@ class MobileTitleAdapter(
         notifyDataSetChanged()
     }
 
+    private var recycler: RecyclerView? = null
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { recycler = recyclerView }
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) { recycler = null }
+
     fun addItems(moreItems: List<Title>) {
         val start = items.size
         items.addAll(moreItems)
         notifyItemRangeInserted(start, moreItems.size)
+        // the first cards of a list fade in instead of popping up at once (same pace as the page slide)
+        if (start == 0 && moreItems.isNotEmpty()) {
+            recycler?.apply { alpha = 0f; animate().alpha(1f).setDuration(300).start() }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TitleViewHolder {
