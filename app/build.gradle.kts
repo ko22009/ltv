@@ -17,6 +17,9 @@ android {
         versionCode = 3
         versionName = "0.2"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
+        // Google OAuth client of the sync (docs/sync.md): empty keys switch the sync section off
+        buildConfigField("String", "DRIVE_CLIENT_ID", "\"${localProps.getProperty("DRIVE_CLIENT_ID") ?: ""}\"")
+        buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${localProps.getProperty("DRIVE_CLIENT_SECRET") ?: ""}\"")
     }
     buildTypes {
         release {
@@ -61,4 +64,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
+    // the merge of the sync is checked on the desk, without a device (app/src/test)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

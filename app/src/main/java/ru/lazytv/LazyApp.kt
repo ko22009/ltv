@@ -69,5 +69,7 @@ class LazyApp : Application() {
         Thread { runCatching { Recommendations.refresh(this) } }.start()
         // the addresses file is renewed once a day in the background; without it the built-in ones stay
         Thread { RemoteConfig.refreshIfStale(this) }.start()
+        // bookmarks and history from the other device: quietly, only when the link is set and the last pass is old
+        Sync.startCheck(this)
     }
 }

@@ -529,6 +529,20 @@ open class SettingsScreen : Fragment() {
                 ))
         }
 
+        section("Синхронизация")
+        info("Состояние", Sync.status(ctx))
+        if (!Sync.configured(ctx)) {
+            info("Нужен ключ Google", "Синхронизация выключена в этой сборке: нет ключа приложения Google")
+        } else if (!Sync.linked(ctx)) {
+            button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
+        } else {
+            button("Синхронизировать сейчас", "Закладки, история, отметки просмотра, поиск и часть настроек") { syncNow() }
+            check("Проверять при запуске", "Тихо в фоне, не чаще раза в 10 минут", Sync.AUTO)
+            button("Отключить Google", "Данные на Диске останутся, устройство перестанет синхронизироваться") { unlinkGoogle() }
+        }
+        info("Что переносится", "Закладки, история просмотров, отметки просмотра, история поиска и настройки каталога. " +
+            "Адреса TorrServe, JacRed и Jackett, прокси и код родителя остаются на своём устройстве")
+
         section("О приложении")
         info("Версия", BuildConfig.VERSION_NAME)
         info("Как работает приложение",
@@ -696,6 +710,54 @@ open class SettingsScreen : Fragment() {
     }
 
     private fun downloadTorrServe() = Links.open(requireActivity(), TorrServe.DOWNLOAD)
+
+    /** Google's code flow: the code is shown on this device, the person types it on a phone. */
+    private fun connectGoogle() {
+        val ctx = requireContext()
+        val act = requireActivity()
+        toast("Запрашиваем код у Google…")
+        var dialog: android.app.Dialog? = null
+        Sync.link(ctx, onCode = { code ->
+            if (!isAdded || act.isFinishing) return@link
+            dialog = showMessage(act, "Вход в Google",
+                message = "На телефоне откройте google.com/device и введите код:\n\n$code\n\n" +
+                    "Это окно закроется само, когда вход пройдёт.",
+                buttons = listOf(DialogButton("Отмена") { Sync.cancel() }))
+        }, onDone = { problem ->
+            dialog?.dismiss()
+            if (isAdded && !act.isFinishing) {
+                if (problem == null) {
+                    toast("Google подключён")
+                    act.recreate()
+                } else {
+                    toast(problem)
+                }
+            }
+        })
+    }
+
+    private fun syncNow() {
+        val ctx = requireContext()
+        val act = requireActivity()
+        toast("Синхронизируем…")
+        Thread {
+            val result = runCatching { Sync.syncNow(ctx.applicationContext) }
+            act.runOnUiThread {
+                if (!isAdded || act.isFinishing) return@runOnUiThread
+                result.onSuccess { toast(it) }.onFailure { toast("Не вышло: ${Errors.explain(it)}") }
+                act.recreate()
+            }
+        }.start()
+    }
+
+    private fun unlinkGoogle() {
+        showMessage(requireActivity(), "Отключить Google?",
+            message = "Данные на Диске останутся. Это устройство перестанет синхронизироваться.",
+            buttons = listOf(DialogButton("Отмена"), DialogButton("Отключить") {
+                Sync.unlink(requireContext())
+                activity?.recreate()
+            }))
+    }
 
     private fun toast(message: String) = android.widget.Toast.makeText(requireContext(), message, android.widget.Toast.LENGTH_LONG).show()
 }
