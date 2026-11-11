@@ -172,11 +172,11 @@ object OfflineCover {
         if (started) return
         started = true
         Connectivity.listenReach { ok ->
-            covers.forEach { (_, cover) -> show(cover, !Connectivity.online || !ok) }
+            covers.forEach { (activity, cover) -> show(cover, blocked(activity)) }
             if (ok) top?.takeIf { !it.isFinishing && covers.containsKey(it) }?.recreate()
         }
         Connectivity.listen { online ->
-            covers.forEach { (_, cover) -> show(cover, !online || !Connectivity.reachable) }
+            covers.forEach { (activity, cover) -> show(cover, blocked(activity)) }
             // the screen in front is built again: whatever failed to load while the network was gone loads now
             if (online) top?.takeIf { !it.isFinishing && covers.containsKey(it) }?.recreate()
         }
@@ -187,7 +187,17 @@ object OfflineCover {
         if (activity is PlayerActivity) return
         Connectivity.check()
         val cover = covers.getOrPut(activity) { build(activity) }
-        show(cover, !Connectivity.online || !Connectivity.reachable)
+        show(cover, blocked(activity))
+    }
+
+    /**
+     * No network at all covers every screen. A silent catalogue server covers all but the card screens: a card opened from the
+     * cache still works (other sources, RUTUBE, torrents), the plate must not block it.
+     */
+    private fun blocked(activity: Activity): Boolean {
+        if (!Connectivity.online) return true
+        if (Connectivity.reachable) return false
+        return activity !is DetailsActivity && activity !is EpisodesActivity && activity !is TorrentsActivity
     }
 
     private fun show(cover: FrameLayout, offline: Boolean) {
