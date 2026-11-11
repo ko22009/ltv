@@ -332,6 +332,7 @@ class CatalogPageFragment : Fragment() {
             nextPage = 2
         } else {
             skeletons = true
+            loading.caption("Загрузка…")
             loading.visibility = View.VISIBLE
         }
         loadNext()
@@ -352,6 +353,8 @@ class CatalogPageFragment : Fragment() {
             // set-top box must not leave the page empty or stuck
             if (result.isFailure && failures < MAX_RETRIES) {
                 failures++
+                // the system says "online" even behind a white list, so the page itself tells that the catalogue server is silent
+                if (skeletons) loading.caption("Каталог не отвечает (возможно, ограничен доступ). Повтор $failures из $MAX_RETRIES…")
                 kotlinx.coroutines.delay(RETRY_PAUSE_MS)
                 if (isActive && isAdded) loadNext()
                 return@launch
