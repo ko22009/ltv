@@ -75,6 +75,7 @@ class PlayerActivity : Activity() {
 
     private var player: ExoPlayer? = null
     private var resumeWhenOnline = false
+    private var everReady = false
     private lateinit var waitingDots: View
     private var bufferEmpty = false
     private var offlineNoticeShown = false
@@ -322,11 +323,14 @@ class PlayerActivity : Activity() {
                     showWaiting()
                     return
                 }
+                // a film opened from the card: the next source starts by itself
+                if (!everReady && PlaybackFallback.next(this@PlayerActivity, tmdbId)) return
                 showErrorDialog(error)
             }
 
             override fun onPlaybackStateChanged(state: Int) {
                 android.util.Log.i("LazyTV", "player state " + state)
+                if (state == Player.STATE_READY) everReady = true
                 // the buffer is empty: the same circle with dots as without internet (no separate rotating arc over the video)
                 bufferEmpty = state == Player.STATE_BUFFERING
                 showWaiting()
@@ -345,6 +349,10 @@ class PlayerActivity : Activity() {
         exo.prepare()
         exo.playWhenReady = true
         player = exo
+        // a stream that neither fails nor starts (a silent site) must not hold the screen: after 15 s the next source is tried
+        handler.postDelayed({
+            if (!everReady && !isFinishing && !releasing) PlaybackFallback.next(this, tmdbId)
+        }, 15_000)
         handler.postDelayed(saver, 10_000)
         handler.post(ticker)
         // on opening the controls stay hidden: the film is still loading and the screen shows only that; a tap or the remote's

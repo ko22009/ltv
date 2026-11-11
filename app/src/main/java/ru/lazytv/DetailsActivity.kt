@@ -1308,6 +1308,13 @@ class DetailsActivity : Activity() {
                 History.add(this, historyTitle())
                 // only a film with one video starts at once; a series always shows its episodes to choose from
                 if (episodes.size == 1 && !currentTitle.tv) {
+                    val wanted = listOf(currentName.ifEmpty { currentTitle.name }, originalTitle)
+                    PlaybackFallback.arm(
+                        currentTitle.id,
+                        variants.filter { it.sourceId != v.sourceId || it.ref != v.ref }
+                            .filter { Sources.yearRank(it, currentTitle.year, wanted) != 2 },
+                        currentName.ifEmpty { currentTitle.name }, originalTitle, currentTitle.year, posterPath,
+                    )
                     playEpisode(
                         this, v, episodes, 0, choose = false,
                         mediaTitle = currentName.ifEmpty { currentTitle.name },

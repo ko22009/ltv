@@ -106,3 +106,54 @@ private fun startPlayer(
         queue.toString(), index, titleForMedia, titleForOriginal, year, tv, poster, tmdbId,
     )
 }
+
+/**
+ * The other sources of the film the card has opened: when the stream of one does not start (a silent site, a white list),
+ * the player moves on to the next one by itself. Only for the card's own start (matched by the TMDB id), not for
+ * "continue watching" or other starts.
+ */
+object PlaybackFallback {
+    private var tmdbId = 0L
+    private var queue = ArrayDeque<Variant>()
+    private var mediaTitle = ""
+    private var originalTitle = ""
+    private var year = ""
+    private var poster: String? = null
+    private var busy = false
+
+    fun arm(id: Long, rest: List<Variant>, mediaTitle: String, originalTitle: String, year: String, poster: String?) {
+        tmdbId = id
+        queue = ArrayDeque(rest)
+        this.mediaTitle = mediaTitle; this.originalTitle = originalTitle; this.year = year; this.poster = poster
+    }
+
+    fun available(id: Long) = id > 0L && id == tmdbId && queue.isNotEmpty()
+
+    /** Starts the next source from [activity] (the player that failed) and closes it; false when nothing is left. */
+    fun next(activity: Activity, id: Long): Boolean {
+        if (busy) return true
+        if (!available(id)) return false
+        busy = true
+        val variant = queue.removeFirst()
+        android.widget.Toast.makeText(activity, "Источник не открылся, пробуем ${variant.source}", android.widget.Toast.LENGTH_LONG).show()
+        Thread {
+            val answer = java.util.concurrent.atomic.AtomicReference<List<Episode>?>(null)
+            val asking = Thread { answer.set(runCatching { Sources.episodesCached(variant) }.getOrNull()) }
+            asking.start()
+            asking.join(6000)
+            val episodes = answer.get()
+            activity.runOnUiThread {
+                busy = false
+                if (activity.isFinishing) return@runOnUiThread
+                if (episodes.isNullOrEmpty()) {
+                    if (!next(activity, id)) android.widget.Toast.makeText(activity, "Другие источники тоже не открылись", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    playEpisode(activity, variant, episodes, 0, choose = false, mediaTitle = mediaTitle, originalTitle = originalTitle,
+                        year = year, tv = false, poster = poster, tmdbId = id)
+                    activity.finish()
+                }
+            }
+        }.start()
+        return true
+    }
+}
