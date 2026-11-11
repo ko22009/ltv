@@ -553,8 +553,6 @@ open class SettingsScreen : Fragment() {
         } else {
             button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
         }
-        info("Что переносится", "Закладки, история просмотров, отметки просмотра, история поиска и настройки каталога. " +
-            "Адреса TorrServe, JacRed и Jackett, прокси и код родителя остаются на своём устройстве")
 
         section("О приложении")
         info("Версия", BuildConfig.VERSION_NAME)
