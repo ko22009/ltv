@@ -172,6 +172,7 @@ object OfflineCover {
         if (started) return
         started = true
         Connectivity.listenReach { ok ->
+            if (!ok) dismissed = false
             covers.forEach { (activity, cover) -> show(cover, blocked(activity)) }
             if (ok) top?.takeIf { !it.isFinishing && covers.containsKey(it) }?.recreate()
         }
@@ -190,17 +191,20 @@ object OfflineCover {
         show(cover, blocked(activity))
     }
 
-    /**
-     * No network at all covers every screen. A silent catalogue server covers all but the card screens: a card opened from the
-     * cache still works (other sources, RUTUBE, torrents), the plate must not block it.
-     */
+    /** The user closed the plate of a silent server: the cached lists and cards (RUTUBE, torrents) can still be used. Reset by the next loss. */
+    private var dismissed = false
+
+    /** No network at all covers every screen for good; a silent catalogue server covers it until the user closes the plate. */
     private fun blocked(activity: Activity): Boolean {
         if (!Connectivity.online) return true
         if (Connectivity.reachable) return false
-        return activity !is DetailsActivity && activity !is EpisodesActivity && activity !is TorrentsActivity
+        return !dismissed
     }
 
     private fun show(cover: FrameLayout, offline: Boolean) {
+        // the close button only where there is some network: without any, nothing works under the plate
+        cover.findViewWithTag<android.view.View>("close")?.visibility =
+            if (Connectivity.online) android.view.View.VISIBLE else android.view.View.GONE
         cover.visibility = if (offline) android.view.View.VISIBLE else android.view.View.GONE
         // on a TV the cursor must not wander under the plate: the plate holds the focus
         if (offline) cover.requestFocus()
@@ -218,6 +222,8 @@ object OfflineCover {
             isClickable = true
             isFocusable = true
             isFocusableInTouchMode = true
+            // the close button takes the focus first, the plate itself only when there is nothing else
+            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             visibility = android.view.View.GONE
             // the remote keys are taken too, only Back goes through (the app can still be left)
             setOnKeyListener { _, keyCode, _ -> keyCode != android.view.KeyEvent.KEYCODE_BACK }
@@ -242,6 +248,14 @@ object OfflineCover {
             setPadding(0, (8 * density).toInt(), 0, (20 * density).toInt())
         })
         column.addView(ProgressBar(activity).apply { indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.WHITE) })
+        column.addView(android.widget.Button(activity).apply {
+            tag = "close"
+            text = "Закрыть"
+            setOnClickListener {
+                dismissed = true
+                covers.forEach { (a, c) -> show(c, blocked(a)) }
+            }
+        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = (24 * density).toInt() })
         cover.addView(column, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         (activity.window.decorView as ViewGroup).addView(cover, ViewGroup.LayoutParams(-1, -1))
         return cover
