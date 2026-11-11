@@ -495,7 +495,10 @@ object Tmdb {
      */
     private fun download(context: Context, address: String): String {
         val file = cacheFile(context, address)
-        if (file.isFile && System.currentTimeMillis() - file.lastModified() < CACHE_MS) return file.readText()
+        if (file.isFile && System.currentTimeMillis() - file.lastModified() < CACHE_MS) {
+            Connectivity.check() // a cached answer says nothing about the network: ask the server for real
+            return file.readText()
+        }
         val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 8000
         connection.readTimeout = 20000

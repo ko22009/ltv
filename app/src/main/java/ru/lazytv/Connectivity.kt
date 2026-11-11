@@ -79,8 +79,62 @@ object Connectivity {
             if (now != reachable) {
                 reachable = now
                 reachListeners.toList().forEach { it(now) }
+                if (!now) probeUntilAnswer()
             }
         }
+    }
+
+    private var probing = false
+    @Volatile private var lastCheck = 0L
+
+    /** One real request to the server, never from the cache: true after any HTTP answer, even an error one. */
+    private fun ping(): Boolean = try {
+        val c = java.net.URL("https://api.themoviedb.org/3/configuration?api_key=${BuildConfig.TMDB_KEY}")
+            .openConnection() as java.net.HttpURLConnection
+        c.connectTimeout = 8000
+        c.readTimeout = 8000
+        c.responseCode
+        c.disconnect()
+        true
+    } catch (e: Exception) {
+        !Errors.isNetwork(e)
+    }
+
+    /**
+     * A real request on every screen opening and every cache hit (answers kept on the device say nothing about the network).
+     * At most one in 15 s. One silent answer is enough here: the plate goes up at once.
+     */
+    fun check() {
+        val now = System.currentTimeMillis()
+        if (now - lastCheck < 15000 || !online) return
+        lastCheck = now
+        Thread {
+            val ok = ping()
+            main.post {
+                failStreak = if (ok) 0 else FAILS_TO_WARN
+                val reach = ok
+                if (reach != reachable) {
+                    reachable = reach
+                    reachListeners.toList().forEach { it(reach) }
+                    if (!reach) probeUntilAnswer()
+                }
+            }
+        }.start()
+    }
+
+    /** The plate blocks the app, so nothing else would ever ask again: knock on the server until any answer comes. */
+    private fun probeUntilAnswer() {
+        if (probing) return
+        probing = true
+        Thread {
+            while (!reachable) {
+                try {
+                    Thread.sleep(8000)
+                    if (ping()) report(true)
+                } catch (e: Exception) { /* still silent */ }
+            }
+            probing = false
+        }.start()
     }
 
     private const val FAILS_TO_WARN = 3
@@ -98,16 +152,18 @@ object Connectivity {
  */
 object OfflineCover {
     private val covers = WeakHashMap<Activity, FrameLayout>()
-    private val bars = WeakHashMap<Activity, TextView>()
     private var top: Activity? = null
     private var started = false
 
     fun start() {
         if (started) return
         started = true
-        Connectivity.listenReach { ok -> bars.forEach { (_, bar) -> bar.visibility = if (ok) android.view.View.GONE else android.view.View.VISIBLE } }
+        Connectivity.listenReach { ok ->
+            covers.forEach { (_, cover) -> show(cover, !Connectivity.online || !ok) }
+            if (ok) top?.takeIf { !it.isFinishing && covers.containsKey(it) }?.recreate()
+        }
         Connectivity.listen { online ->
-            covers.forEach { (_, cover) -> show(cover, !online) }
+            covers.forEach { (_, cover) -> show(cover, !online || !Connectivity.reachable) }
             // the screen in front is built again: whatever failed to load while the network was gone loads now
             if (online) top?.takeIf { !it.isFinishing && covers.containsKey(it) }?.recreate()
         }
@@ -116,10 +172,9 @@ object OfflineCover {
     fun resumed(activity: Activity) {
         top = activity
         if (activity is PlayerActivity) return
+        Connectivity.check()
         val cover = covers.getOrPut(activity) { build(activity) }
-        show(cover, !Connectivity.online)
-        bars.getOrPut(activity) { buildBar(activity) }.visibility =
-            if (Connectivity.reachable) android.view.View.GONE else android.view.View.VISIBLE
+        show(cover, !Connectivity.online || !Connectivity.reachable)
     }
 
     private fun show(cover: FrameLayout, offline: Boolean) {
@@ -130,32 +185,6 @@ object OfflineCover {
 
     fun paused(activity: Activity) {
         if (top === activity) top = null
-    }
-
-    /** A thin strip over the top of the screen: the network is there but the catalogue server is not answering. Takes no focus or touch. */
-    private fun buildBar(activity: Activity): TextView {
-        val density = activity.resources.displayMetrics.density
-        val tv = DeviceType.isTv(activity)
-        val bar = TextView(activity).apply {
-            text = "Доступ к интернету потерян"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(0xE6B45309.toInt())
-            textSize = if (tv) 16f else 12f
-            gravity = Gravity.CENTER
-            setPadding((16 * density).toInt(), (6 * density).toInt(), (16 * density).toInt(), (6 * density).toInt())
-            isFocusable = false
-            visibility = android.view.View.GONE
-        }
-        (activity.window.decorView as ViewGroup).addView(bar, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
-        // the decor view reaches under the status bar: without this the upper half of the strip is hidden behind it
-        val padTop = bar.paddingTop
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bar) { v, insets ->
-            val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            v.setPadding(v.paddingLeft, padTop + top, v.paddingRight, v.paddingBottom)
-            insets
-        }
-        androidx.core.view.ViewCompat.requestApplyInsets(bar)
-        return bar
     }
 
     private fun build(activity: Activity): FrameLayout {
@@ -177,13 +206,13 @@ object OfflineCover {
             setPadding((32 * density).toInt(), 0, (32 * density).toInt(), 0)
         }
         column.addView(TextView(activity).apply {
-            text = "Нет интернета"
+            text = "Доступ к интернету потерян"
             setTextColor(Color.WHITE)
             textSize = if (tv) 30f else 20f
             gravity = Gravity.CENTER
         })
         column.addView(TextView(activity).apply {
-            text = "Без сети приложение не работает.\nОжидание включения интернета..."
+            text = "Включите интернет.\nПриложение продолжит работу, как только связь появится."
             setTextColor(TEXT_MUTED)
             textSize = if (tv) 22f else 15f
             gravity = Gravity.CENTER
