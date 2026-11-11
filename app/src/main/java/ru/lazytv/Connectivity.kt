@@ -217,7 +217,7 @@ object OfflineCover {
     private fun buildBadge(activity: Activity) {
         val density = activity.resources.displayMetrics.density
         val statusId = activity.resources.getIdentifier("status_bar_height", "dimen", "android")
-        val top = (if (statusId > 0) activity.resources.getDimensionPixelSize(statusId) else 0) + (16 * density).toInt()
+        val top = (if (statusId > 0) activity.resources.getDimensionPixelSize(statusId) else 0) + (56 * density).toInt()
         val size = (36 * density).toInt()
         val decor = activity.window.decorView as ViewGroup
         val tip = TextView(activity).apply {
