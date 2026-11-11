@@ -122,10 +122,9 @@ class FavoritesPageFragment : Fragment() {
 
         titles = Favorites.all(ctx)
         val episodes = EpisodeState.favorites(ctx)
-        val torrents = FavoriteTorrents.unlinked(ctx)
         // torrents saved from a film card stand among the films, as cards with the mark "ТОРРЕНТ"
         val torrentCards = FavoriteTorrents.cards(ctx)
-        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty() && torrents.isEmpty()) {
+        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty()) {
             content.addView(TextView(ctx).apply {
                 text = "Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"
                 setTextColor(TEXT_MUTED)
@@ -180,22 +179,6 @@ class FavoritesPageFragment : Fragment() {
                 }
                 holder.view
             }, pad, pitch)
-        }
-        if (torrents.isNotEmpty()) {
-            addHeader("Избранные раздачи", pad, scale)
-            val presenter = TorrentCardPresenter()
-            addGrid(torrents.map { torrent ->
-                val holder = presenter.onCreateViewHolder(content)
-                presenter.onBindViewHolder(holder, torrent)
-                holder.view.setOnClickListener {
-                    startActivity(
-                        Intent(ctx, TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
-                            .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
-                            .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
-                    )
-                }
-                holder.view
-            }, pad, pitch * 5 / 3, perRow = 3)
         }
         // room under the last row for the focused card that grows
         content.addView(View(ctx), LinearLayout.LayoutParams(1, (24 * scale).toInt()))

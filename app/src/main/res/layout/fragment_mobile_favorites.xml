@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/page_bg">
 
-    <!-- one page like the TV one: the bookmarked titles, then the saved episodes and torrents when there are any -->
+    <!-- one page like the TV one: the bookmarked titles, then the saved torrents among them as cards, then the saved episodes when there are any -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/favoritesScroll"
         android:layout_width="match_parent"
@@ -35,21 +35,6 @@
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/episodesList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/torrentsHeader"
-                style="@style/MobileSectionTitle"
-                android:text="ИЗБРАННЫЕ РАЗДАЧИ"
-                android:visibility="gone" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/torrentsList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"

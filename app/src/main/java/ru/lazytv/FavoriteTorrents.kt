@@ -22,9 +22,6 @@ object FavoriteTorrents {
 
     fun all(context: Context): List<Torrent> = entries(context).map { it.first }
 
-    /** The torrents saved without a film (old records): they stay lines of the list. */
-    fun unlinked(context: Context): List<Torrent> = entries(context).filter { it.second == null }.map { it.first }
-
     /** The torrents saved with their film, as cards of that film wearing the mark "ТОРРЕНТ". */
     fun cards(context: Context): List<Pair<Torrent, Title>> =
         entries(context).mapNotNull { (torrent, film) -> film?.let { torrent to it.copy(torrentKey = torrent.identity()) } }

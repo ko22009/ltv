@@ -27,7 +27,6 @@ class FavoritesFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var titles: MobileTitleAdapter
     private val episodeRows = TextRows()
-    private val torrentRows = TextRows()
 
     /** One line of the episode and torrent lists: a tap opens it, a long press takes it out of the bookmarks. */
     private class TextRow(val title: String, val info: String, val open: () -> Unit, val remove: () -> Unit, val torrent: ru.lazytv.Torrent? = null)
@@ -97,8 +96,6 @@ class FavoritesFragment : Fragment() {
         binding.titlesList.adapter = titles
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
         binding.episodesList.adapter = episodeRows
-        binding.torrentsList.layoutManager = LinearLayoutManager(requireContext())
-        binding.torrentsList.adapter = torrentRows
     }
 
     /** The saved torrents drawn as film cards, by the key of the card. */
@@ -144,23 +141,9 @@ class FavoritesFragment : Fragment() {
         }
         episodeRows.notifyDataSetChanged()
 
-        torrentRows.rows.clear()
-        FavoriteTorrents.unlinked(ctx).forEach { torrent ->
-            torrentRows.rows += TextRow(torrent.title, listOf(torrent.size, "▲ ${torrent.seeds}", torrent.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
-                // a saved torrent goes straight to the preload, no new search
-                startActivity(
-                    Intent(ctx, TorrentsPopupActivity::class.java).putExtra("name", torrent.title)
-                        .putExtra("magnet", torrent.magnet).putExtra("size", torrent.size).putExtra("seeds", torrent.seeds)
-                        .putExtra("leeches", torrent.leeches).putExtra("source", torrent.source)
-                )
-            }, { FavoriteTorrents.toggle(ctx, torrent) }, torrent)
-        }
-        torrentRows.notifyDataSetChanged()
-
         fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
         show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
-        show(torrentRows.rows.isNotEmpty(), binding.torrentsHeader, binding.torrentsList)
-        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && torrentRows.rows.isEmpty()
+        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty()
         binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
         binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }
