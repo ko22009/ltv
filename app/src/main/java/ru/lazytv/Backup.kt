@@ -32,6 +32,10 @@ object Backup {
         context.getSharedPreferences("lazytv", 0).edit().putLong(LAST_AT, System.currentTimeMillis()).apply()
     }
 
+    /** True when a copy was made at least once: by the app or found in the default folder. */
+    fun exists(context: Context): Boolean =
+        context.getSharedPreferences("lazytv", 0).getLong(LAST_AT, 0L) > 0L || latestDefault(context) != null
+
     /** Status line for the settings screen, with a gentle reminder when no copy was made for over a month. */
     fun status(context: Context): String {
         val at = context.getSharedPreferences("lazytv", 0).getLong(LAST_AT, 0L)

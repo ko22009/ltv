@@ -550,11 +550,7 @@ open class SettingsScreen : Fragment() {
             button("Синхронизировать сейчас", "Закладки, история, отметки просмотра, поиск и часть настроек") { syncNow() }
             check("Проверять при запуске", "Тихо в фоне, не чаще раза в 10 минут", Sync.AUTO)
             button("Отключить Google", "Данные на Диске останутся, устройство перестанет синхронизироваться") { unlinkGoogle() }
-        }
-        info("Что переносится", "Закладки, история просмотров, отметки просмотра, история поиска и настройки каталога. " +
-            "Адреса TorrServe, JacRed и Jackett, прокси и код родителя остаются на своём устройстве")
-        // the sign-in stands after the explanation: first what it brings, then the button
-        if (syncReady && !syncLinked) {
+        } else {
             button("Подключить Google", "Приложение покажет код, его нужно ввести на телефоне") { connectGoogle() }
         }
 

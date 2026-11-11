@@ -19,11 +19,14 @@ object Links {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         val target = activity.packageManager.resolveActivity(intent, 0)
         val browser = target?.activityInfo?.packageName
-        if (browser == null || browser == STUB) {
+        if (browser == STUB) {
             showAddress(activity, url)
             return
         }
-        runCatching { activity.startActivity(intent) }.onFailure { showAddress(activity, url) }
+        // Android 11 hides other apps from resolveActivity unless they are listed in <queries>, so a missing answer
+        // means nothing here: the attempt itself still reaches the browser. Only a real failure shows the address.
+        val opened = runCatching { activity.startActivity(intent) }.isSuccess
+        if (!opened) showAddress(activity, url)
     }
 
     private fun showAddress(activity: Activity, url: String) {
@@ -35,7 +38,7 @@ object Links {
             gravity = Gravity.START
             setPadding(0, 0, 0, 0)
             addView(TextView(activity).apply {
-                text = "Браузера на этом устройстве нет. Откройте ссылку на телефоне или компьютере и поставьте TorrServe оттуда."
+                text = "Открыть ссылку не удалось. Наберите её на телефоне или компьютере."
                 setTextColor(TEXT_SECONDARY)
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scale)
                 gravity = Gravity.START
@@ -47,6 +50,9 @@ object Links {
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scale)
                 gravity = Gravity.START
                 setTextIsSelectable(true)
+                // the address itself opens the browser: typing it by hand on a TV remote is hopeless
+                autoLinkMask = android.text.util.Linkify.WEB_URLS
+                movementMethod = android.text.method.LinkMovementMethod.getInstance()
                 setPadding(0, px(16), 0, 0)
             })
         }

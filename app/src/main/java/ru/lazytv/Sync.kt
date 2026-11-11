@@ -63,6 +63,7 @@ object Sync {
         Settings.SHOW_ADULT, Settings.SHOW_HORROR, Settings.LANGUAGE, Settings.QUALITY, Settings.VOICE,
         Settings.REMEMBER_POSITION, Settings.AUTO_NEXT, Settings.SOURCE_MODE, Settings.TORRENT_SORT,
         Settings.TORRENT_EXACT, Settings.TORRENT_MIN_SEEDS,
+        Settings.TORRSERVE, Settings.JACRED_SERVERS, Settings.JACKETT_URL, Settings.JACKETT_KEY,
     )
 
     private fun synced(key: String) = key in SYNCED_KEYS || key.startsWith("service_")
