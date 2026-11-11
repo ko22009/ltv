@@ -1281,12 +1281,22 @@ class DetailsActivity : Activity() {
         if (opening) return
         setWatchLoading(true)
         Thread {
-            val episodes = runCatching { Sources.episodesCached(v) }.getOrNull()
+            // a silent site (white list) must not hold the button: after 6 s the next source is tried; the slow request goes on in
+            // the background and fills the cache, so the record is not thrown away for good
+            val answer = java.util.concurrent.atomic.AtomicReference<List<Episode>?>(null)
+            val asking = Thread { answer.set(runCatching { Sources.episodesCached(v) }.getOrNull()) }
+            asking.start()
+            asking.join(6000)
+            val timedOut = asking.isAlive
+            val episodes = answer.get()
             onUi {
                 setWatchLoading(false)
                 if (episodes.isNullOrEmpty()) {
-                    excludeVariant(v)
-                    Toast.makeText(this, "В источнике ${v.source} нет видео, запись исключена", Toast.LENGTH_SHORT).show()
+                    if (timedOut) variants = variants.filterNot { it.sourceId == v.sourceId && it.ref == v.ref } else excludeVariant(v)
+                    Toast.makeText(
+                        this, if (timedOut) "Источник ${v.source} не отвечает" else "В источнике ${v.source} нет видео, запись исключена",
+                        Toast.LENGTH_SHORT,
+                    ).show()
                     val targetName = currentName.ifEmpty { currentTitle.name }
                     if (fromDefault) {
                         openDefaultVariant(targetName)
