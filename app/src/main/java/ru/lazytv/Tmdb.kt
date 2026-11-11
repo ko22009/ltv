@@ -499,7 +499,7 @@ object Tmdb {
             Connectivity.check() // a cached answer says nothing about the network: ask the server for real
             return file.readText()
         }
-        val connection = URL(address).openConnection() as HttpURLConnection
+        val connection = Connectivity.open(address)
         connection.connectTimeout = 8000
         connection.readTimeout = 20000
         val body = try {

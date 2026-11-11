@@ -367,7 +367,7 @@ object Sources {
 
     /** POST with a JSON body, the same timeouts and UA as [get]; answers of the open APIs are JSON too. */
     fun postJson(address: String, body: String): String {
-        val c = URL(address).openConnection() as HttpURLConnection
+        val c = Connectivity.open(address)
         c.requestMethod = "POST"
         c.doOutput = true
         c.connectTimeout = 15000
@@ -383,7 +383,7 @@ object Sources {
 
     /** Binary answer (a .torrent file, for example) with the same timeouts and UA as [get]. */
     fun getBytes(address: String, quick: Boolean = false): ByteArray {
-        val c = URL(address).openConnection() as HttpURLConnection
+        val c = Connectivity.open(address)
         // quick: a search must not wait for a dead mirror 15 seconds, the next mirror is tried instead
         c.connectTimeout = if (quick) 3000 else 15000
         c.readTimeout = if (quick) 6000 else 25000

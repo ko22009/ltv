@@ -226,7 +226,7 @@ object TorrentSearch {
         .replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ").replace("&amp;", "&")
 
     private fun download(address: String): String {
-        val connection = URL(address).openConnection() as HttpURLConnection
+        val connection = Connectivity.open(address)
         connection.connectTimeout = 15000
         connection.readTimeout = 25000
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Safari/537.36")

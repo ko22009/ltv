@@ -79,9 +79,22 @@ object Connectivity {
             if (now != reachable) {
                 reachable = now
                 reachListeners.toList().forEach { it(now) }
-                if (!now) probeUntilAnswer()
+                if (!now) { abortAll(); probeUntilAnswer() }
             }
         }
+    }
+
+    private val live: MutableSet<java.net.HttpURLConnection> =
+        java.util.Collections.newSetFromMap(java.util.Collections.synchronizedMap(WeakHashMap()))
+
+    /** A request to the internet; it is remembered so that [abortAll] can cut it. Not for the local TorrServe. */
+    fun open(address: String): java.net.HttpURLConnection =
+        (java.net.URL(address).openConnection() as java.net.HttpURLConnection).also { live.add(it) }
+
+    /** The plate went up: requests that hang on a silent network must not go on waiting, they fail at once. */
+    private fun abortAll() {
+        val all = synchronized(live) { live.toList() }
+        Thread { all.forEach { runCatching { it.disconnect() } } }.start()
     }
 
     private var probing = false
@@ -116,7 +129,7 @@ object Connectivity {
                 if (reach != reachable) {
                     reachable = reach
                     reachListeners.toList().forEach { it(reach) }
-                    if (!reach) probeUntilAnswer()
+                    if (!reach) { abortAll(); probeUntilAnswer() }
                 }
             }
         }.start()

@@ -168,7 +168,7 @@ object Hdrezka : VideoSource {
     }
 
     private fun post(base: String, ref: String, kind: String, fields: Map<String, String>): String {
-        val c = URL("$base/ajax/get_cdn_series/?t=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
+        val c = Connectivity.open("$base/ajax/get_cdn_series/?t=${System.currentTimeMillis()}")
         c.requestMethod = "POST"
         c.doOutput = true
         c.connectTimeout = 15000
