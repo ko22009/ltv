@@ -281,6 +281,8 @@ open class SettingsScreen : Fragment() {
         val ctx = requireContext()
         val mobile = requireContext().isMobileUi()
         val focusable = row.kind != RowKind.SECTION && row.kind != RowKind.INFO
+        // a caption block is not a button: no plate, so the rows one can press stand out
+        val plain = row.kind == RowKind.INFO
         if (row.kind == RowKind.SECTION) {
             return label(row.title, if (mobile) 12f else 14f, TEXT_MUTED, bold = true).apply {
                 setPadding(px(4), px(16), 0, px(8))
@@ -307,8 +309,12 @@ open class SettingsScreen : Fragment() {
         }
         return LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(px(if (mobile) 14 else 22), px(if (mobile) 12 else 14), px(if (mobile) 14 else 22), px(if (mobile) 12 else 14))
-            background = textTilePlate(scale)
+            val side = px(if (mobile) 14 else 22)
+            setPadding(
+                side, px(if (plain) 8 else if (mobile) 12 else 14),
+                side, px(if (plain) 8 else if (mobile) 12 else 14),
+            )
+            if (!plain) background = textTilePlate(scale)
             addView(texts, LinearLayout.LayoutParams(0, -2, 1f))
             if (row.kind == RowKind.CHECK) {
                 val toggle = Switch(ctx).apply {
