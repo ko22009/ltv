@@ -20,7 +20,8 @@ import java.util.WeakHashMap
 
 /**
  * Whether the device has any network with internet. A connection that only lets some sites through (white lists) still counts
- * as online here; such a case is caught separately by the probe below (`reachable`) and shown as a strip over the screen.
+ * as online here; such a case is caught separately from the results of the app's own requests (`report`, `reachable`) and
+ * shown as a strip over the screen.
  * Listeners are called on the main thread.
  */
 object Connectivity {
@@ -51,6 +52,8 @@ object Connectivity {
             val now = networks.isNotEmpty()
             if (now != online) {
                 online = now
+                // a new network starts with a clean slate: the old failures say nothing about it
+                if (now) { failStreak = 0; if (!reachable) { reachable = true; reachListeners.toList().forEach { it(true) } } }
                 listeners.toList().forEach { it(now) }
             }
         }
@@ -63,29 +66,24 @@ object Connectivity {
     @Volatile var reachable = true
         private set
     private val reachListeners = mutableListOf<(Boolean) -> Unit>()
-    private var probing = false
+    private var failStreak = 0
 
-    /** Starts the periodic probe (once): every minute while all is well, every 10 seconds while the server is silent. */
-    fun startProbe() {
-        if (probing) return
-        probing = true
-        Thread {
-            while (true) {
-                if (online) {
-                    val ok = runCatching {
-                        val c = java.net.URL("https://api.themoviedb.org/").openConnection() as java.net.HttpURLConnection
-                        c.connectTimeout = 6000
-                        c.readTimeout = 6000
-                        c.requestMethod = "HEAD"
-                        c.responseCode
-                        c.disconnect()
-                    }.isSuccess
-                    if (ok != reachable) main.post { reachable = ok; reachListeners.toList().forEach { it(ok) } }
-                }
-                Thread.sleep(if (reachable) 60_000L else 10_000L)
+    /**
+     * The result of a real request of the app (no probes of its own): [ok] after an answer, false after a timeout, a refused
+     * connection or an unknown address. Three failures in a row mean the server is shut off; one answer clears it.
+     */
+    fun report(ok: Boolean) {
+        main.post {
+            failStreak = if (ok) 0 else failStreak + 1
+            val now = failStreak < FAILS_TO_WARN
+            if (now != reachable) {
+                reachable = now
+                reachListeners.toList().forEach { it(now) }
             }
-        }.apply { isDaemon = true }.start()
+        }
     }
+
+    private const val FAILS_TO_WARN = 3
 
     fun listenReach(listener: (Boolean) -> Unit) { reachListeners.add(listener) }
 
@@ -107,7 +105,6 @@ object OfflineCover {
     fun start() {
         if (started) return
         started = true
-        Connectivity.startProbe()
         Connectivity.listenReach { ok -> bars.forEach { (_, bar) -> bar.visibility = if (ok) android.view.View.GONE else android.view.View.VISIBLE } }
         Connectivity.listen { online ->
             covers.forEach { (_, cover) -> show(cover, !online) }

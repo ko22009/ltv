@@ -499,10 +499,17 @@ object Tmdb {
         val connection = URL(address).openConnection() as HttpURLConnection
         connection.connectTimeout = 8000
         connection.readTimeout = 20000
-        val body = connection.inputStream.use {
-            ClockCheck.observe(connection.date)
-            it.readBytes().toString(Charsets.UTF_8)
+        val body = try {
+            connection.inputStream.use {
+                ClockCheck.observe(connection.date)
+                it.readBytes().toString(Charsets.UTF_8)
+            }
+        } catch (e: Exception) {
+            // only a silent server counts (timeout, refused, no address): an HTTP error code is an answer
+            if (Errors.isNetwork(e)) Connectivity.report(false) else Connectivity.report(true)
+            throw e
         }
+        Connectivity.report(true)
         runCatching { file.apply { parentFile?.mkdirs(); writeText(body) } }
         return body
     }
