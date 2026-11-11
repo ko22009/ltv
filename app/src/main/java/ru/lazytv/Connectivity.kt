@@ -200,43 +200,6 @@ object OfflineCover {
         if (top === activity) top = null
     }
 
-    private fun rutubeSearch(activity: Activity) {
-        val input = android.widget.EditText(activity).apply { hint = "Название фильма"; setSingleLine() }
-        android.app.AlertDialog.Builder(activity).setTitle("Поиск на RUTUBE").setView(input)
-            .setPositiveButton("Искать") { _, _ ->
-                val query = input.text.toString().trim()
-                if (query.isNotEmpty()) rutubeResults(activity, query)
-            }
-            .setNegativeButton("Отмена", null).show()
-    }
-
-    private fun rutubeResults(activity: Activity, query: String) {
-        android.widget.Toast.makeText(activity, "Ищем на RUTUBE…", android.widget.Toast.LENGTH_SHORT).show()
-        Thread {
-            val found = runCatching { Rutube.search(query, "", "") }.getOrDefault(emptyList()).take(15)
-            activity.runOnUiThread {
-                if (found.isEmpty()) {
-                    android.widget.Toast.makeText(activity, "На RUTUBE ничего не найдено", android.widget.Toast.LENGTH_LONG).show()
-                } else {
-                    android.app.AlertDialog.Builder(activity).setTitle("Найдено на RUTUBE")
-                        .setItems(found.map { it.title + "\n" + it.note }.toTypedArray()) { _, i -> rutubePlay(activity, found[i], query) }
-                        .setNegativeButton("Закрыть", null).show()
-                }
-            }
-        }.start()
-    }
-
-    private fun rutubePlay(activity: Activity, variant: Variant, query: String) {
-        Thread {
-            val episodes = runCatching { Sources.episodesCached(variant) }.getOrNull()
-            activity.runOnUiThread {
-                if (episodes.isNullOrEmpty()) {
-                    android.widget.Toast.makeText(activity, "Видео не открылось", android.widget.Toast.LENGTH_LONG).show()
-                } else playEpisode(activity, variant, episodes, 0, choose = false, mediaTitle = query)
-            }
-        }.start()
-    }
-
     private fun build(activity: Activity): FrameLayout {
         val density = activity.resources.displayMetrics.density
         val cover = FrameLayout(activity).apply {
@@ -245,8 +208,6 @@ object OfflineCover {
             isClickable = true
             isFocusable = true
             isFocusableInTouchMode = true
-            // the RUTUBE button takes the focus first, the plate itself only when there is nothing else
-            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             visibility = android.view.View.GONE
             // the remote keys are taken too, only Back goes through (the app can still be left)
             setOnKeyListener { _, keyCode, _ -> keyCode != android.view.KeyEvent.KEYCODE_BACK }
@@ -271,11 +232,6 @@ object OfflineCover {
             setPadding(0, (8 * density).toInt(), 0, (20 * density).toInt())
         })
         column.addView(ProgressBar(activity).apply { indeterminateTintList = android.content.res.ColorStateList.valueOf(Color.WHITE) })
-        // RUTUBE is on the white lists: it needs nothing but its own search, so the plate lets the user in there
-        column.addView(android.widget.Button(activity).apply {
-            text = "Искать на RUTUBE"
-            setOnClickListener { rutubeSearch(activity) }
-        }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = (24 * density).toInt() })
         cover.addView(column, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
         (activity.window.decorView as ViewGroup).addView(cover, ViewGroup.LayoutParams(-1, -1))
         return cover
