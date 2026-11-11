@@ -8,8 +8,8 @@
     <color name="accent_light">#E2E8F0</color>
     <color name="touch_fill">#343B47</color>
     <!-- the cursor of the remote on a TV: the plate and what is drawn on it (caption, icon). Both change together: a light plate needs a dark caption -->
-    <color name="focus_fill">#F1F5F9</color>
-    <color name="on_focus">#11151C</color>
+    <color name="focus_fill">#0F766E</color>
+    <color name="on_focus">#FFFFFF</color>
     <!-- the dark plates over a picture or a video: soft (back button, rows over the video), light (round buttons, the counter), dense (the rating, the bubbles of the player); the cover is the page colour over the page -->
     <color name="overlay_soft">#66000000</color>
     <color name="overlay_light">#99000000</color>
