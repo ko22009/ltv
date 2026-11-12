@@ -128,11 +128,6 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
  * [onSelected] tells which position took the focus, [keyIntercept] sees the keys first (a page leads the arrows out of the grid by hand).
  */
 open class CardGridView(context: Context, private val columns: Int, private val gap: Int, private val hGap: Int = gap) : RecyclerView(context) {
-    private companion object {
-        /** One row's move to the focused card, ms: about the gap of a held arrow's repeats. */
-        const val STEP_MS = 180
-    }
-
     var onSelected: ((Int) -> Unit)? = null
     var keyIntercept: ((KeyEvent) -> Boolean)? = null
 
@@ -149,36 +144,13 @@ open class CardGridView(context: Context, private val columns: Int, private val 
 
     init {
         layoutManager = object : GridLayoutManager(context, columns) {
-            // the row below the screen is made in advance: "down" then finds it and the grid scrolls to it smoothly, instead of
-            // jumping to a row that was not made yet (a jerk on every press)
-            override fun calculateExtraLayoutSpace(state: State, extraLayoutSpace: IntArray) {
-                super.calculateExtraLayoutSpace(state, extraLayoutSpace)
-                extraLayoutSpace[1] = maxOf(extraLayoutSpace[1], this@CardGridView.height / 2)
-            }
-
-            private var lastStep = 0L
-
-            // RecyclerView asks its layout manager (not its own method) where to scroll for a focused card
+            // RecyclerView asks its layout manager (not its own method) where to scroll for a focused card; the stock smooth
+            // scroll is kept (the earlier own steady-speed scroll and the extra row made in advance gave nothing)
             override fun requestChildRectangleOnScreen(
                 parent: RecyclerView, child: View, rect: Rect, immediate: Boolean, focusedChildVisible: Boolean,
             ): Boolean {
                 if (stayWhenShown && shownWhole(child)) return false
-                if (immediate) return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
-                // the card with its gap is brought into the padded area. The stock move starts fast and slows down every time, so
-                // a held arrow made a row of stops: a move at one steady speed, a few quick ones in a row join into one run
-                val top = getDecoratedTop(child) - paddingTop
-                val bottom = getDecoratedBottom(child) - (parent.height - paddingBottom)
-                val dy = if (top < 0) top else if (bottom > 0) bottom else 0
-                if (dy == 0) return false
-                val now = android.os.SystemClock.uptimeMillis()
-                val running = now - lastStep < 250
-                lastStep = now
-                parent.smoothScrollBy(
-                    0, dy,
-                    if (running) android.view.animation.LinearInterpolator() else android.view.animation.DecelerateInterpolator(),
-                    STEP_MS,
-                )
-                return true
+                return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
             }
         }
         itemAnimator = null
