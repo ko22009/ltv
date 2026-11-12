@@ -26,7 +26,6 @@ $sum = "{0}  {1}" -f (Get-FileHash -LiteralPath $to -Algorithm SHA256).Hash.ToLo
 Set-Content -LiteralPath (Join-Path $dist "SHA256SUMS.txt") -Value $sum -Encoding ASCII
 
 $size = [math]::Round((Get-Item -LiteralPath $to).Length / 1MB, 2)
-$notes = Join-Path $dist "release-notes.md"
 Write-Output "$to ($size MB)"
 Write-Output $sum
-Write-Output "next: gh release create v$Version `"$to`" --title `"LazyTV $Version`" --notes-file `"$notes`""
+Write-Output "next: edit dist\release-notes.md, commit and push, then .\tools\publish-release.ps1 -Version $Version"
