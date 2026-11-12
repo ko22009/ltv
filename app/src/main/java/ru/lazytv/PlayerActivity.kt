@@ -1227,6 +1227,8 @@ class PlayerActivity : Activity() {
     private fun positionKey(): String = queue.getOrNull(queueIndex)?.watchKey?.takeIf { it.isNotEmpty() } ?: url
 
     private fun savedPosition(): Long {
+        // a film: the place of the title (it may come from another device through the sync, whose stream address differs)
+        if (!isTv && tmdbId > 0L) TitleProgress.position(this, tmdbId).takeIf { it > 0L }?.let { return it }
         val prefs = getSharedPreferences("positions", 0)
         return prefs.getLong(positionKey(), 0L).takeIf { it > 0L } ?: prefs.getLong(url, 0L)
     }
@@ -1274,6 +1276,7 @@ class PlayerActivity : Activity() {
             val appContext = applicationContext
             if (known && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
                 clearPosition()
+                if (!isTv && tmdbId > 0L) TitleProgress.remove(this, tmdbId)
                 val following = seriesResume(queueIndex + 1)
                 if (tmdbId > 0L && isTv && following.isNotEmpty()) {
                     // a series: the row of the home screen now offers the next episode
@@ -1282,6 +1285,7 @@ class PlayerActivity : Activity() {
                 } else if (tmdbId > 0L) Thread { ContinueWatching.clear(appContext, isTv, tmdbId) }.start()
             } else if (pos >= 5_000L) {
                 getSharedPreferences("positions", 0).edit().putLong(positionKey(), pos).apply()
+                if (!isTv && tmdbId > 0L && known) TitleProgress.put(this, tmdbId, mediaTitle, posterPath, mediaYear, pos, dur)
                 if (tmdbId > 0L && known) {
                     // the row of the home screen: the provider is written off the main thread
                     val title = Title(tmdbId, mediaTitle, "", posterPath, isTv, mediaYear)

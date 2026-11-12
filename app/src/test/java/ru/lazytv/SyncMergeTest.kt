@@ -118,4 +118,25 @@ class SyncMergeTest {
         assertTrue(SyncMerge.parse("").history.isEmpty())
         assertTrue(SyncMerge.parse("{это не json").search.isEmpty())
     }
+
+    private fun progress(pos: Long, at: Long) = SyncMerge.Doc(
+        progress = SyncMerge.titles(listOf(JSONObject().put("id", 7L).put("tv", false).put("pos", pos).put("at", at))))
+
+    @Test
+    fun `the film left last wins, not the device doing the sync`() {
+        val agreed = progress(1000, 1)
+        // the box has an older place, the phone a newer one: after the sync the box continues from the phone's minute
+        val merged = SyncMerge.merge(agreed, progress(2000, 5), progress(9000, 8))
+        assertEquals(9000L, JSONObject(merged.progress.single().json).getLong("pos"))
+        // and the other way round: the local one is newer
+        val mine = SyncMerge.merge(agreed, progress(9000, 8), progress(2000, 5))
+        assertEquals(9000L, JSONObject(mine.progress.single().json).getLong("pos"))
+    }
+
+    @Test
+    fun `a film finished on one device leaves the other one`() {
+        val agreed = progress(1000, 1)
+        val merged = SyncMerge.merge(agreed, SyncMerge.Doc(), agreed)
+        assertTrue(merged.progress.isEmpty())
+    }
 }

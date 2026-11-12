@@ -25,6 +25,8 @@ object SyncMerge {
         val search: List<Item> = emptyList(),
         /** Setting key to its encoded value: `{"b":true}` or `{"s":"ru-RU"}`. */
         val settings: Map<String, String> = emptyMap(),
+        /** Where a film was left: id, name, poster, year, position, duration, `at` (when). Key as titles. */
+        val progress: List<Item> = emptyList(),
     )
 
     fun titleKey(o: JSONObject) = o.optBoolean("tv").toString() + ":" + o.optLong("id")
@@ -42,6 +44,7 @@ object SyncMerge {
             history = items(root.optJSONArray("history")),
             search = plain(root.optJSONArray("search")),
             settings = settings(root.optJSONObject("settings")),
+            progress = items(root.optJSONArray("progress")),
         )
     }
 
@@ -56,6 +59,7 @@ object SyncMerge {
         val values = JSONObject()
         doc.settings.toSortedMap().forEach { (key, value) -> values.put(key, JSONObject(value)) }
         root.put("settings", values)
+        root.put("progress", objects(doc.progress))
         return root
     }
 
@@ -70,7 +74,24 @@ object SyncMerge {
         history = mergeList(base.history, local.history, remote.history).take(historyLimit),
         search = mergeList(base.search, local.search, remote.search).take(searchLimit),
         settings = mergeSettings(base.settings, local.settings, remote.settings),
+        progress = mergeProgress(base.progress, local.progress, remote.progress),
     )
+
+    /**
+     * Like [mergeList], but when both devices moved the same film the later `at` wins: the place the person left last
+     * is the one to continue from (a stale local record must not beat a newer one from the phone).
+     */
+    private fun mergeProgress(base: List<Item>, local: List<Item>, remote: List<Item>): List<Item> {
+        val mine = local.associate { it.key to it.json }
+        val theirs = remote.associate { it.key to it.json }
+        fun at(json: String?) = json?.let { runCatching { JSONObject(it).optLong("at") }.getOrDefault(0L) } ?: 0L
+        val settled = mergeList(base, local, remote)
+        return settled.map { item ->
+            val l = mine[item.key]
+            val r = theirs[item.key]
+            if (l != null && r != null && l != r) Item(item.key, if (at(r) > at(l)) r else l) else item
+        }
+    }
 
     /** Records merged by key; the local order first, then what only the other device has. Deletions on either side stick. */
     private fun mergeList(base: List<Item>, local: List<Item>, remote: List<Item>): List<Item> {
