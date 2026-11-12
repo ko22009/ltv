@@ -100,7 +100,7 @@ class FavoritesFragment : Fragment() {
             startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
         continueTitles.onItemLongClick = { title ->
-            ru.lazytv.TitleProgress.remove(requireContext(), title.id)
+            ru.lazytv.TitleProgress.remove(requireContext(), title.tv, title.id)
             Toast.makeText(requireContext(), "Убрано из «Продолжить просмотр»", Toast.LENGTH_SHORT).show()
             refresh()
         }
@@ -146,7 +146,7 @@ class FavoritesFragment : Fragment() {
         }
 
         val unfinished = ru.lazytv.TitleProgress.all(ctx).map {
-            ru.lazytv.Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, false, it.optString("year"))
+            ru.lazytv.Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, it.optBoolean("tv"), it.optString("year"))
         }
         continueTitles.setItems(unfinished)
         binding.continueBlock.visibility = if (unfinished.isEmpty()) View.GONE else View.VISIBLE

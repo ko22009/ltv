@@ -257,16 +257,21 @@ object Sync {
 
     /** Films left half-way on another device: kept here and offered in the "continue" row of the TV home screen. */
     private fun applyProgress(context: Context, items: List<SyncMerge.Item>) {
-        val before = TitleProgress.all(context).associate { it.optLong("id") to it.toString() }
+        fun key(o: JSONObject) = SyncMerge.titleKey(o)
+        val before = TitleProgress.all(context).associate { key(it) to it.toString() }
         val after = items.mapNotNull { runCatching { JSONObject(it.json) }.getOrNull() }
         TitleProgress.replace(context, after)
-        after.filter { before[it.optLong("id")] != it.toString() && it.optLong("pos") > 0L && it.optLong("dur") > 0L }.forEach { r ->
-            val title = Title(r.optLong("id"), r.optString("name"), "", r.optString("poster").ifEmpty { null }, false, r.optString("year"))
-            runCatching { ContinueWatching.update(context, title, r.optLong("pos"), r.optLong("dur"), "") }
+        after.filter { before[key(it)] != it.toString() && it.optLong("dur") > 0L }.forEach { r ->
+            val tv = r.optBoolean("tv")
+            val title = Title(r.optLong("id"), r.optString("name"), "", r.optString("poster").ifEmpty { null }, tv, r.optString("year"))
+            // position 0 is a series whose next episode is waiting
+            runCatching { ContinueWatching.update(context, title, r.optLong("pos"), r.optLong("dur"), "", next = r.optLong("pos") == 0L) }
         }
         // finished on the other device: the entry leaves the row here too
-        val kept = after.map { it.optLong("id") }.toSet()
-        before.keys.filter { it !in kept }.forEach { runCatching { ContinueWatching.clear(context, false, it) } }
+        val kept = after.map { key(it) }.toSet()
+        before.keys.filter { it !in kept }.forEach { k ->
+            runCatching { ContinueWatching.clear(context, k.substringBefore(':').toBoolean(), k.substringAfter(':').toLong()) }
+        }
     }
 
     private fun titles(raw: String): List<JSONObject> = runCatching {

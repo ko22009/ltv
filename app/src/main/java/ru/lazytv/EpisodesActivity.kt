@@ -242,7 +242,16 @@ class EpisodesActivity : Activity() {
                         }
                         override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
                     })
-                    val focus = if (voiceSwitched) -1 else intent.getIntExtra("episodeIndex", -1)
+                    var focus = if (voiceSwitched) -1 else intent.getIntExtra("episodeIndex", -1)
+                    if (focus !in episodes.indices && !voiceSwitched) {
+                        // left on another device: the episode with the same season and number in this source
+                        val left = TitleProgress.get(this, true, intent.getLongExtra("tmdbId", 0L))
+                        if (left != null) {
+                            val at = left.optInt("season") to left.optInt("episode")
+                            focus = episodes.indexOfFirst { TitleProgress.episodeOf(it.title) == at }
+                            if (focus < 0) android.widget.Toast.makeText(this, "В этом источнике нет ${at.first} сезона ${at.second} серии", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
                     // opened by hand: the first episode not yet watched (the first one when all are), so OK continues the series
                     selectedIndex = if (focus in episodes.indices) focus else episodes.indexOfFirst {
                         !EpisodeState.isWatched(this, EpisodeState.key(variant.sourceId, variant.ref, it.title))
