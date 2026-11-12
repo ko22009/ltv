@@ -75,8 +75,6 @@ class FavoritesPageFragment : Fragment() {
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        // another page is opened: the next visit starts from the top, a scroll left here would move the first card a little
-        if (::scroll.isInitialized) scroll.scrollTo(0, 0)
         if (!hidden) refreshIfChanged()
     }
 
@@ -95,12 +93,18 @@ class FavoritesPageFragment : Fragment() {
     }
 
     /** Puts the focus on the first card (or the first tile when there are no titles); false when the page is empty. */
-    fun focusFirst(): Boolean = firstFocus?.requestFocus() ?: false
+    fun focusFirst(): Boolean = (lastFocus?.takeIf { it.isAttachedToWindow } ?: firstFocus)?.requestFocus() ?: false
+
+    /** The card or tile that held the focus last: "right" from the menu returns to it, the scroll stays as it was (as in the catalog). */
+    private var lastFocus: View? = null
 
     /** A card or tile grows under the focus, as the cards of the catalog do. */
     private fun zoomOnFocus(view: View, onFocused: (() -> Unit)? = null) {
         view.setOnFocusChangeListener { v, focused ->
-            if (focused) onFocused?.invoke()
+            if (focused) {
+                lastFocus = v
+                onFocused?.invoke()
+            }
             v.animate().scaleX(if (focused) 1.1f else 1f).scaleY(if (focused) 1.1f else 1f)
                 .translationZ(if (focused) 8f else 0f).setDuration(150).start()
         }
@@ -114,6 +118,9 @@ class FavoritesPageFragment : Fragment() {
         lastHeader = null
         titleHolders.clear()
         firstFocus = null
+        // a rebuilt page starts from the top: the old cards are gone
+        lastFocus = null
+        scroll.scrollTo(0, 0)
         val scale = resources.displayMetrics.widthPixels / 1280f
         val pad = resources.getDimensionPixelSize(R.dimen.page_padding_start)
 
