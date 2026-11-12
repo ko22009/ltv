@@ -358,9 +358,21 @@ object Sync {
         Thread {
             runCatching {
                 val mark = fileMark(app, folderId(app))?.second
-                if (mark != null && mark != prefs(app).getString(MARK, null)) syncNow(app)
+                // another device wrote a copy, or this one has changes the Drive has not seen (a removed title, a new bookmark)
+                if (dirty(app) || (mark != null && mark != prefs(app).getString(MARK, null))) syncNow(app)
             }
         }.start()
+    }
+
+    /** This device has something the last agreed copy does not: it must go to the Drive, the other devices cannot ask for it. */
+    private fun dirty(context: Context): Boolean =
+        SyncMerge.json(local(context)).toString() != SyncMerge.json(SyncMerge.parse(prefs(context).getString(BASE, null))).toString()
+
+    /** The app goes to the background: local changes are sent at once, not at the next start. */
+    fun pushIfChanged(context: Context) {
+        if (!configured(context) || !linked(context)) return
+        val app = context.applicationContext
+        Thread { runCatching { if (dirty(app)) syncNow(app) } }.start()
     }
 
     /** Runs [call] with the access token, renewing it once when Google says it is stale. */
