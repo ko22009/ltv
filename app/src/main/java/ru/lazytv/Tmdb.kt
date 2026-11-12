@@ -241,6 +241,18 @@ object Tmdb {
     }
 
     /** What a card in a row shows besides the list data: the runtime and the genres. */
+    /** The rating ("7.4", empty when TMDB has none) and up to two genres of a title: what a card of a list shows besides the poster. */
+    fun cardInfo(context: Context, id: Long, tv: Boolean): Pair<String, String> {
+        val kind = if (tv) "tv" else "movie"
+        val language = Settings.string(context, Settings.LANGUAGE, "ru-RU")
+        val o = JSONObject(download(context, "$BASE/$kind/$id?api_key=${BuildConfig.TMDB_KEY}&language=$language"))
+        val rating = o.optDouble("vote_average", 0.0).takeIf { it > 0 }?.let { String.format(java.util.Locale.US, "%.1f", it) }.orEmpty()
+        val genres = o.optJSONArray("genres")?.let { a ->
+            (0 until a.length()).map { a.getJSONObject(it).str("name") }.filter { it.isNotEmpty() }
+        }.orEmpty().take(2).joinToString(", ")
+        return rating to genres
+    }
+
     class RowInfo(val runtime: Int, val genres: List<String>)
 
     private val rowInfoCache = java.util.concurrent.ConcurrentHashMap<String, RowInfo>()

@@ -147,6 +147,13 @@ class FavoritesFragment : Fragment() {
         }
 
         continueTitles.setItems(unfinished)
+        // the rating and genres of a title left half-way are asked for once, then the block is drawn again
+        if (unfinished.any { it.rating.isEmpty() && it.genre.isEmpty() }) {
+            val app = ctx.applicationContext
+            Thread {
+                if (ru.lazytv.TitleProgress.complete(app)) activity?.runOnUiThread { if (isAdded && _binding != null) refresh() }
+            }.start()
+        }
         binding.continueBlock.visibility = if (unfinished.isEmpty()) View.GONE else View.VISIBLE
 
         episodeRows.rows.clear()

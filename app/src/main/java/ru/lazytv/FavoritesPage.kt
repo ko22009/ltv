@@ -141,6 +141,10 @@ class FavoritesPageFragment : Fragment() {
 
         if (unfinished.isNotEmpty()) {
             addHeader("Продолжить просмотр", pad, scale)
+            if (unfinished.any { it.rating.isEmpty() && it.genre.isEmpty() }) {
+                val app = ctx.applicationContext
+                Thread { if (TitleProgress.complete(app)) activity?.runOnUiThread { if (isAdded) fill() } }.start()
+            }
             addGrid(unfinished.map { title ->
                 val holder = cardPresenter.onCreateViewHolder(content)
                 cardPresenter.onBindViewHolder(holder, title)

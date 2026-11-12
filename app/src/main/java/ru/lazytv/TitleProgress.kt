@@ -61,7 +61,27 @@ object TitleProgress {
 
     /** The titles left half-way, newest first: the "Продолжить просмотр" block. A title in it is not shown again among the bookmarks. */
     fun titles(context: Context): List<Title> = read(context).map {
-        Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, it.optBoolean("tv"), it.optString("year"))
+        Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, it.optBoolean("tv"), it.optString("year"),
+            it.optString("rating"), it.optString("genre"))
+    }
+
+    /**
+     * Records without the rating and genres (made by the player, which does not know them, or taken from the system row)
+     * ask TMDB once, so the card in the block looks like the other cards. Network: not on the main thread. True when
+     * something was filled in and the page should be drawn again.
+     */
+    @Synchronized
+    fun complete(context: Context): Boolean {
+        val list = read(context)
+        var changed = false
+        val filled = list.map { o ->
+            if (o.has("rating")) return@map o
+            val info = runCatching { Tmdb.cardInfo(context, o.optLong("id"), o.optBoolean("tv")) }.getOrNull() ?: return@map o
+            changed = true
+            JSONObject(o.toString()).put("rating", info.first).put("genre", info.second)
+        }
+        if (changed) write(context, filled)
+        return changed
     }
 
     fun get(context: Context, tv: Boolean, id: Long): JSONObject? = read(context).firstOrNull { same(it, tv, id) }
