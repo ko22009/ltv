@@ -18,22 +18,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/titlesList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:paddingStart="8dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="8dp" />
-
-            <!-- the films left half-way (also from another device): a plate with the heading on the first line, a carousel on the second -->
+            <!-- the titles left half-way, above the bookmarks (also from another device): a plate with the heading on the first line, a carousel on the second -->
             <LinearLayout
                 android:id="@+id/continueBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
                 android:orientation="vertical"
                 android:paddingBottom="8dp"
@@ -56,6 +47,15 @@
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp" />
             </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/titlesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingStart="8dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="8dp" />
 
             <TextView
                 android:id="@+id/episodesHeader"
