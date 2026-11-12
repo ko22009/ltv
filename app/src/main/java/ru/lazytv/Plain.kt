@@ -170,9 +170,11 @@ open class CardGridView(context: Context, private val columns: Int, private val 
      */
     override fun requestChildRectangleOnScreen(child: View, rect: Rect, immediate: Boolean): Boolean {
         if (stayWhenShown) {
-            val top = child.top + rect.top
-            val bottom = child.top + rect.bottom
-            if (top >= 0 && bottom <= height) return false
+            // the card itself, without the gap round it. The last row may stand below the grid's own edge (in the page's bottom
+            // padding) and still be wholly on the screen: that counts as shown, so the bottom is checked against the screen
+            val onScreen = IntArray(2).also { child.getLocationOnScreen(it) }
+            val screenBottom = rootView.height
+            if (child.top >= -paddingTop && onScreen[1] + child.height <= screenBottom) return false
         }
         return super.requestChildRectangleOnScreen(child, rect, immediate)
     }
