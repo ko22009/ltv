@@ -226,7 +226,7 @@ class DetailsActivity : Activity() {
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(dp(m(389, 0)), 0, dp(m(24, 0)), 0)
         // watching opens the first variant found on the video sites; without any it falls back to torrents
-        watchButton = button(MenuIcons.PLAY, "Смотреть") { startWatching(name) }.apply {
+        watchButton = button(MenuIcons.PLAY, watchCaption()) { startWatching(name) }.apply {
             id = View.generateViewId()
             isLongClickable = true
             setOnLongClickListener {
@@ -254,7 +254,7 @@ class DetailsActivity : Activity() {
         }
         if (mobile) watchButton.apply {
             // a wide button in the accent colour of the app with the caption; the corner is the same as the bookmark tile beside it (14 dp)
-            text = "Смотреть"
+            text = watchCaption()
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scale)
             typeface = Typeface.DEFAULT_BOLD
             compoundDrawablePadding = dp(10)
@@ -1048,8 +1048,27 @@ class DetailsActivity : Activity() {
         }
     }
 
+    /** "Продолжить" when the title was left half-way on this or another device (the synced progress), otherwise "Смотреть". */
+    private fun watchCaption(): String =
+        if (TitleProgress.get(this, currentTitle.tv, currentTitle.id) != null) "Продолжить" else "Смотреть"
+
+    private fun refreshWatchCaption() {
+        if (!::watchButton.isInitialized) return
+        val caption = watchCaption()
+        val shown = if (mobile) caption else caption.uppercase()
+        if (watchButton.text.toString() == shown) return
+        watchButton.text = shown
+        watchButton.contentDescription = caption
+        // the phone button keeps the icon and the caption in the middle: the padding is counted again for the new width
+        if (mobile) watchButton.post {
+            val pad = (((watchButton.width) - dp(22) - watchButton.compoundDrawablePadding - watchButton.paint.measureText(shown)) / 2).toInt().coerceAtLeast(0)
+            watchButton.setPadding(pad, 0, pad, 0)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        refreshWatchCaption()
         if (backdropsStarted && backdrops.size >= 2) {
             backdropHandler.removeCallbacks(backdropTick)
             backdropHandler.postDelayed(backdropTick, 20_000L)
