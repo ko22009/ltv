@@ -71,7 +71,7 @@ object Links {
                 setBackgroundColor(Color.WHITE)
                 setPadding(px(8), px(8), px(8), px(8))
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                contentDescription = "QR-код страницы поддержки на Boosty"
+                contentDescription = "QR-код страницы поддержки проекта"
             }, LinearLayout.LayoutParams(side, side).apply {
                 setMargins(0, 0, 0, px(12))
             })

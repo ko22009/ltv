@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поддержать LazyTV</title>
+</head>
+<body>
+  <form id="donate" method="post" action="https://yoomoney.ru/quickpay/confirm">
+    <input type="hidden" name="receiver" value="4100119683740899">
+    <input type="hidden" name="quickpay-form" value="button">
+    <input type="hidden" name="paymentType" value="AC">
+    <input type="hidden" name="sum" value="100">
+    <p>Переход к оплате 100 ₽ через ЮMoney.</p>
+    <button type="submit">Перейти к оплате</button>
+  </form>
+  <script>document.getElementById('donate').submit();</script>
+</body>
+</html>
