@@ -1283,6 +1283,20 @@ class DetailsActivity : Activity() {
      * first one is not necessarily the season the viewer wants.
      */
     private fun openDefaultVariant(name: String) {
+        // a series left half-way (here or on another device): no question about the source, the release of that season is
+        // opened and the episode starts itself; when it cannot be found the list of episodes opens instead
+        val left = if (currentTitle.tv) TitleProgress.get(this, true, currentTitle.id)?.takeIf { it.optInt("episode") > 0 } else null
+        if (left != null && variants.isNotEmpty()) {
+            val at = left.optInt("season") to left.optInt("episode")
+            fun seasonOf(v: Variant) = Regex("(\\d+)\\s*сезон|сезон\\s*(\\d+)", RegexOption.IGNORE_CASE).find(v.title + " " + v.note)
+                ?.groupValues?.drop(1)?.firstOrNull { it.isNotEmpty() }?.toIntOrNull()
+            val release = variants.firstOrNull { seasonOf(it) == at.first }
+                ?: Sources.best(variants, currentTitle.year, currentTitle.tv, listOf(name, originalTitle))
+            if (release != null) {
+                openVariant(release, true, resume = at)
+                return
+            }
+        }
         if (currentTitle.tv && variants.size > 1) {
             showSourceDialog(name)
             return
@@ -1308,7 +1322,7 @@ class DetailsActivity : Activity() {
      * The release is asked for its videos first: a film with one video starts in the player straight from this card,
      * and only a release with several (a series) opens the episode page. No empty page flashes in between.
      */
-    private fun openVariant(v: Variant, fromDefault: Boolean = false) {
+    private fun openVariant(v: Variant, fromDefault: Boolean = false, resume: Pair<Int, Int>? = null) {
         if (opening) return
         setWatchLoading(true)
         Thread {
@@ -1337,6 +1351,17 @@ class DetailsActivity : Activity() {
                     return@onUi
                 }
                 History.add(this, historyTitle())
+                // continuing a series: the episode left on the other device starts at once, if this release has it
+                val resumeAt = resume?.let { at -> episodes.indexOfFirst { TitleProgress.episodeOf(it.title) == at } } ?: -1
+                if (resumeAt >= 0) {
+                    playEpisode(
+                        this, v, episodes, resumeAt, choose = false,
+                        mediaTitle = currentName.ifEmpty { currentTitle.name },
+                        originalTitle = originalTitle, year = currentTitle.year, tv = currentTitle.tv, poster = posterPath,
+                        tmdbId = currentTitle.id,
+                    )
+                    return@onUi
+                }
                 // only a film with one video starts at once; a series always shows its episodes to choose from
                 if (episodes.size == 1 && !currentTitle.tv) {
                     val wanted = listOf(currentName.ifEmpty { currentTitle.name }, originalTitle)
