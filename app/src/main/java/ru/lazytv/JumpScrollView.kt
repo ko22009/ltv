@@ -12,6 +12,12 @@ import android.widget.ScrollView
  * Here a card within a whole screen takes the focus at once, and the page follows it.
  */
 open class JumpScrollView(context: Context) : ScrollView(context) {
+    init {
+        // the stock view keeps a fading edge (12dp) clear of the focused card: a card that is wholly on the screen, but near its
+        // edge, still moved the page a little. No fading edge, no such shift.
+        isVerticalFadingEdgeEnabled = false
+    }
+
     override fun getMaxScrollAmount(): Int = height
 
     /**
