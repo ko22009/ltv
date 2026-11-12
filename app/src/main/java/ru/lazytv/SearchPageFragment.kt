@@ -249,8 +249,8 @@ class SearchPageFragment : Fragment() {
     /** The history changes while a card is open (a title is watched): the grid is filled again on return. */
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        // another page is opened: the grid goes back to the top, so the next visit does not start from a shifted position
-        if (::grid.isInitialized) {
+        // another page is opened: the viewing history keeps its scroll, the result of a phrase goes back to the top
+        if (::grid.isInitialized && !showingRecent) {
             grid.stopScroll()
             grid.scrollToPosition(0)
         }
@@ -313,7 +313,11 @@ class SearchPageFragment : Fragment() {
         }
         // marks of titles that are gone from the history make no sense
         picked.retainAll(recent.map { key(it) }.toSet())
-        setCards(recent)
+        // the same number of cards: they are replaced in place, so the scroll and the focus stay where they were (back from a card)
+        if (cards.size() == recent.size && recent.isNotEmpty()) {
+            recent.forEachIndexed { i, t -> if (cards.get(i) != t) cards.replace(i, t) }
+            cards.notifyArrayItemRangeChanged(0, cards.size())
+        } else setCards(recent)
         recentHeader.visibility = if (showingRecent) View.VISIBLE else View.GONE
         message.visibility = View.GONE
         renderRecentActions()
