@@ -1,6 +1,9 @@
 package ru.lazytv
 
 import android.content.Context
+import android.graphics.Rect
+import android.view.FocusFinder
+import android.view.View
 import android.widget.ScrollView
 
 /**
@@ -10,4 +13,21 @@ import android.widget.ScrollView
  */
 open class JumpScrollView(context: Context) : ScrollView(context) {
     override fun getMaxScrollAmount(): Int = height
+
+    /**
+     * "Down" on the last card: the stock view scrolls the rest of the page (the bottom padding, a caption) a little. When the
+     * focused view is fully shown and there is nothing to focus below, the page stays where it is.
+     */
+    override fun arrowScroll(direction: Int): Boolean {
+        val current: View? = findFocus()
+        if (direction == View.FOCUS_DOWN && current != null && current !== this &&
+            FocusFinder.getInstance().findNextFocus(this, current, direction) == null
+        ) {
+            val box = Rect()
+            current.getDrawingRect(box)
+            offsetDescendantRectToMyCoords(current, box)
+            if (box.top >= scrollY && box.bottom <= scrollY + height) return true
+        }
+        return super.arrowScroll(direction)
+    }
 }
