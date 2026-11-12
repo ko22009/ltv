@@ -208,13 +208,15 @@ class FavoritesPageFragment : Fragment() {
     private var lastHeader: View? = null
 
     private fun addHeader(text: String, pad: Int, scale: Float, first: Boolean = false) {
-        lastHeader = TextView(requireContext()).apply {
+        val header = TextView(requireContext()).apply {
             this.text = text
             setTextColor(TEXT_MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
             setPadding(pad, if (first) 0 else (18 * scale).toInt(), 0, (6 * scale).toInt())
         }
-        content.addView(lastHeader)
+        // the heading of the first block is not an anchor: the page scrolls to its very top, to the page title
+        lastHeader = if (first) null else header
+        content.addView(header)
     }
 
     /** Lays the views out in rows of [perRow] (five by default), each in a cell of the grid pitch. */
@@ -236,7 +238,13 @@ class FavoritesPageFragment : Fragment() {
                 }
                 val lp = FrameLayout.LayoutParams(own?.width ?: -2, own?.height ?: -2)
                 (own as? ViewGroup.MarginLayoutParams)?.let { lp.topMargin = it.topMargin; lp.bottomMargin = it.bottomMargin }
-                zoomOnFocus(view, if (rowIndex == 0) ({ val top = if (anchor == null || anchor.top < 0) 0 else anchor.top; if (top < scroll.scrollY) scroll.smoothScrollTo(0, top) }) else null)
+                zoomOnFocus(view, if (rowIndex == 0) ({
+                    // after the platform has shown the card itself: the heading above it must be shown too (the first block: the page title)
+                    scroll.post {
+                        val top = if (anchor == null || anchor.top < 0) 0 else anchor.top
+                        if (top < scroll.scrollY) scroll.smoothScrollTo(0, top)
+                    }
+                }) else null)
                 cell.addView(view, lp)
                 row.addView(cell, LinearLayout.LayoutParams(pitch, -2))
                 if (firstFocus == null) firstFocus = view
