@@ -43,9 +43,9 @@
         <item name="android:textStyle">bold</item>
     </style>
     <style name="Widget.LazyMobile.CatalogChip" parent="Widget.LazyMobile.Chip">
-        <item name="android:textSize">18sp</item>
-        <item name="chipMinHeight">48dp</item>
-        <item name="ensureMinTouchTargetSize">true</item>
+        <item name="android:textSize">16sp</item>
+        <item name="chipMinHeight">40dp</item>
+        <item name="ensureMinTouchTargetSize">false</item>
     </style>
     <!-- bottom menu of the phone: dark plate, the active section is a plate with the teal outline (no fill) -->
     <style name="Widget.LazyMobile.BottomNav" parent="Widget.Material3.BottomNavigationView">
