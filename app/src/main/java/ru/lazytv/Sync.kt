@@ -33,7 +33,6 @@ object Sync {
     private const val FAILED_TEXT = "failed_text"
 
     /** Settings key: look for changes quietly on start (on by default after linking). */
-    const val AUTO = "sync_auto"
 
     private const val DEVICE_URL = "https://oauth2.googleapis.com/device/code"
     private const val TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -49,7 +48,6 @@ object Sync {
     private const val SEARCH_LIMIT = 20
 
     /** A start check is skipped when the last one is fresher than this: opening screens back and forth must not mean requests. */
-    private const val MIN_GAP_MS = 10 * 60 * 1000L
 
     private const val PREFS_FAVORITES = "favorites"
     private const val PREFS_HISTORY = "history"
@@ -199,11 +197,9 @@ object Sync {
         }
     }
 
-    /** Quiet check when the app starts: only when linked, switched on and the last pass is not fresh. */
+    /** Quiet pass on every app start, whenever Google is linked (no switch, no minimum gap). */
     fun startCheck(context: Context) {
         if (!configured(context) || !linked(context)) return
-        if (!Settings.bool(context, AUTO)) return
-        if (System.currentTimeMillis() - lastSync(context) < MIN_GAP_MS) return
         val app = context.applicationContext
         Thread { runCatching { syncNow(app) } }.start()
     }
