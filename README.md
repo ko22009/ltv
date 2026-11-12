@@ -9,7 +9,7 @@
 - Политика конфиденциальности: [tv.sdkcache.ru/policy](https://tv.sdkcache.ru/policy)
 
 Приложение распространяется готовым APK через релизы на GitHub, в Google Play не публикуется.
-Подробности: [docs/release.md](docs/release.md). `minSdk` 21, `targetSdk` 36, версия 1.0.0.
+Подробности: [docs/release.md](docs/release.md). `minSdk` 21, `targetSdk` 36, версия 1.0.1.
 
 ## Что нужно
 
