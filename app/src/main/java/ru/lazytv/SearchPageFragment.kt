@@ -182,6 +182,7 @@ class SearchPageFragment : Fragment() {
             }
         }
         grid = titleCardGrid(requireContext(), scale, cards, COLUMNS)
+        grid.stayWhenShown = true
         // up from the first row goes to the nearest controls above instead of getting stuck inside the grid
         grid.keyIntercept = { event ->
             if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP &&

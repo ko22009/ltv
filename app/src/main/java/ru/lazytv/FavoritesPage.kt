@@ -75,6 +75,8 @@ class FavoritesPageFragment : Fragment() {
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
+        // another page is opened: the next visit starts from the top, a scroll left here would move the first card a little
+        if (::scroll.isInitialized) scroll.scrollTo(0, 0)
         if (!hidden) refreshIfChanged()
     }
 

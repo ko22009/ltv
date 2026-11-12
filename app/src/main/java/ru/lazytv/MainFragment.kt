@@ -695,6 +695,7 @@ class SettingsPageFragment : Fragment() {
         val side = px(20)
         val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap, titleCards = false)
         this.grid = grid
+        grid.stayWhenShown = true
         val gridWidth = COLUMNS * (px(290) + gap) + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
             // half of the gap more to the left: the first tile starts exactly under the caption, like the cards of the other grids

@@ -130,6 +130,9 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
 open class CardGridView(context: Context, private val columns: Int, private val gap: Int, private val hGap: Int = gap) : RecyclerView(context) {
     var onSelected: ((Int) -> Unit)? = null
     var keyIntercept: ((KeyEvent) -> Boolean)? = null
+
+    /** On for the pages that fit the screen (settings, recent titles); the catalog lists keep the stock scrolling. */
+    var stayWhenShown = false
     private var chosen = 0
 
     var selectedPosition: Int
@@ -166,9 +169,11 @@ open class CardGridView(context: Context, private val columns: Int, private val 
      * last row), still moved the whole grid a little. A card that is wholly inside the view is left where it is.
      */
     override fun requestChildRectangleOnScreen(child: View, rect: Rect, immediate: Boolean): Boolean {
-        val top = child.top + rect.top
-        val bottom = child.top + rect.bottom
-        if (top >= 0 && bottom <= height) return false
+        if (stayWhenShown) {
+            val top = child.top + rect.top
+            val bottom = child.top + rect.bottom
+            if (top >= 0 && bottom <= height) return false
+        }
         return super.requestChildRectangleOnScreen(child, rect, immediate)
     }
 
