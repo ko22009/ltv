@@ -191,6 +191,17 @@ open class CardGridView(context: Context, private val columns: Int, private val 
         return super.dispatchKeyEvent(event)
     }
 
+    /** Back from the menu or another screen: the focus returns to the card that was chosen last (the first one on a new list). */
+    fun focusChosen() {
+        val count = adapter?.itemCount ?: 0
+        if (count == 0) requestFocus() else moveTo(chosen.coerceIn(0, count - 1))
+    }
+
+    /** A new list starts: the first card is the chosen one again. */
+    fun resetChosen() {
+        chosen = 0
+    }
+
     /** Puts the focus on the card at [position], making it first when it is off screen. */
     private fun moveTo(position: Int) {
         val ready = findViewHolderForAdapterPosition(position)

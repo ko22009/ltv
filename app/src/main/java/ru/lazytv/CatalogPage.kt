@@ -218,7 +218,7 @@ class CatalogPageFragment : Fragment() {
             // a button holds the focus either because the system put it there when the app opened (nobody has pressed a key yet:
             // the first card must be active once the films stand) or because the user came there: that one stays
             val onButton = listOf(resetChip, filterChip, sortChip).any { it.hasFocus() }
-            if (always || held == null || (onButton && !userSteered)) grid.requestFocus()
+            if (always || held == null || (onButton && !userSteered)) grid.focusChosen()
         }
         // [force]: the user pressed "right" or OK on the menu, the focus sits on the menu item and must leave it; the
         // delayed repeats below stay careful so they do not pull the focus back after the user has gone to the menu
@@ -334,6 +334,7 @@ class CatalogPageFragment : Fragment() {
     private fun startOver() {
         loadJob?.cancel()
         cards.clear()
+        grid.resetChosen()
         nextPage = 1
         busy = false
         finished = false
