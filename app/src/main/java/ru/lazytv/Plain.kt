@@ -143,7 +143,22 @@ open class CardGridView(context: Context, private val columns: Int, private val 
         }
 
     init {
-        layoutManager = GridLayoutManager(context, columns)
+        layoutManager = object : GridLayoutManager(context, columns) {
+            // the row below the screen is made in advance: "down" then finds it and the grid scrolls to it smoothly, instead of
+            // jumping to a row that was not made yet (a jerk on every press)
+            override fun calculateExtraLayoutSpace(state: State, extraLayoutSpace: IntArray) {
+                super.calculateExtraLayoutSpace(state, extraLayoutSpace)
+                extraLayoutSpace[1] = maxOf(extraLayoutSpace[1], this@CardGridView.height / 2)
+            }
+
+            // RecyclerView asks its layout manager (not its own method) where to scroll for a focused card
+            override fun requestChildRectangleOnScreen(
+                parent: RecyclerView, child: View, rect: Rect, immediate: Boolean, focusedChildVisible: Boolean,
+            ): Boolean {
+                if (stayWhenShown && shownWhole(child)) return false
+                return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+            }
+        }
         itemAnimator = null
         isFocusable = true
         descendantFocusability = FOCUS_AFTER_DESCENDANTS
@@ -168,15 +183,11 @@ open class CardGridView(context: Context, private val columns: Int, private val 
      * brings a focused card inside the padding, so a card standing wholly on the screen, but in that room (the first and the
      * last row), still moved the whole grid a little. A card that is wholly inside the view is left where it is.
      */
-    override fun requestChildRectangleOnScreen(child: View, rect: Rect, immediate: Boolean): Boolean {
-        if (stayWhenShown) {
-            // the card itself, without the gap round it. The last row may stand below the grid's own edge (in the page's bottom
-            // padding) and still be wholly on the screen: that counts as shown, so the bottom is checked against the screen
-            val onScreen = IntArray(2).also { child.getLocationOnScreen(it) }
-            val screenBottom = rootView.height
-            if (child.top >= -paddingTop && onScreen[1] + child.height <= screenBottom) return false
-        }
-        return super.requestChildRectangleOnScreen(child, rect, immediate)
+    private fun shownWhole(child: View): Boolean {
+        // the card itself, without the gap round it. The last row may stand below the grid's own edge (in the page's bottom
+        // padding) and still be wholly on the screen: that counts as shown, so the bottom is checked against the screen
+        val onScreen = IntArray(2).also { child.getLocationOnScreen(it) }
+        return child.top >= -paddingTop && onScreen[1] + child.height <= rootView.height
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
