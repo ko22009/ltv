@@ -246,7 +246,7 @@ class EpisodesActivity : Activity() {
                     if (focus !in episodes.indices && !voiceSwitched) {
                         // left on another device: the episode with the same season and number in this source
                         val left = TitleProgress.get(this, true, intent.getLongExtra("tmdbId", 0L))
-                        if (left != null) {
+                        if (left != null && left.optInt("episode") > 0) {
                             val at = left.optInt("season") to left.optInt("episode")
                             focus = episodes.indexOfFirst { TitleProgress.episodeOf(it.title) == at }
                             if (focus < 0) android.widget.Toast.makeText(this, "В этом источнике нет ${at.first} сезона ${at.second} серии", android.widget.Toast.LENGTH_LONG).show()

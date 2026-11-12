@@ -102,10 +102,10 @@ object ContinueWatching {
     /**
      * Once, after the update that brought the synced progress: the films already left half-way in the row of this device
      * (the system keeps their place) become records of [TitleProgress], so the other devices get them with the next sync.
-     * Series are not taken: the row does not know the season and the episode.
+     * A series is taken without season and episode (the row does not know them): the other device shows it and opens its card.
      */
     fun seedProgress(context: Context) {
-        if (Settings.bool(context, "progress_seeded", false)) return
+        if (Settings.bool(context, "progress_seeded_2", false)) return
         runCatching {
             val columns = arrayOf(
                 TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID, TvContractCompat.WatchNextPrograms.COLUMN_TITLE,
@@ -115,18 +115,19 @@ object ContinueWatching {
             context.contentResolver.query(TvContractCompat.WatchNextPrograms.CONTENT_URI, columns, null, null, null)?.use { c ->
                 while (c.moveToNext()) {
                     val id = c.getString(0).orEmpty()
-                    if (!id.startsWith("false:")) continue
+                    val tv = id.startsWith("true:")
+                    if (!tv && !id.startsWith("false:")) continue
                     val tmdb = id.substringAfter(':').toLongOrNull() ?: continue
                     val pos = c.getInt(2).toLong()
                     val dur = c.getInt(3).toLong()
-                    if (pos < 5_000L || dur <= 0L || TitleProgress.get(context, false, tmdb) != null) continue
+                    if (pos < 5_000L || dur <= 0L || TitleProgress.get(context, tv, tmdb) != null) continue
                     val poster = c.getString(4).orEmpty().substringAfter("/w780", "").ifEmpty { null }
                     val year = c.getString(5).orEmpty().substringBefore(" ").takeIf { it.length == 4 && it.all(Char::isDigit) }.orEmpty()
-                    TitleProgress.put(context, false, tmdb, c.getString(1).orEmpty(), poster, year, pos, dur)
+                    TitleProgress.put(context, tv, tmdb, c.getString(1).orEmpty(), poster, year, pos, dur)
                 }
             }
         }
-        Settings.setBool(context, "progress_seeded", true)
+        Settings.setBool(context, "progress_seeded_2", true)
     }
 
     /** Removes the title from the row (watched to the end). */
