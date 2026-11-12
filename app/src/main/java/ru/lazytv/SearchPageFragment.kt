@@ -247,6 +247,15 @@ class SearchPageFragment : Fragment() {
     }
 
     /** The history changes while a card is open (a title is watched): the grid is filled again on return. */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        // another page is opened: the grid goes back to the top, so the next visit does not start from a shifted position
+        if (::grid.isInitialized) {
+            grid.stopScroll()
+            grid.scrollToPosition(0)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         showRecent()

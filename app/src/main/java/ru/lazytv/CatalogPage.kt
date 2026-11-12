@@ -125,6 +125,8 @@ class CatalogPageFragment : Fragment() {
             override fun onCreate(holder: ItemList.Holder) {
                 holder.itemView.setOnClickListener {
                     (holder.item as? Title)?.let {
+                        // the card that was opened gets the focus back when the page is shown again
+                        openedPosition = holder.adapterPosition
                         startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(it.toExtras()))
                     }
                 }
@@ -278,6 +280,22 @@ class CatalogPageFragment : Fragment() {
         }
     }
 
+    /** The position of the card that was opened: the focus returns to it, not to the card of the row before. */
+    private var openedPosition = -1
+
+    private fun restoreOpenedFocus() {
+        val position = openedPosition.takeIf { it in 0 until cards.size() } ?: return
+        openedPosition = -1
+        fun focus(): Boolean = grid.findViewHolderForAdapterPosition(position)?.itemView?.requestFocus() ?: false
+        grid.post {
+            if (!isAdded || isHidden) return@post
+            if (!focus()) {
+                grid.scrollToPosition(position)
+                grid.post { focus() }
+            }
+        }
+    }
+
     /** The filters or the sort could have changed on their own screens: the list is built from the first page again. */
     override fun onResume() {
         super.onResume()
@@ -290,6 +308,7 @@ class CatalogPageFragment : Fragment() {
         } else if (cards.size() > 0) {
             // a title marked watched on its card comes back dimmed in this grid too
             cards.notifyArrayItemRangeChanged(0, cards.size())
+            restoreOpenedFocus()
         }
     }
 
