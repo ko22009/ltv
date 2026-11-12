@@ -261,7 +261,7 @@ open class SettingsScreen : Fragment() {
             clipToPadding = false
             setPadding(0, px(if (mobile) 12 else 20), 0, px(16))
         }
-        root.addView(ScrollView(ctx).apply {
+        root.addView(JumpScrollView(ctx).apply {
             isVerticalScrollBarEnabled = false
             clipChildren = false
             clipToPadding = false

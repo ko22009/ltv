@@ -40,7 +40,7 @@ class FavoritesPageFragment : Fragment() {
             clipChildren = false
             clipToPadding = false
         }
-        scroll = ScrollView(ctx).apply {
+        scroll = JumpScrollView(ctx).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             clipChildren = false
@@ -95,8 +95,9 @@ class FavoritesPageFragment : Fragment() {
     fun focusFirst(): Boolean = firstFocus?.requestFocus() ?: false
 
     /** A card or tile grows under the focus, as the cards of the catalog do. */
-    private fun zoomOnFocus(view: View) {
+    private fun zoomOnFocus(view: View, onFocused: (() -> Unit)? = null) {
         view.setOnFocusChangeListener { v, focused ->
+            if (focused) onFocused?.invoke()
             v.animate().scaleX(if (focused) 1.1f else 1f).scaleY(if (focused) 1.1f else 1f)
                 .translationZ(if (focused) 8f else 0f).setDuration(150).start()
         }
@@ -107,6 +108,7 @@ class FavoritesPageFragment : Fragment() {
         signature = state()
         watchedMarks = Watched.revision(ctx)
         content.removeAllViews()
+        lastHeader = null
         titleHolders.clear()
         firstFocus = null
         val scale = resources.displayMetrics.widthPixels / 1280f
@@ -203,18 +205,23 @@ class FavoritesPageFragment : Fragment() {
     }
 
     /** [first]: right under the page title, which already keeps the distance to the first block (as the cards of a plain list). */
+    private var lastHeader: View? = null
+
     private fun addHeader(text: String, pad: Int, scale: Float, first: Boolean = false) {
-        content.addView(TextView(requireContext()).apply {
+        lastHeader = TextView(requireContext()).apply {
             this.text = text
             setTextColor(TEXT_MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
             setPadding(pad, if (first) 0 else (18 * scale).toInt(), 0, (6 * scale).toInt())
-        })
+        }
+        content.addView(lastHeader)
     }
 
     /** Lays the views out in rows of [perRow] (five by default), each in a cell of the grid pitch. */
     private fun addGrid(views: List<View>, pad: Int, pitch: Int, perRow: Int = 5) {
-        views.chunked(perRow).forEach { chunk ->
+        // the first row of a block brings its heading into view (the top of the page for the first block): one press of down or up
+        val anchor = lastHeader
+        views.chunked(perRow).forEachIndexed { rowIndex, chunk ->
             val row = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 clipChildren = false
@@ -229,7 +236,7 @@ class FavoritesPageFragment : Fragment() {
                 }
                 val lp = FrameLayout.LayoutParams(own?.width ?: -2, own?.height ?: -2)
                 (own as? ViewGroup.MarginLayoutParams)?.let { lp.topMargin = it.topMargin; lp.bottomMargin = it.bottomMargin }
-                zoomOnFocus(view)
+                zoomOnFocus(view, if (rowIndex == 0) ({ scroll.smoothScrollTo(0, if (anchor == null || anchor.top < 0) 0 else anchor.top) }) else null)
                 cell.addView(view, lp)
                 row.addView(cell, LinearLayout.LayoutParams(pitch, -2))
                 if (firstFocus == null) firstFocus = view

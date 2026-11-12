@@ -392,7 +392,7 @@ class DetailsActivity : Activity() {
         // on the TV the poster lies over the banner; on a phone it stands in the main block, left of the title
         if (!mobile) root.addView(posterBox, FrameLayout.LayoutParams(dp(170), dp(256)).apply { leftMargin = dp(176); topMargin = dp(228) })
 
-        val scroll = ScrollView(this).apply {
+        val scroll = JumpScrollView(this).apply {
             isFocusable = false
             isVerticalScrollBarEnabled = false
         }
