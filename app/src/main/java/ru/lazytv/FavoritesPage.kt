@@ -140,7 +140,7 @@ class FavoritesPageFragment : Fragment() {
         val pitch = tvGridPitch(scale)
 
         if (unfinished.isNotEmpty()) {
-            addHeader("Продолжить просмотр", pad, scale)
+            addHeader("Продолжить просмотр", pad, scale, first = true)
             if (unfinished.any { it.rating.isEmpty() && it.genre.isEmpty() }) {
                 val app = ctx.applicationContext
                 Thread { if (TitleProgress.complete(app)) activity?.runOnUiThread { if (isAdded) fill() } }.start()
@@ -202,12 +202,13 @@ class FavoritesPageFragment : Fragment() {
         content.addView(View(ctx), LinearLayout.LayoutParams(1, (24 * scale).toInt()))
     }
 
-    private fun addHeader(text: String, pad: Int, scale: Float) {
+    /** [first]: right under the page title, which already keeps the distance to the first block (as the cards of a plain list). */
+    private fun addHeader(text: String, pad: Int, scale: Float, first: Boolean = false) {
         content.addView(TextView(requireContext()).apply {
             this.text = text
             setTextColor(TEXT_MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
-            setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
+            setPadding(pad, if (first) 0 else (18 * scale).toInt(), 0, (6 * scale).toInt())
         })
     }
 
