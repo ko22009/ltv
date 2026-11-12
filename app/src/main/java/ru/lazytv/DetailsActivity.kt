@@ -898,6 +898,8 @@ class DetailsActivity : Activity() {
                 row.addView(text("★ $value", 18f, color), LinearLayout.LayoutParams(0, -2, 1f))
             } else {
                 val valueView = text(value, 18f, Color.WHITE)
+                // phone: one line like the grey bar it replaces, a long value ends with an ellipsis (the rows do not change height)
+                if (mobile) { valueView.maxLines = 1; valueView.ellipsize = android.text.TextUtils.TruncateAt.END }
                 row.addView(valueView, LinearLayout.LayoutParams(0, -2, 1f))
             }
             table.addView(row)
