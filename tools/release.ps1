@@ -6,7 +6,8 @@ param(
 # The version also stands in app/build.gradle.kts (versionName, versionCode): bump it there first.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$env:JAVA_HOME = "<JDK 17>"
+if (-not $env:JAVA_HOME) { throw "set JAVA_HOME to a JDK 17 folder (docs/workflow.md)" }
+if (-not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME "bin\java.exe"))) { throw "JAVA_HOME does not look like a JDK: $env:JAVA_HOME" }
 
 # Gradle writes warnings to stderr; with Stop that would abort the script, so the build runs with Continue
 $ErrorActionPreference = "Continue"

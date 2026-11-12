@@ -27,19 +27,19 @@ TMDB_KEY=ваш_ключ_tmdb
 ## Сборка и запуск
 
 ```powershell
-$env:JAVA_HOME='<JDK 17>'
-& '<проект>\gradlew.bat' -p <проект> assembleDebug     # разработка, DebugSeed
-& '<проект>\tools\release.ps1' -Version 1.0.0                    # релиз в dist
+$env:JAVA_HOME = '<папка JDK 17>'
+.\gradlew.bat assembleDebug          # разработка, DebugSeed
+.\tools\release.ps1 -Version 1.0.0   # релиз в dist
 ```
 
 APK для разработки: `app/build/outputs/apk/debug/app-debug.apk`. Релизные файлы:
 `dist/LazyTV-1.0.0.apk` и `dist/SHA256SUMS.txt`.
 
-Установка и запуск (эмулятор `emulator-5554`, для приставки подставить её адрес):
+Установка и запуск (адрес устройства смотреть в `adb devices`):
 
 ```bash
-adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
-adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true
+adb -s <устройство> install -r app/build/outputs/apk/debug/app-debug.apk
+adb -s <устройство> shell am start -n ru.lazytv/.MainActivity --ez restore true
 ```
 
 Ключ `restore` возвращает на экран, который был открыт до обновления.
