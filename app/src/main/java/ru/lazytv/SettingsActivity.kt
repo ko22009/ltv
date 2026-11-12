@@ -464,7 +464,6 @@ open class SettingsScreen : Fragment() {
             listOf("any" to "Любая", "ru" to "Русская", "original" to "Оригинал с субтитрами"))
         choice("Что предлагать первым", Settings.SOURCE_MODE, "sites", listOf("sites" to "Сайты", "torrents" to "Торренты"))
         check("Запоминать позицию", "Продолжать с места остановки", Settings.REMEMBER_POSITION)
-        check("Скрывать просмотренное", "Не показывать в каталоге фильмы и сериалы, отмеченные просмотренными", Settings.HIDE_WATCHED, default = false)
         check("Следующая серия сама", "После окончания включать следующую серию из списка", Settings.AUTO_NEXT)
 
         section("Торренты и адреса")
@@ -482,6 +481,7 @@ open class SettingsScreen : Fragment() {
         section("Каталог")
         choice("Язык названий и описаний", Settings.LANGUAGE, "ru-RU",
             listOf("ru-RU" to "Русский", "en-US" to "English", "uk-UA" to "Українська"))
+        check("Скрывать просмотренное", "Не показывать в каталоге фильмы и сериалы, отмеченные просмотренными", Settings.HIDE_WATCHED, default = false)
         check("Строка «Популярное» на главном экране TV",
             "Рекомендации в ленте Android TV (если лаунчер их показывает)", Settings.RECOMMENDATIONS)
 
