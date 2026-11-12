@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
-const val SUPPORT_URL = "https://boosty.to/ko22009"
+const val SUPPORT_URL = "https://boosty.to/ko22009/donate"
 /** Colour of the inactive left-menu icons; the logo under the menu uses the same one. */
 private val NAV_INACTIVE_COLOR: Int get() = TEXT_MUTED
 
