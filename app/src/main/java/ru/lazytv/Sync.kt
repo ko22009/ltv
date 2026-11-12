@@ -29,6 +29,7 @@ object Sync {
     private const val ACCESS = "access_token"
     private const val EXPIRES = "access_expires"
     private const val LAST_AT = "last_at"
+    private const val MARK = "remote_mark"
     private const val FAILED_AT = "failed_at"
     private const val FAILED_TEXT = "failed_text"
 
@@ -187,8 +188,10 @@ object Sync {
             apply(context, merged)
             val text = SyncMerge.json(merged, System.currentTimeMillis()).toString()
             upload(context, text, folder)
+            // remember our own copy, so the next look at Drive does not take it for somebody else's
+            val mark = runCatching { fileMark(context, folder)?.second }.getOrNull()
             prefs(context).edit().putString(BASE, text).putLong(LAST_AT, System.currentTimeMillis())
-                .remove(FAILED_TEXT).apply()
+                .putString(MARK, mark).remove(FAILED_TEXT).apply()
             return "Синхронизировано: закладки ${merged.favorites.size}, история ${merged.history.size}, поиск ${merged.search.size}"
         } catch (e: Throwable) {
             prefs(context).edit().putLong(FAILED_AT, System.currentTimeMillis())
@@ -309,14 +312,33 @@ object Sync {
     }
 
     /** The copy in the folder, the newest one if an old removal was interrupted. */
-    private fun fileId(context: Context, folder: String): String? {
+    private fun fileId(context: Context, folder: String): String? = fileMark(context, folder)?.first
+
+    /** The newest copy as (id, id + modified time): the second part changes whenever any device writes a copy. */
+    private fun fileMark(context: Context, folder: String): Pair<String, String>? {
         val query = URLEncoder.encode("name='$FILE_NAME' and trashed=false and '$folder' in parents", "UTF-8")
-        val url = "$FILES?fields=files(id)&orderBy=modifiedTime%20desc&q=$query"
+        val url = "$FILES?fields=files(id,modifiedTime)&orderBy=modifiedTime%20desc&q=$query"
         val reply = authorized(context) { send(url, "GET", null, null, it) }
         if (reply.code == 404) return null
         if (reply.code !in 200..299) throw IllegalStateException("Google Диск не отвечает (${reply.code})")
-        val files = JSONObject(reply.text).optJSONArray("files") ?: return null
-        return files.optJSONObject(0)?.optString("id")?.ifEmpty { null }
+        val file = JSONObject(reply.text).optJSONArray("files")?.optJSONObject(0) ?: return null
+        val id = file.optString("id").ifEmpty { return null }
+        return id to (id + file.optString("modifiedTime"))
+    }
+
+    /**
+     * Cheap look at Drive when the app comes back to the screen: a full pass only if another device wrote a copy
+     * since ours. Two small requests, nothing is downloaded when nothing changed.
+     */
+    fun checkRemote(context: Context) {
+        if (!configured(context) || !linked(context)) return
+        val app = context.applicationContext
+        Thread {
+            runCatching {
+                val mark = fileMark(app, folderId(app))?.second
+                if (mark != null && mark != prefs(app).getString(MARK, null)) syncNow(app)
+            }
+        }.start()
     }
 
     /** Runs [call] with the access token, renewing it once when Google says it is stale. */

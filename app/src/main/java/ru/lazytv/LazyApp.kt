@@ -31,13 +31,19 @@ class LazyApp : Application() {
                 }
             }
             private fun slides(activity: Activity) = activity !is PlayerActivity && activity.isMobileUi()
-            override fun onActivityStarted(activity: Activity) {}
+            private var started = 0
+            private var firstStart = true
+            override fun onActivityStarted(activity: Activity) {
+                // the app came back from the background (the cold start is covered by startCheck): look at Drive
+                if (started++ == 0 && !firstStart) Sync.checkRemote(activity)
+                firstStart = false
+            }
             override fun onActivityResumed(activity: Activity) { LastScreen.remember(activity); OfflineCover.resumed(activity) }
             override fun onActivityPaused(activity: Activity) {
                 OfflineCover.paused(activity)
                 if (slides(activity) && activity.isFinishing) activity.overridePendingTransition(R.anim.page_in_left, R.anim.page_out_right)
             }
-            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) { started-- }
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
         })
