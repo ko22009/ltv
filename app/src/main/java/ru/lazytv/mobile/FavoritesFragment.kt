@@ -26,6 +26,7 @@ class FavoritesFragment : Fragment() {
     private var _binding: FragmentMobileFavoritesBinding? = null
     private val binding get() = _binding!!
     private lateinit var titles: MobileTitleAdapter
+    private lateinit var continueTitles: MobileTitleAdapter
     private val episodeRows = TextRows()
 
     /** One line of the episode and torrent lists: a tap opens it, a long press takes it out of the bookmarks. */
@@ -92,6 +93,23 @@ class FavoritesFragment : Fragment() {
             Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
             refresh()
         }
+        // the carousel cards are as wide as the cards of the grid above, so the third one peeks out and invites to scroll
+        val d = resources.displayMetrics.density
+        val cell = ((resources.displayMetrics.widthPixels - 16 * d) / mobileColumns(resources)).toInt()
+        continueTitles = MobileTitleAdapter(cardWidth = cell) { title ->
+            startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
+        }
+        continueTitles.onItemLongClick = { title ->
+            ru.lazytv.TitleProgress.remove(requireContext(), title.id)
+            Toast.makeText(requireContext(), "Убрано из «Продолжить просмотр»", Toast.LENGTH_SHORT).show()
+            refresh()
+        }
+        binding.continueList.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.continueList.adapter = continueTitles
+        binding.continueHeader.text = blockHeading("Продолжить просмотр", "Удержание убирает")
+        binding.continueBlock.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(ru.lazytv.BACKDROP_PLATE); cornerRadius = ru.lazytv.TITLE_CARD_RADIUS * d
+        }
         binding.titlesList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.titlesList.adapter = titles
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
@@ -127,6 +145,12 @@ class FavoritesFragment : Fragment() {
             }.start()
         }
 
+        val unfinished = ru.lazytv.TitleProgress.all(ctx).map {
+            ru.lazytv.Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, false, it.optString("year"))
+        }
+        continueTitles.setItems(unfinished)
+        binding.continueBlock.visibility = if (unfinished.isEmpty()) View.GONE else View.VISIBLE
+
         episodeRows.rows.clear()
         EpisodeState.favorites(ctx).forEach { item ->
             episodeRows.rows += TextRow(item.seriesTitle, listOf(item.episodeTitle, item.source).filter { it.isNotEmpty() }.joinToString("  •  "), {
@@ -143,7 +167,7 @@ class FavoritesFragment : Fragment() {
 
         fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
         show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
-        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty()
+        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && unfinished.isEmpty()
         binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
         binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }

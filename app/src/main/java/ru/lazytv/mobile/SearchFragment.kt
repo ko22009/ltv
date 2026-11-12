@@ -154,7 +154,7 @@ class SearchFragment : Fragment() {
         binding.chipScroll.visibility = if (phrases.isEmpty()) View.GONE else View.VISIBLE
         val recent = History.all(requireContext())
         adapter.setItems(recent)
-        binding.sectionTitle.text = "НЕДАВНО ОТКРЫТЫЕ  (удерживайте, чтобы убрать)"
+        binding.sectionTitle.text = blockHeading("Недавно открытое", "Удержание убирает")
         binding.sectionTitle.visibility = if (recent.isEmpty()) View.GONE else View.VISIBLE
         binding.emptyText.text = "Введите название фильма или сериала"
         binding.emptyText.visibility = if (recent.isEmpty()) View.VISIBLE else View.GONE
@@ -202,6 +202,18 @@ class SearchFragment : Fragment() {
 }
 
 /** Columns of the card grid: three on a phone, more on a wide screen. */
+/** The heading of a phone block with a small grey line under it ("Продолжить просмотр" / "Удержание убирает"): the same on every page. */
+fun blockHeading(title: String, hint: String): CharSequence = android.text.SpannableStringBuilder().apply {
+    append(title)
+    setSpan(android.text.style.AbsoluteSizeSpan(22, true), 0, length, 0)
+    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, length, 0)
+    setSpan(android.text.style.ForegroundColorSpan(android.graphics.Color.WHITE), 0, length, 0)
+    val start = length + 1
+    append("\n").append(hint)
+    setSpan(android.text.style.AbsoluteSizeSpan(13, true), start, length, 0)
+    setSpan(android.text.style.StyleSpan(android.graphics.Typeface.NORMAL), start, length, 0)
+}
+
 fun mobileColumns(resources: android.content.res.Resources): Int {
     val m = resources.displayMetrics
     val widthDp = m.widthPixels / m.density

@@ -14,7 +14,9 @@ import ru.lazytv.showPoster
 private const val PAYLOAD_WATCHED = "watched"
 
 class MobileTitleAdapter(
-    private val onItemClick: (Title) -> Unit
+    /** A fixed card width in px for a horizontal carousel; 0 keeps the width the grid gives. */
+    private val cardWidth: Int = 0,
+    private val onItemClick: (Title) -> Unit,
 ) : RecyclerView.Adapter<MobileTitleAdapter.TitleViewHolder>() {
 
     private val items = mutableListOf<Title>()
@@ -55,6 +57,7 @@ class MobileTitleAdapter(
         val binding = ItemMobileTitleCardBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
+        if (cardWidth > 0) binding.root.layoutParams = RecyclerView.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
         return TitleViewHolder(binding)
     }
 
