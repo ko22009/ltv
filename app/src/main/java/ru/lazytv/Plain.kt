@@ -160,6 +160,18 @@ open class CardGridView(context: Context, private val columns: Int, private val 
         }
     }
 
+    /**
+     * The grid keeps room round its cards (padding for the zoom of the focused one) and is not clipped to it. The stock view
+     * brings a focused card inside the padding, so a card standing wholly on the screen, but in that room (the first and the
+     * last row), still moved the whole grid a little. A card that is wholly inside the view is left where it is.
+     */
+    override fun requestChildRectangleOnScreen(child: View, rect: Rect, immediate: Boolean): Boolean {
+        val top = child.top + rect.top
+        val bottom = child.top + rect.bottom
+        if (top >= 0 && bottom <= height) return false
+        return super.requestChildRectangleOnScreen(child, rect, immediate)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (keyIntercept?.invoke(event) == true) return true
         if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_DPAD_DOWN && focusedChild != null) {

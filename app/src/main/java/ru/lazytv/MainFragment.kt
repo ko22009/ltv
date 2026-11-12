@@ -241,6 +241,8 @@ class MainFragment : Fragment() {
         val catalog = childFragmentManager.findFragmentByTag(currentPage) as? CatalogPageFragment
         if (catalog != null && catalog.focusFirstCard()) return
         if ((childFragmentManager.findFragmentByTag(currentPage) as? FavoritesPageFragment)?.focusFirst() == true) return
+        // the settings page opens on its first tile, not on the one that happens to stand beside the menu item
+        if ((childFragmentManager.findFragmentByTag(currentPage) as? SettingsPageFragment)?.focusFirst() == true) return
         if (contentContainer.findFocus() != null) return
         if (currentPage == SEARCH_HEADER) {
             val mic = searchPage?.micView
@@ -659,6 +661,10 @@ class PlainTextPresenter : Presenter() {
 }
 
 class SettingsPageFragment : Fragment() {
+    private var grid: CardGridView? = null
+
+    fun focusFirst(): Boolean = grid?.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() ?: false
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val scale = resources.displayMetrics.widthPixels / 1280f
         fun px(v: Int) = (v * scale).toInt()
@@ -688,6 +694,7 @@ class SettingsPageFragment : Fragment() {
         val gap = ((24f * CARD_SCALE + 6f) * scale).toInt()
         val side = px(20)
         val grid = titleCardGrid(requireContext(), scale, tiles, COLUMNS, spacing = gap, titleCards = false)
+        this.grid = grid
         val gridWidth = COLUMNS * (px(290) + gap) + 2 * side
         page.addView(grid, LinearLayout.LayoutParams(gridWidth, 0, 1f).apply {
             // half of the gap more to the left: the first tile starts exactly under the caption, like the cards of the other grids
