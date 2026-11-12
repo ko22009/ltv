@@ -346,7 +346,7 @@ class CatalogPageFragment : Fragment() {
         // the first page is warmed at the start of the app: it stands at once, without a spinner
         val cached = Tmdb.peekPage(ctx, category, CatalogFilter.sort(ctx, category.id).sort, 1, filter.query(category.tv))
         if (cached != null) {
-            cards.addAll(0, cached)
+            cards.addAll(0, MoreTile.withoutWatched(ctx, cached, filter.hideWatched))
             skeletons = false
             loading.visibility = View.GONE
             nextPage = 2

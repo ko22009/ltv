@@ -60,7 +60,7 @@ object Sync {
      */
     private val SYNCED_KEYS = setOf(
         Settings.SHOW_ADULT, Settings.SHOW_HORROR, Settings.LANGUAGE, Settings.QUALITY, Settings.VOICE,
-        Settings.REMEMBER_POSITION, Settings.AUTO_NEXT, Settings.SOURCE_MODE, Settings.TORRENT_SORT,
+        Settings.REMEMBER_POSITION, Settings.HIDE_WATCHED, Settings.AUTO_NEXT, Settings.SOURCE_MODE, Settings.TORRENT_SORT,
         Settings.TORRENT_EXACT, Settings.TORRENT_MIN_SEEDS,
     )
 

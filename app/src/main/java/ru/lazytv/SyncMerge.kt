@@ -85,11 +85,21 @@ object SyncMerge {
         val mine = local.associate { it.key to it.json }
         val theirs = remote.associate { it.key to it.json }
         fun at(json: String?) = json?.let { runCatching { JSONObject(it).optLong("at") }.getOrDefault(0L) } ?: 0L
-        val settled = mergeList(base, local, remote)
+        // rating and genres are filled in later by each device (TitleProgress.complete) and are not a change of the place:
+        // without this a record "changed" on the phone beat the deletion made on the set-top box and came back
+        fun core(json: String) = runCatching { JSONObject(json).apply { remove("rating"); remove("genre") }.toString() }.getOrDefault(json)
+        fun cores(list: List<Item>) = list.map { Item(it.key, core(it.json)) }
+        val settled = mergeList(cores(base), cores(local), cores(remote))
         return settled.map { item ->
             val l = mine[item.key]
             val r = theirs[item.key]
-            if (l != null && r != null && l != r) Item(item.key, if (at(r) > at(l)) r else l) else item
+            val json = when {
+                l != null && r != null && core(l) != core(r) -> if (at(r) > at(l)) r else l
+                l != null && core(l) == item.json -> l
+                r != null && core(r) == item.json -> r
+                else -> item.json
+            }
+            Item(item.key, json)
         }
     }
 

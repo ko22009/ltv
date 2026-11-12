@@ -15,6 +15,8 @@ object Settings {
     const val QUALITY = "quality"
     const val VOICE = "voice"
     const val REMEMBER_POSITION = "remember_position"
+    /** Drops watched films and series from the catalog lists and rows (the per-list filter can also ask for it). */
+    const val HIDE_WATCHED = "hide_watched"
     const val AUTO_BYPASS = "auto_bypass"
     const val APP_PROXY = "app_proxy"
     const val CARD_SIZE = "card_size"

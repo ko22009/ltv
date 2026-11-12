@@ -139,4 +139,13 @@ class SyncMergeTest {
         val merged = SyncMerge.merge(agreed, SyncMerge.Doc(), agreed)
         assertTrue(merged.progress.isEmpty())
     }
+
+    @Test
+    fun `a rating filled in locally does not bring back a film finished on the other device`() {
+        val agreed = progress(1000, 1)
+        val withRating = SyncMerge.Doc(progress = SyncMerge.titles(listOf(
+            JSONObject().put("id", 7L).put("tv", false).put("pos", 1000L).put("at", 1L).put("rating", "7.1").put("genre", "Драма"))))
+        val merged = SyncMerge.merge(agreed, withRating, SyncMerge.Doc())
+        assertTrue(merged.progress.isEmpty())
+    }
 }

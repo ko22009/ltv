@@ -126,7 +126,8 @@ data class CatalogFilter(
         }
 
         /** Changes with every choice on either screen: the page compares it to know whether to be drawn again. */
-        fun signature(context: Context, category: String) = "${load(context, category).toJson()}|${sort(context, category).key}"
+        fun signature(context: Context, category: String) =
+            "${load(context, category).toJson()}|${sort(context, category).key}|${Settings.bool(context, Settings.HIDE_WATCHED, false)}"
 
         /** Lists that carry the two buttons. */
         fun supports(category: String) = category == "movies" || category == "serials"

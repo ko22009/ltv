@@ -22,12 +22,11 @@ data class MoreTile(val title: String, val category: String = "", val sort: Stri
 
     fun loadPage(context: Context, page: Int): Loaded {
         val list = Tmdb.categories.first { it.id == category }
-        if (!filtered) return Tmdb.load(context, list, sort, page).let { Loaded(it, it.isEmpty()) }
+        if (!filtered) return Tmdb.load(context, list, sort, page).let { Loaded(withoutWatched(context, it, false), it.isEmpty()) }
         // the filters chosen on the list page are read at the moment of loading, so every page of the grid agrees
         val filter = CatalogFilter.load(context, category)
         val found = Tmdb.load(context, list, sort, page, filter.query(list.tv))
-        val shown = if (filter.hideWatched) found.filter { !Watched.has(context, it) } else found
-        return Loaded(shown, found.isEmpty())
+        return Loaded(withoutWatched(context, found, filter.hideWatched), found.isEmpty())
     }
 
     /** The first titles of the list for a row: pages made up only of watched titles are skipped. */
@@ -44,6 +43,10 @@ data class MoreTile(val title: String, val category: String = "", val sort: Stri
         .putExtra("title", title).putExtra("category", category).putExtra("sort", sort).putExtra("filtered", filtered)
 
     companion object {
+        /** Watched titles leave the list when the list's own filter or the global switch in the settings asks for it. */
+        fun withoutWatched(context: Context, titles: List<Title>, listAsks: Boolean): List<Title> =
+            if (listAsks || Settings.bool(context, Settings.HIDE_WATCHED, false)) titles.filter { !Watched.has(context, it) } else titles
+
         /** How many pages in a row may hold only watched titles before the row gives up. */
         private const val MAX_SKIPPED_PAGES = 5
 

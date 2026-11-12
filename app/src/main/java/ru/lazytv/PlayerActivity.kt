@@ -1283,6 +1283,8 @@ class PlayerActivity : Activity() {
             val appContext = applicationContext
             if (known && (pos >= dur - 90_000L || pos * 100 / dur >= 95)) {
                 clearPosition()
+                // a film watched to the end is marked at once (a series is marked by episodes, see EpisodeState)
+                if (tmdbId > 0L && !isTv) Watched.set(this, Title(tmdbId, mediaTitle, "", posterPath, false, mediaYear), true)
                 val next = episodeAt(queueIndex + 1)
                 if (tmdbId > 0L && isTv && next != null) {
                     // the next episode of the series is where the other device continues (from its start)
