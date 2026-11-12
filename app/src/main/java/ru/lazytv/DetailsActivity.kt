@@ -899,7 +899,15 @@ class DetailsActivity : Activity() {
             } else {
                 val valueView = text(value, 18f, Color.WHITE)
                 // phone: one line like the grey bar it replaces, a long value ends with an ellipsis (the rows do not change height)
-                if (mobile) { valueView.maxLines = 1; valueView.ellipsize = android.text.TextUtils.TruncateAt.END }
+                if (mobile) {
+                    valueView.maxLines = 1
+                    valueView.ellipsize = android.text.TextUtils.TruncateAt.END
+                    // a tap opens the whole value in the same window as the description (only when something is cut off)
+                    valueView.setOnClickListener {
+                        val cut = valueView.layout?.let { l -> l.getEllipsisCount(l.lineCount - 1) > 0 } == true
+                        if (cut) showText(this@DetailsActivity, caption, value)
+                    }
+                }
                 row.addView(valueView, LinearLayout.LayoutParams(0, -2, 1f))
             }
             table.addView(row)
