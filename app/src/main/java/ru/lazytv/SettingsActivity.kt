@@ -542,6 +542,9 @@ open class SettingsScreen : Fragment() {
 
         section("О приложении")
         info("Версия", BuildConfig.VERSION_NAME)
+        button("Политика конфиденциальности", "Как LazyTV обрабатывает данные") {
+            Links.open(requireActivity(), Links.PRIVACY_POLICY_URL)
+        }
         info("Как работает приложение",
             "Поисковая система по открытым источникам сети. Приложение не хранит видеофайлы и не имеет собственных серверов")
         info("Условия использования",

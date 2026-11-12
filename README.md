@@ -38,6 +38,11 @@ adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true
 
 Ключ `restore` возвращает на экран, который был открыт до обновления.
 
+## Поддержка проекта
+
+Страница для донатов: [Boosty](https://boosty.to/ko22009). В настройках приложения пункт «Поддержать проект»
+открывает страницу на телефоне, а на ТВ показывает QR-код и ссылку. Адрес задан в `SUPPORT_URL` в `MainFragment.kt`.
+
 ## Устройство проекта
 
 Весь код лежит в `app/src/main/java/ru/lazytv`.

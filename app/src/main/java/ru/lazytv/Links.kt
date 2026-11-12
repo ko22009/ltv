@@ -18,6 +18,8 @@ import com.google.zxing.qrcode.QRCodeWriter
  * does nothing, so the address is shown on screen instead: it is easy to retype on a phone and install from there.
  */
 object Links {
+    const val PRIVACY_POLICY_URL = "https://tv.sdkcache.ru/privacy"
+
     /** The system "browser" of Android TV: an activity that answers every link and opens nothing. */
     private const val STUB = "com.android.tv.frameworkpackagestubs"
 
