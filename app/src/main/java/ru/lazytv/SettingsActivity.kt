@@ -545,6 +545,9 @@ open class SettingsScreen : Fragment() {
         button("Политика конфиденциальности", "Как LazyTV обрабатывает данные") {
             Links.open(requireActivity(), Links.PRIVACY_POLICY_URL)
         }
+        // the terms of TMDB ask for this notice wherever its data is shown
+        info("Данные о фильмах",
+            "Источник данных о фильмах и сериалах: TMDB. Приложение использует API TMDB, но не одобрено и не сертифицировано TMDB")
         info("Как работает приложение",
             "Поисковая система по открытым источникам сети. Приложение не хранит видеофайлы и не имеет собственных серверов")
         info("Условия использования",

@@ -46,14 +46,15 @@ $env:JAVA_HOME='<JDK 17>'
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 
-Релиз (приставка, сжатие R8, без отладки, 3.0 МБ):
+Релиз (сжатие R8, без отладки). Готовый файл раздаётся через релизы на GitHub, в Google Play не публикуем
+(подробности в `docs/release.md`):
 ```powershell
-$env:JAVA_HOME='<JDK 17>'
-& '<проект>\gradlew.bat' -p <проект> assembleRelease
+& '<проект>\tools\release.ps1' -Version 1.0.0
 ```
-APK: `app/build/outputs/apk/release/app-release.apk` (в git не попадает). Сборка подписана debug-ключом, поэтому устанавливается на устройство без сторонних сертификатов.
+Скрипт собирает `assembleRelease`, кладёт в `dist` файл `LazyTV-<версия>.apk` и `SHA256SUMS.txt`.
 
-Целевая и compile API: 36. Для Google Play дополнительно нужен отдельный upload-ключ; debug-подпись годится только для локальной установки.
+Версия задаётся в `app/build.gradle.kts` (`versionName`, `versionCode`). Сборка подписана debug-ключом, чтобы
+обновляться поверх уже установленных файлов. Целевая и compile API: 36.
 
 В сборке ответы TMDB кэшируются на устройстве на 12 часов (`cache/tmdb`): повторные открытия экранов не тратят запросы, а списки показываются сразу. Свежие данные: очистить кэш приложения.
 

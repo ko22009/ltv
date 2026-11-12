@@ -13,12 +13,11 @@ $env:JAVA_HOME='<JDK 17>'
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Релиз (приставка, сжатие R8, без отладки, 3.0 МБ):
+Релиз (сжатие R8, без отладки). Готовый файл раздаётся через релизы на GitHub, в Google Play не публикуем:
 ```powershell
-$env:JAVA_HOME='<JDK 17>'
-& '<проект>\gradlew.bat' -p <проект> assembleRelease
+& '<проект>\tools\release.ps1' -Version 1.0.0
 ```
-APK: `app/build/outputs/apk/release/app-release.apk`. Эмулятор: `adb -s emulator-5554`, приставка <приставка>: `<приставка>:5555` (лаунчер launcher3, нужна метка `LAUNCHER`). Вторая приставка: `<приставка>:5555` (<приставка>, лаунчер <лаунчер>; адрес менялся с `.192`, при отказе подключения искать через `arp -a`). На запущенные эмуляторы (`emulator-5554`, `emulator-5556`) после сборки ставить и открывать приложение автоматически, без вопроса. На приставки ставить только по просьбе владельца и только на одно названное им устройство; если не назвал, спросить.
+APK: `dist/LazyTV-1.0.0.apk`, рядом `SHA256SUMS.txt`. Эмулятор: `adb -s emulator-5554`, приставка <приставка>: `<приставка>:5555` (лаунчер launcher3, нужна метка `LAUNCHER`). Вторая приставка: `<приставка>:5555` (<приставка>, лаунчер <лаунчер>; адрес менялся с `.192`, при отказе подключения искать через `arp -a`). На запущенные эмуляторы (`emulator-5554`, `emulator-5556`) после сборки ставить и открывать приложение автоматически, без вопроса. На приставки ставить только по просьбе владельца и только на одно названное им устройство; если не назвал, спросить.
 Если эмулятор не запущен, запускать его на интерактивном рабочем столе без окна консоли через WMI:
 ```powershell
 $v = "$env:TEMP\launch_tv.vbs"; [IO.File]::WriteAllText($v, 'CreateObject("WScript.Shell").Run """<Android SDK>\emulator\emulator.exe"" -avd tv -gpu host -feature -Vulkan", 0, False', [Text.Encoding]::ASCII); Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "wscript.exe `"$v`"" }

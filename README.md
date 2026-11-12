@@ -4,7 +4,12 @@
 списки, видеосервисы, поиск, торренты через TorrServe, встроенный плеер. Ряды «Популярное», «Закладки» и
 «Смотреть далее» выводятся на главный экран телевизора.
 
-`applicationId`: `ru.lazytv`, `minSdk` 21, `targetSdk` 36.
+- Скачать: [релизы на GitHub](https://github.com/ko22009/ltv/releases/latest) (файл APK), сайт [tv.sdkcache.ru](https://tv.sdkcache.ru)
+- Поддержать проект: [tv.sdkcache.ru/donate](https://tv.sdkcache.ru/donate) или [Boosty](https://boosty.to/ko22009)
+- Политика конфиденциальности: [tv.sdkcache.ru/policy](https://tv.sdkcache.ru/policy)
+
+Приложение распространяется готовым APK через релизы на GitHub, в Google Play не публикуется.
+Подробности: [docs/release.md](docs/release.md). `minSdk` 21, `targetSdk` 36, версия 1.0.0.
 
 ## Что нужно
 
@@ -24,10 +29,11 @@ TMDB_KEY=ваш_ключ_tmdb
 ```powershell
 $env:JAVA_HOME='<JDK 17>'
 & '<проект>\gradlew.bat' -p <проект> assembleDebug     # разработка, DebugSeed
-& '<проект>\gradlew.bat' -p <проект> assembleRelease   # приставка, R8, без отладки
+& '<проект>\tools\release.ps1' -Version 1.0.0                    # релиз в dist
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk` и `app/build/outputs/apk/release/app-release.apk`.
+APK для разработки: `app/build/outputs/apk/debug/app-debug.apk`. Релизные файлы:
+`dist/LazyTV-1.0.0.apk` и `dist/SHA256SUMS.txt`.
 
 Установка и запуск (эмулятор `emulator-5554`, для приставки подставить её адрес):
 
@@ -40,8 +46,9 @@ adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true
 
 ## Поддержка проекта
 
-Страница для донатов: [Boosty](https://boosty.to/ko22009). В настройках приложения пункт «Поддержать проект»
-открывает страницу на телефоне, а на ТВ показывает QR-код и ссылку. Адрес задан в `SUPPORT_URL` в `MainFragment.kt`.
+Страница для донатов: [tv.sdkcache.ru/donate](https://tv.sdkcache.ru/donate) (разовый донат через ЮMoney) и
+[Boosty](https://boosty.to/ko22009). В настройках приложения пункт «Поддержать проект» открывает страницу на
+телефоне, а на ТВ показывает QR-код и ссылку. Адрес задан в `SUPPORT_URL` в `MainFragment.kt`.
 
 ## Устройство проекта
 
@@ -59,10 +66,12 @@ adb -s emulator-5554 shell am start -n ru.lazytv/.MainActivity --ez restore true
 | Ряды главного экрана системы | `Recommendations.kt`, `RecommendationsReceiver.kt` |
 | Общие детали интерфейса | `Cards.kt`, `MenuIcons.kt`, `Popup.kt`, `Loading.kt` |
 | Настройки | `Settings.kt`, `SettingsActivity.kt` |
+| Релиз (версия, файл, сумма) | `app/build.gradle.kts`, `tools/release.ps1`, `dist/release-notes.md` |
 
 ## Документы
 
 - [docs/workflow.md](docs/workflow.md): git, сборка, пробные данные `DebugSeed`.
+- [docs/release.md](docs/release.md): версия, имя файла, выпуск через релизы GitHub, подпись, сайт.
 - [docs/design-system.md](docs/design-system.md): карточки, плитки, кнопки, иконки, сетки. Новый экран начинать отсюда.
 - [docs/remote-config.md](docs/remote-config.md): адреса источников из JSON-конфига вместо зашитых в код.
 - [docs/fixit.md](docs/fixit.md): известные проблемы.

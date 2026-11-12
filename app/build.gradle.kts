@@ -14,8 +14,8 @@ android {
         applicationId = "ru.lazytv"
         minSdk = 21
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.2"
+        versionCode = 10
+        versionName = "1.0.0"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
         // Google OAuth client of the sync (docs/sync.md): empty keys switch the sync section off
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${localProps.getProperty("DRIVE_CLIENT_ID") ?: ""}\"")
@@ -26,7 +26,8 @@ android {
             // smaller and faster to start; the rules keep what is found by name at run time
             isMinifyEnabled = true
             isShrinkResources = true
-            // the app is installed from a file, not from a store: the debug key lets this build be installed
+            // the app is installed from a file, not from a store: the debug key lets this build be installed and
+            // updated over the older one
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
