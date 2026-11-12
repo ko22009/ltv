@@ -219,7 +219,7 @@ class FavoritesPageFragment : Fragment() {
 
     /** Lays the views out in rows of [perRow] (five by default), each in a cell of the grid pitch. */
     private fun addGrid(views: List<View>, pad: Int, pitch: Int, perRow: Int = 5) {
-        // the first row of a block brings its heading into view (the top of the page for the first block): one press of down or up
+        // the first row of a block brings its heading into view only when the heading is above the shown part: a page that fits is not moved
         val anchor = lastHeader
         views.chunked(perRow).forEachIndexed { rowIndex, chunk ->
             val row = LinearLayout(requireContext()).apply {
@@ -236,7 +236,7 @@ class FavoritesPageFragment : Fragment() {
                 }
                 val lp = FrameLayout.LayoutParams(own?.width ?: -2, own?.height ?: -2)
                 (own as? ViewGroup.MarginLayoutParams)?.let { lp.topMargin = it.topMargin; lp.bottomMargin = it.bottomMargin }
-                zoomOnFocus(view, if (rowIndex == 0) ({ scroll.smoothScrollTo(0, if (anchor == null || anchor.top < 0) 0 else anchor.top) }) else null)
+                zoomOnFocus(view, if (rowIndex == 0) ({ val top = if (anchor == null || anchor.top < 0) 0 else anchor.top; if (top < scroll.scrollY) scroll.smoothScrollTo(0, top) }) else null)
                 cell.addView(view, lp)
                 row.addView(cell, LinearLayout.LayoutParams(pitch, -2))
                 if (firstFocus == null) firstFocus = view
