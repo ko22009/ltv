@@ -132,7 +132,8 @@ class FavoritesFragment : Fragment() {
 
     private fun refresh() {
         val ctx = requireContext()
-        val saved = Favorites.all(ctx)
+        val unfinished = ru.lazytv.TitleProgress.titles(ctx)
+        val saved = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
         val cards = FavoriteTorrents.cards(ctx)
         cardTorrents = cards.associate { (torrent, film) -> film.torrentKey to torrent }
         titles.setItems(saved + cards.map { it.second })
@@ -145,9 +146,6 @@ class FavoritesFragment : Fragment() {
             }.start()
         }
 
-        val unfinished = ru.lazytv.TitleProgress.all(ctx).map {
-            ru.lazytv.Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, it.optBoolean("tv"), it.optString("year"))
-        }
         continueTitles.setItems(unfinished)
         binding.continueBlock.visibility = if (unfinished.isEmpty()) View.GONE else View.VISIBLE
 

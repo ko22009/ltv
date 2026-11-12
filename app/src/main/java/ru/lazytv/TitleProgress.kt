@@ -59,6 +59,11 @@ object TitleProgress {
         write(context, read(context).filterNot { same(it, tv, id) })
     }
 
+    /** The titles left half-way, newest first: the "Продолжить просмотр" block. A title in it is not shown again among the bookmarks. */
+    fun titles(context: Context): List<Title> = read(context).map {
+        Title(it.optLong("id"), it.optString("name"), "", it.optString("poster").ifEmpty { null }, it.optBoolean("tv"), it.optString("year"))
+    }
+
     fun get(context: Context, tv: Boolean, id: Long): JSONObject? = read(context).firstOrNull { same(it, tv, id) }
 
     /** The place of a film in milliseconds, or 0 when nothing is known. */

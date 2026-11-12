@@ -30,7 +30,7 @@ class FavoritesPageFragment : Fragment() {
 
     private fun state(): String {
         val ctx = requireContext()
-        return Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx) + "|" + Settings.string(ctx, "favorite_torrents", "[]")
+        return Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx) + "|" + Settings.string(ctx, "favorite_torrents", "[]") + "|" + Settings.string(ctx, "title_progress", "[]")
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -120,11 +120,13 @@ class FavoritesPageFragment : Fragment() {
             setPadding(pad, (24 * scale).toInt(), 0, (31 * scale).toInt())
         })
 
-        titles = Favorites.all(ctx)
+        val unfinished = TitleProgress.titles(ctx)
+        // a title left half-way stands in its own block only, not among the bookmarks again
+        titles = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
         val episodes = EpisodeState.favorites(ctx)
         // torrents saved from a film card stand among the films, as cards with the mark "ТОРРЕНТ"
         val torrentCards = FavoriteTorrents.cards(ctx)
-        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty()) {
+        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty() && unfinished.isEmpty()) {
             content.addView(TextView(ctx).apply {
                 text = "Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"
                 setTextColor(TEXT_MUTED)
@@ -137,6 +139,18 @@ class FavoritesPageFragment : Fragment() {
         // the same pitch as the grid of the catalog: five columns over the width of the page
         val pitch = tvGridPitch(scale)
 
+        if (unfinished.isNotEmpty()) {
+            addHeader("Продолжить просмотр", pad, scale)
+            addGrid(unfinished.map { title ->
+                val holder = cardPresenter.onCreateViewHolder(content)
+                cardPresenter.onBindViewHolder(holder, title)
+                holder.view.setOnClickListener {
+                    startActivity(Intent(ctx, DetailsActivity::class.java).putExtras(title.toExtras()))
+                }
+                holder.view
+            }, pad, pitch)
+            if (titles.isNotEmpty() || torrentCards.isNotEmpty()) addHeader("Закладки", pad, scale)
+        }
         if (titles.isNotEmpty() || torrentCards.isNotEmpty()) {
             val views = titles.map { title ->
                 val holder = cardPresenter.onCreateViewHolder(content)
