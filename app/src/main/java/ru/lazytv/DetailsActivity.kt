@@ -830,6 +830,8 @@ class DetailsActivity : Activity() {
                 val bar = text(" ", 18f, Color.WHITE)
                 bar.background = android.graphics.drawable.InsetDrawable(
                     GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(SMALL_RADIUS.toInt()).toFloat() }, 0, dp(3), 0, dp(3))
+                // a background drawable brings its own padding (the 3dp inset): without this the bar is 6dp taller than the filled line
+                bar.setPadding(0, 0, 0, 0)
                 if (caption == "Режиссёр") bar.minimumHeight = dp(if (mobile) 44 else 40)
                 row.addView(bar, LinearLayout.LayoutParams(dp(140), -2))
             } else if (caption == "Режиссёр" && linkedDirectors.isNotEmpty()) {
