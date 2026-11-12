@@ -20,6 +20,12 @@ open class JumpScrollView(context: Context) : ScrollView(context) {
 
     override fun getMaxScrollAmount(): Int = height
 
+    /** The page moves the view to a focused card itself (smoothly, with the headings): the platform's jump is switched off. */
+    var ownFocusScroll = false
+
+    override fun computeScrollDeltaToGetChildRectOnScreen(rect: Rect): Int =
+        if (ownFocusScroll) 0 else super.computeScrollDeltaToGetChildRectOnScreen(rect)
+
     /**
      * "Down" on the last card: the stock view scrolls the rest of the page (the bottom padding, a caption) a little. When the
      * focused view is fully shown and there is nothing to focus below, the page stays where it is.

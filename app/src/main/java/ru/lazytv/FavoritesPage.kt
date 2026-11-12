@@ -19,7 +19,7 @@ import androidx.fragment.app.Fragment
  * only as much as is needed to show the focused card. The cards and tiles are the same ones the rows used.
  */
 class FavoritesPageFragment : Fragment() {
-    private lateinit var scroll: ScrollView
+    private lateinit var scroll: JumpScrollView
     private lateinit var content: LinearLayout
     private var signature = ""
     private var watchedMarks = ""
@@ -41,6 +41,7 @@ class FavoritesPageFragment : Fragment() {
             clipToPadding = false
         }
         scroll = JumpScrollView(ctx).apply {
+            ownFocusScroll = true
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             clipChildren = false
@@ -238,13 +239,19 @@ class FavoritesPageFragment : Fragment() {
                 }
                 val lp = FrameLayout.LayoutParams(own?.width ?: -2, own?.height ?: -2)
                 (own as? ViewGroup.MarginLayoutParams)?.let { lp.topMargin = it.topMargin; lp.bottomMargin = it.bottomMargin }
-                zoomOnFocus(view, if (rowIndex == 0) ({
-                    // after the platform has shown the card itself: the heading above it must be shown too (the first block: the page title)
-                    scroll.post {
-                        val top = if (anchor == null || anchor.top < 0) 0 else anchor.top
-                        if (top < scroll.scrollY) scroll.smoothScrollTo(0, top)
-                    }
-                }) else null)
+                zoomOnFocus(view) {
+                    // one smooth move: the card with room for its zoom, and for the first row of a block its heading too (the first
+                    // block: the page title); a page that already shows all this is not moved
+                    val box = android.graphics.Rect()
+                    view.getDrawingRect(box)
+                    scroll.offsetDescendantRectToMyCoords(view, box)
+                    val room = (14 * resources.displayMetrics.density).toInt()
+                    var y = scroll.scrollY
+                    val topWanted = if (rowIndex == 0) (if (anchor == null || anchor.top < 0) 0 else anchor.top) else box.top - room
+                    if (topWanted < y) y = topWanted
+                    else if (box.bottom + room > y + scroll.height) y = box.bottom + room - scroll.height
+                    if (y != scroll.scrollY) scroll.smoothScrollTo(0, y.coerceAtLeast(0))
+                }
                 cell.addView(view, lp)
                 row.addView(cell, LinearLayout.LayoutParams(pitch, -2))
                 if (firstFocus == null) firstFocus = view
