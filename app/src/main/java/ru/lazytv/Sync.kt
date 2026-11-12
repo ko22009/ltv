@@ -177,6 +177,7 @@ object Sync {
     fun syncNow(context: Context): String {
         check(configured(context)) { "В сборке нет ключа Google" }
         check(linked(context)) { "Google не подключён" }
+        ContinueWatching.seedProgress(context)
         try {
             val base = prefs(context).getString(BASE, null)
             val folder = folderId(context)

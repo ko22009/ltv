@@ -99,6 +99,36 @@ object ContinueWatching {
         }.onFailure { android.util.Log.w("Recommendations", "continue-watching entry was not saved: ${title.name}", it) }
     }
 
+    /**
+     * Once, after the update that brought the synced progress: the films already left half-way in the row of this device
+     * (the system keeps their place) become records of [TitleProgress], so the other devices get them with the next sync.
+     * Series are not taken: the row does not know the season and the episode.
+     */
+    fun seedProgress(context: Context) {
+        if (Settings.bool(context, "progress_seeded", false)) return
+        runCatching {
+            val columns = arrayOf(
+                TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID, TvContractCompat.WatchNextPrograms.COLUMN_TITLE,
+                TvContractCompat.WatchNextPrograms.COLUMN_LAST_PLAYBACK_POSITION_MILLIS, TvContractCompat.WatchNextPrograms.COLUMN_DURATION_MILLIS,
+                TvContractCompat.WatchNextPrograms.COLUMN_POSTER_ART_URI, TvContractCompat.WatchNextPrograms.COLUMN_SHORT_DESCRIPTION,
+            )
+            context.contentResolver.query(TvContractCompat.WatchNextPrograms.CONTENT_URI, columns, null, null, null)?.use { c ->
+                while (c.moveToNext()) {
+                    val id = c.getString(0).orEmpty()
+                    if (!id.startsWith("false:")) continue
+                    val tmdb = id.substringAfter(':').toLongOrNull() ?: continue
+                    val pos = c.getInt(2).toLong()
+                    val dur = c.getInt(3).toLong()
+                    if (pos < 5_000L || dur <= 0L || TitleProgress.get(context, false, tmdb) != null) continue
+                    val poster = c.getString(4).orEmpty().substringAfter("/w780", "").ifEmpty { null }
+                    val year = c.getString(5).orEmpty().substringBefore(" ").takeIf { it.length == 4 && it.all(Char::isDigit) }.orEmpty()
+                    TitleProgress.put(context, false, tmdb, c.getString(1).orEmpty(), poster, year, pos, dur)
+                }
+            }
+        }
+        Settings.setBool(context, "progress_seeded", true)
+    }
+
     /** Removes the title from the row (watched to the end). */
     fun clear(context: Context, tv: Boolean, id: Long) {
         val saved = Settings.string(context, key(tv, id), "").toLongOrNull() ?: return
