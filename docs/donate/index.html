@@ -3,16 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Поддержать LazyTV</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.65 system-ui, sans-serif; }
+    body { min-height: 100vh; min-height: 100dvh; margin: 0; display: grid; place-items: center; background: #101216; color: #fff; }
+    .spinner { width: 48px; height: 48px; border: 4px solid #ffffff66; border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+  </style>
 </head>
 <body>
+  <div class="spinner" role="status" aria-label="Переход к оплате"></div>
   <form id="donate" method="post" action="https://yoomoney.ru/quickpay/confirm">
     <input type="hidden" name="receiver" value="4100119683740899">
     <input type="hidden" name="quickpay-form" value="button">
     <input type="hidden" name="paymentType" value="AC">
     <input type="hidden" name="sum" value="100">
-    <p>Переход к оплате 100 ₽ через ЮMoney.</p>
-    <button type="submit">Перейти к оплате</button>
+    <noscript><p>Переход к оплате 100 ₽ через ЮMoney.</p><button type="submit">Перейти к оплате</button></noscript>
   </form>
   <script>document.getElementById('donate').submit();</script>
 </body>
