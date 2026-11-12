@@ -12,6 +12,9 @@ import androidx.recyclerview.widget.RecyclerView
 import ru.lazytv.R
 import ru.lazytv.SETTINGS_SECTIONS
 import ru.lazytv.SettingsActivity
+import ru.lazytv.PathDrawable
+import ru.lazytv.Links
+import ru.lazytv.SUPPORT_URL
 import ru.lazytv.databinding.FragmentMobileGridBinding
 
 /** The sections of the settings as a list; a section opens on its own screen (the same one the TV uses). */
@@ -36,9 +39,23 @@ class SettingsFragment : Fragment() {
 
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val section = SETTINGS_SECTIONS[position]
-                holder.itemView.findViewById<TextView>(R.id.torrentTitle).text = section.title
+                holder.itemView.findViewById<TextView>(R.id.torrentTitle).apply {
+                    text = section.title
+                    val icon = section.icon?.let {
+                        PathDrawable(it).apply {
+                            val size = (20 * resources.displayMetrics.density).toInt()
+                            setBounds(0, 0, size, size)
+                        }
+                    }
+                    setCompoundDrawables(icon, null, null, null)
+                    compoundDrawablePadding = (8 * resources.displayMetrics.density).toInt()
+                }
                 holder.itemView.findViewById<TextView>(R.id.torrentInfo).text = section.description
                 holder.itemView.setOnClickListener {
+                    if (section.title == "Поддержать проект") {
+                        Links.openSupport(requireActivity(), SUPPORT_URL)
+                        return@setOnClickListener
+                    }
                     startActivity(Intent(requireContext(), SettingsActivity::class.java).putExtra("section", section.title))
                 }
             }

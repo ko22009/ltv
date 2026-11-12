@@ -63,10 +63,10 @@ class SettingsActivity : FragmentActivity() {
         }
         page.addView(header)
 
-        // no action buttons here: "Подобрать приём обхода" is in the "Сеть" section, and for a wrong clock the error box offers the settings itself
+        // A wrong device clock is handled from the relevant error message.
         val topics = listOf(
             "Сайт не открывается" to
-                "Включите обход блокировок в разделе «Сеть» и нажмите там «Подобрать приём обхода». Если показ закрыт для вашего региона, используйте торренты.",
+                "Проверьте подключение к интернету. Если сайт недоступен, попробуйте другой источник или торренты.",
             "Видео не запускается или нет звука" to
                 "Если встроенный плеер не поддерживает кодек раздачи, выберите внешний плеер в разделе «Воспроизведение» или удерживайте OK на серии для выбора другого качества.",
             "Торренты и TorrServe" to
@@ -439,7 +439,7 @@ open class SettingsScreen : Fragment() {
 
         section("Источники видео")
         Sources.all.forEach { source -> check(source.name, if (RemoteConfig.isDown(source.id)) "Сайт сейчас не отвечает" else "Сайт", Settings.service(source.id)) }
-        button("Проверить источники", "Время ответа и путь к каждому сайту: напрямую, обход или прокси") { checkSources() }
+        button("Проверить источники", "Проверить доступность выбранных сайтов") { checkSources() }
         check("Торренты", "Раздачи для TorrServe", "source_torrents")
         check("Кэшировать найденные источники", "Не искать заново один и тот же фильм 6 часов", Settings.CACHE_SOURCES)
 
@@ -483,19 +483,6 @@ open class SettingsScreen : Fragment() {
             listOf("ru-RU" to "Русский", "en-US" to "English", "uk-UA" to "Українська"))
         check("Строка «Популярное» на главном экране TV",
             "Рекомендации в ленте Android TV (если лаунчер их показывает)", Settings.RECOMMENDATIONS)
-
-        section("Сеть")
-        if (ClockCheck.skewed) {
-            info("Часы на устройстве сбились", ClockCheck.MESSAGE)
-            button("Открыть настройки даты и времени", "Системные часы устройства") { Errors.openDateSettings(ctx) }
-        }
-        check("Обход блокировок", "Сначала напрямую, затем встроенный обход (ByeDPI)", Settings.AUTO_BYPASS)
-        check("Прокси для сайтов", "Запасной путь, если встроенный обход не помог", Settings.APP_PROXY)
-        check("Прокси для торрентов", "То же для поиска раздач (rutor)", Settings.APP_PROXY_TORRENTS)
-        button("Подобрать приём обхода", "Перебирает приёмы ByeDPI, запоминает рабочий для этой сети") {
-            com.lmd.dpi.DpiBypass.retune()
-            toast("Подбор запущен, занимает до минуты")
-        }
 
         section("Данные")
         // the "not made yet" line only reminded; the row stays useful once a copy exists
@@ -686,8 +673,7 @@ open class SettingsScreen : Fragment() {
                 val name = Sources.byId(id)?.name ?: id
                 result.fold({ fetched ->
                     val host = fetched.base.substringAfter("://").substringBefore('/')
-                    val way = if (fetched.base.startsWith("https://")) com.lmd.dpi.DpiBypass.route(host) else "напрямую"
-                    String.format(java.util.Locale("ru"), "%s: %.1f с • %s • %s", name, seconds, way, host)
+                    String.format(java.util.Locale("ru"), "%s: %.1f с • %s", name, seconds, host)
                 }, { error -> name + ": не отвечает (" + Errors.explain(error) + ")" })
             }.map { (id, line) -> line ?: ((Sources.byId(id)?.name ?: id) + ": проверка не удалась") }
             android.util.Log.i("LazyTV", "check sources: " + lines.joinToString(" | "))

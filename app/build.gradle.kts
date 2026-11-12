@@ -9,11 +9,11 @@ val localProps = Properties().apply { file("../local.properties").inputStream().
 
 android {
     namespace = "ru.lazytv"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "ru.lazytv"
         minSdk = 21
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 3
         versionName = "0.2"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
@@ -52,6 +52,7 @@ android {
 dependencies {
     implementation("androidx.tvprovider:tvprovider:1.0.0")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.zxing:core:3.5.4")
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")

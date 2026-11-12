@@ -42,16 +42,18 @@
 Разработка (эмулятор, отладка, DebugSeed):
 ```powershell
 $env:JAVA_HOME='<JDK 17>'
-& '<Android SDK>\gradle-8.7\bin\gradle.bat' -p <проект> assembleDebug
+& '<проект>\gradlew.bat' -p <проект> assembleDebug
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 
 Релиз (приставка, сжатие R8, без отладки, 3.0 МБ):
 ```powershell
 $env:JAVA_HOME='<JDK 17>'
-& '<Android SDK>\gradle-8.7\bin\gradle.bat' -p <проект> assembleRelease
+& '<проект>\gradlew.bat' -p <проект> assembleRelease
 ```
 APK: `app/build/outputs/apk/release/app-release.apk` (в git не попадает). Сборка подписана debug-ключом, поэтому устанавливается на устройство без сторонних сертификатов.
+
+Целевая и compile API: 36. Для Google Play дополнительно нужен отдельный upload-ключ; debug-подпись годится только для локальной установки.
 
 В сборке ответы TMDB кэшируются на устройстве на 12 часов (`cache/tmdb`): повторные открытия экранов не тратят запросы, а списки показываются сразу. Свежие данные: очистить кэш приложения.
 

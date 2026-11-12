@@ -30,19 +30,20 @@ import kotlinx.coroutines.withContext
 
 private const val FAVORITES = "ЗАКЛАДКИ"
 private const val SETTINGS = "НАСТРОЙКИ"
+const val SUPPORT_URL = "https://boosty.to/ko22009"
 /** Colour of the inactive left-menu icons; the logo under the menu uses the same one. */
 private val NAV_INACTIVE_COLOR: Int get() = TEXT_MUTED
 
 /** One section of the settings, shown as its own card on the settings page. */
-data class SettingsSection(val title: String, val description: String)
+data class SettingsSection(val title: String, val description: String, val icon: String? = null)
 
 val SETTINGS_SECTIONS = listOf(
+    SettingsSection("Поддержать проект", "Помогите развитию LazyTV", MenuIcons.TROPHY),
     SettingsSection("Источники видео", "Сайты и торренты, кэш источников"),
     SettingsSection("Адреса сайтов", "Конфиг с адресами, свои адреса сайтов"),
     SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),
     SettingsSection("Торренты и адреса", "TorrServe, JacRed, Jackett, минимум сидов"),
     SettingsSection("Каталог", "Язык описаний, рекомендации на ТВ"),
-    SettingsSection("Сеть", "Обход блокировок и прокси"),
     SettingsSection("Данные", "Копия в файл, кэш, история, сброс"),
     SettingsSection("Синхронизация", "Google Диск: закладки, история, поиск, настройки"),
     SettingsSection("Помощь", "Частые вопросы: сайты, видео, торренты, время"),
@@ -686,6 +687,10 @@ class SettingsPageFragment : Fragment() {
             override fun onCreate(holder: ItemList.Holder) {
                 holder.itemView.setOnClickListener {
                     (holder.item as? SettingsSection)?.let { section ->
+                        if (section.title == "Поддержать проект") {
+                            Links.openSupport(requireActivity(), SUPPORT_URL)
+                            return@setOnClickListener
+                        }
                         startActivity(Intent(requireContext(), SettingsActivity::class.java).putExtra("section", section.title))
                     }
                 }
@@ -747,6 +752,10 @@ class SettingsSectionPresenter : Presenter() {
         paint(tile.isFocused)
         tile.setOnFocusChangeListener { _, focused -> paint(focused) }
         texts.first.text = section.title
+        val iconSize = (22 * tile.context.uiScale()).toInt()
+        val icon = section.icon?.let { PathDrawable(it).apply { setBounds(0, 0, iconSize, iconSize) } }
+        texts.first.setCompoundDrawables(icon, null, null, null)
+        texts.first.compoundDrawablePadding = (8 * tile.context.uiScale()).toInt()
         texts.second.text = section.description
     }
 
