@@ -1354,6 +1354,8 @@ class DetailsActivity : Activity() {
                 // continuing a series: the episode left on the other device starts at once, if this release has it
                 val resumeAt = resume?.let { at -> episodes.indexOfFirst { TitleProgress.episodeOf(it.title) == at } } ?: -1
                 if (resumeAt >= 0) {
+                    // the stream may not start (a silent site): then the list of episodes opens on this episode
+                    PlaybackFallback.armSeries(currentTitle.id, episodesIntent(v).putExtra("episodeIndex", resumeAt))
                     playEpisode(
                         this, v, episodes, resumeAt, choose = false,
                         mediaTitle = currentName.ifEmpty { currentTitle.name },
@@ -1377,19 +1379,21 @@ class DetailsActivity : Activity() {
                         originalTitle = originalTitle, year = currentTitle.year, tv = currentTitle.tv, poster = posterPath,
                         tmdbId = currentTitle.id,
                     )
-                } else startActivity(
-                    Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
-                        .putExtra("title", v.title).putExtra("note", v.note).putExtra("ref", v.ref)
-                        .putExtra("alt", v.alt).putExtra("description", v.description)
-                        .putExtra("mediaTitle", currentName.ifEmpty { currentTitle.name })
-                        .putExtra("originalTitle", originalTitle)
-                        .putExtra("year", currentTitle.year).putExtra("tv", currentTitle.tv)
-                        .putExtra("poster", posterPath)
-                        .putExtra("tmdbId", currentTitle.id)
-                )
+                } else startActivity(episodesIntent(v))
             }
         }.start()
     }
+
+    /** The page of episodes of a release. */
+    private fun episodesIntent(v: Variant): Intent =
+        Intent(this, EpisodesActivity::class.java).putExtra("source", v.source).putExtra("sourceId", v.sourceId)
+            .putExtra("title", v.title).putExtra("note", v.note).putExtra("ref", v.ref)
+            .putExtra("alt", v.alt).putExtra("description", v.description)
+            .putExtra("mediaTitle", currentName.ifEmpty { currentTitle.name })
+            .putExtra("originalTitle", originalTitle)
+            .putExtra("year", currentTitle.year).putExtra("tv", currentTitle.tv)
+            .putExtra("poster", posterPath)
+            .putExtra("tmdbId", currentTitle.id)
 
     /**
      * Ahead of the "Смотреть" press: a film asks its first source for the video list (the press then starts at once), and when

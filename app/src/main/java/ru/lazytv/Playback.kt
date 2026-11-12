@@ -1,6 +1,7 @@
 package ru.lazytv
 
 import android.app.Activity
+import android.content.Intent
 
 /** A short caption for the player's episode strip: "1 серия SD/HD AniDub" becomes "1 серия". */
 fun shortEpisode(title: String): String {
@@ -121,7 +122,17 @@ object PlaybackFallback {
     private var poster: String? = null
     private var busy = false
 
+    /** A series continued from the card: if its stream does not start, the list of episodes opens instead of the error window. */
+    private var seriesList: Intent? = null
+    private var seriesId = 0L
+
+    fun armSeries(id: Long, list: Intent) {
+        seriesId = id
+        seriesList = list
+    }
+
     fun arm(id: Long, rest: List<Variant>, mediaTitle: String, originalTitle: String, year: String, poster: String?) {
+        seriesList = null
         tmdbId = id
         queue = ArrayDeque(rest)
         this.mediaTitle = mediaTitle; this.originalTitle = originalTitle; this.year = year; this.poster = poster
@@ -132,6 +143,13 @@ object PlaybackFallback {
     /** Starts the next source from [activity] (the player that failed) and closes it; false when nothing is left. */
     fun next(activity: Activity, id: Long): Boolean {
         if (busy) return true
+        seriesList?.takeIf { id > 0L && id == seriesId }?.let { list ->
+            seriesList = null
+            android.widget.Toast.makeText(activity, "Серия не запустилась, открыт список серий", android.widget.Toast.LENGTH_LONG).show()
+            activity.startActivity(list)
+            activity.finish()
+            return true
+        }
         if (!available(id)) return false
         busy = true
         val variant = queue.removeFirst()
