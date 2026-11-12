@@ -245,6 +245,7 @@ class MainFragment : Fragment() {
         if ((childFragmentManager.findFragmentByTag(currentPage) as? SettingsPageFragment)?.focusFirst() == true) return
         if (contentContainer.findFocus() != null) return
         if (currentPage == SEARCH_HEADER) {
+            if (searchPage?.focusChosenCard() == true) return
             val mic = searchPage?.micView
             if (mic != null && mic.isShown) {
                 mic.requestFocus()

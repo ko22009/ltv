@@ -39,6 +39,24 @@ class SearchPageFragment : Fragment() {
 
     private lateinit var searchBar: SearchBar
     val micView: View? get() = if (::searchBar.isInitialized) searchBar.mic else null
+
+    private var onCard = false
+
+    private fun View.isDescendantOf(parent: View): Boolean {
+        var v: View? = this
+        while (v != null) {
+            if (v === parent) return true
+            v = v.parent as? View
+        }
+        return false
+    }
+
+    /** From the menu: the cursor returns to the card it left; false when it did not stand on a card (the field opens then). */
+    fun focusChosenCard(): Boolean {
+        if (!::grid.isInitialized || !onCard || cards.size() == 0) return false
+        grid.focusChosen()
+        return true
+    }
     private lateinit var input: EditText
     private lateinit var history: LinearLayout
     private lateinit var historyBlock: LinearLayout
@@ -203,6 +221,10 @@ class SearchPageFragment : Fragment() {
         body.addView(loader, FrameLayout.LayoutParams(-1, -1))
         page.addView(body, titleGridParams(scale))
         showHistory()
+        // remembers whether the cursor last stood on a card (not on the field or a button): the menu returns there
+        page.viewTreeObserver.addOnGlobalFocusChangeListener { _, new ->
+            if (new != null && new.isDescendantOf(page)) onCard = new.isDescendantOf(grid)
+        }
         // full screen width whatever the menu leaves: while the menu slides, the container changes its width every
         // frame and the grid would be laid out again each time (a jerk); a fixed width lets the page just slide
         page.layoutParams = FrameLayout.LayoutParams(resources.displayMetrics.widthPixels, ViewGroup.LayoutParams.MATCH_PARENT)
