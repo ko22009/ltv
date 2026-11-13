@@ -1,0 +1,8 @@
+# name | tokens (see overview.py). Starter list: fill in screens as they become important.
+# Unverified: key sequences below are guesses of the menu order; check once on an emulator and fix.
+home |
+menu-2 | key:20
+menu-3 | key:20 key:20
+menu-4 | key:20 key:20 key:20
+menu-5 | key:20 key:20 key:20 key:20
+home-open-first | key:22 key:23 wait:3
