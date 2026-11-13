@@ -41,7 +41,7 @@
 
 Разработка (эмулятор, отладка, DebugSeed):
 ```powershell
-$env:JAVA_HOME = '<папка JDK 17>'
+$env:JAVA_HOME = 'C:\Android\jdk17' # либо папка своего JDK 17
 .\gradlew.bat assembleDebug
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
@@ -59,14 +59,25 @@ APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).
 В сборке ответы TMDB кэшируются на устройстве на 12 часов (`cache/tmdb`): повторные открытия экранов не тратят запросы, а списки показываются сразу. Свежие данные: очистить кэш приложения.
 
 Эмулятор поднимается из Android Studio или командой `emulator -avd <имя>`. Адрес запущенного устройства
-смотреть в `adb devices`; дальше он подставляется вместо `<устройство>`.
+смотреть в `adb devices`; дальше он подставляется вместо `<устройство>`. У приставки адрес и MAC не хранить в
+репозитории: адрес закрепляется за MAC в DHCP роутера, а для Wi-Fi ADB используется `<устройство>:5555`.
 
 Обновление убивает процесс, и Android сам приложение не открывает. Поэтому после установки сразу открываем его:
 
 ```powershell
-adb -s <устройство> install -r app\build\outputs\apk\debug\app-debug.apk
-adb -s <устройство> shell am start -n ru.lazytv/.MainActivity --ez restore true
+$adb = 'C:\platform-tools\adb.exe'
+$device = '<устройство>:5555'
+
+# Debug APK
+& $adb -s $device install -r 'app\build\outputs\apk\debug\app-debug.apk'
+
+# Готовый release APK из dist
+& $adb -s $device install -r 'dist\LazyTV-<версия>.apk'
+& $adb -s $device shell am start -n ru.lazytv/.MainActivity --ez restore true
 ```
+
+Перед установкой по Wi-Fi подключиться к приставке: `& $adb connect $device`. Wi-Fi ADB Android отключает после
+перезагрузки или смены сети, поэтому его нужно включить на приставке снова; закреплённый DHCP-адрес остаётся тем же.
 
 Ключ `restore` возвращает туда, где пользователь был до обновления: приложение запоминает intent открытого экрана, страницу меню (поиск, каталог) и то, открыто ли меню, а на холодном старте с этим ключом открывает экран, выбирает ту же страницу и то же состояние меню. Без ключа приложение стартует как обычно, с меню. Плеер не запоминается: после обновления видео не должно запускаться само.
 
