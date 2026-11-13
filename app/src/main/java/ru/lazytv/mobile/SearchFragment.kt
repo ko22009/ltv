@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import ru.lazytv.DetailsActivity
+import ru.lazytv.DialogButton
 import ru.lazytv.Errors
 import ru.lazytv.History
 import ru.lazytv.R
@@ -24,6 +25,7 @@ import ru.lazytv.Settings
 import ru.lazytv.Title
 import ru.lazytv.Tmdb
 import ru.lazytv.databinding.FragmentMobileGridBinding
+import ru.lazytv.showMessage
 import ru.lazytv.toExtras
 
 /** Search by name: the phrases typed before as chips, the recently opened titles when nothing is typed, TMDB results otherwise. */
@@ -54,6 +56,7 @@ class SearchFragment : Fragment() {
             }
         }
         binding.searchInput.visibility = View.VISIBLE
+        binding.clearRecentButton.setOnClickListener { askClearRecent() }
         setupMicrophone()
         binding.chipGroup.isSingleSelection = false
         binding.chipGroup.isSelectionRequired = false
@@ -156,6 +159,8 @@ class SearchFragment : Fragment() {
         adapter.setItems(recent)
         binding.sectionTitle.text = blockHeading("Недавно открытое", "Удержание убирает")
         binding.sectionTitle.visibility = if (recent.isEmpty()) View.GONE else View.VISIBLE
+        binding.clearRecentButton.visibility = if (recent.isEmpty()) View.GONE else View.VISIBLE
+        binding.sectionHeader.visibility = if (recent.isEmpty()) View.GONE else View.VISIBLE
         binding.emptyText.text = "Введите название фильма или сериала"
         binding.emptyText.visibility = if (recent.isEmpty()) View.VISIBLE else View.GONE
     }
@@ -167,7 +172,7 @@ class SearchFragment : Fragment() {
             .hideSoftInputFromWindow(binding.searchInput.windowToken, 0)
         remember(phrase)
         binding.chipScroll.visibility = View.GONE
-        binding.sectionTitle.visibility = View.GONE
+        binding.sectionHeader.visibility = View.GONE
         binding.emptyText.visibility = View.GONE
         binding.loading.visibility = View.VISIBLE
         adapter.setItems(emptyList())
@@ -186,6 +191,16 @@ class SearchFragment : Fragment() {
                 b.emptyText.visibility = View.VISIBLE
             }
         }
+    }
+
+    private fun askClearRecent() {
+        showMessage(requireActivity(), "Очистить весь список?", message = "Недавно открытое будет удалено.", buttons = listOf(
+            DialogButton("Отмена"),
+            DialogButton("Очистить") {
+                History.clear(requireContext())
+                showIdle()
+            },
+        ))
     }
 
     override fun onResume() {
