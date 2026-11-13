@@ -27,7 +27,7 @@ TMDB_KEY=ваш_ключ_tmdb
 ## Сборка и запуск
 
 ```powershell
-$env:JAVA_HOME = 'C:\Android\jdk17' # либо папка своего JDK 17
+$env:JAVA_HOME = 'C:\Android\jdk17\jdk-17.0.20.1+1' # либо папка своего JDK 17
 .\gradlew.bat assembleDebug          # разработка, DebugSeed
 .\tools\release.ps1 -Version 1.0.0   # релиз в dist
 ```

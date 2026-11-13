@@ -38,7 +38,7 @@ private val NAV_INACTIVE_COLOR: Int get() = TEXT_MUTED
 data class SettingsSection(val title: String, val description: String, val icon: String? = null)
 
 val SETTINGS_SECTIONS = listOf(
-    SettingsSection("Поддержать проект", "Помогите развитию LazyTV", MenuIcons.TROPHY),
+    SettingsSection("Поддержать проект", "Помогите развитию LazyTV"),
     SettingsSection("Источники видео", "Сайты и торренты, кэш источников"),
     SettingsSection("Адреса сайтов", "Конфиг с адресами, свои адреса сайтов"),
     SettingsSection("Воспроизведение", "Плеер, качество, озвучка, позиция"),

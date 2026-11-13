@@ -41,7 +41,7 @@
 
 Разработка (эмулятор, отладка, DebugSeed):
 ```powershell
-$env:JAVA_HOME = 'C:\Android\jdk17' # либо папка своего JDK 17
+$env:JAVA_HOME = 'C:\Android\jdk17\jdk-17.0.20.1+1' # либо папка своего JDK 17
 .\gradlew.bat assembleDebug
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk` (в git не попадает).

@@ -401,7 +401,10 @@ class SearchPageFragment : Fragment() {
             add(button(MenuIcons.DELETE, "Очистить всё") { askClearRecent() })
             if (picked.isNotEmpty()) add(button(MenuIcons.DELETE, "Удалить (${picked.size})") { removePicked() })
             add(button(MenuIcons.CHECK, "Готово") { setEditing(false) })
-        } else add(button(MenuIcons.EDIT, "Редактировать") { setEditing(true) })
+        } else {
+            add(button(MenuIcons.DELETE, "Очистить всё") { askClearRecent() })
+            add(button(MenuIcons.EDIT, "Редактировать") { setEditing(true) })
+        }
     }
 
     private fun setEditing(on: Boolean) {
