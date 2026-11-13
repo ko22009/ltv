@@ -55,6 +55,7 @@ object Settings {
 
     fun setBool(context: Context, key: String, value: Boolean) {
         prefs(context).edit().putBoolean(key, value).apply()
+        Sync.dataChanged(context, key)
     }
 
     fun string(context: Context, key: String, default: String): String =
@@ -62,10 +63,12 @@ object Settings {
 
     fun setString(context: Context, key: String, value: String) {
         prefs(context).edit().putString(key, value).apply()
+        Sync.dataChanged(context, key)
     }
 
     fun remove(context: Context, key: String) {
         prefs(context).edit().remove(key).apply()
+        Sync.dataChanged(context, key)
     }
 
     /** Keys in the shared "lazytv" file that hold user data rather than preferences. */
@@ -84,6 +87,7 @@ object Settings {
         edit.apply()
         context.getSharedPreferences("remote", 0).edit().clear().apply()
         context.getSharedPreferences("catalog_filters", 0).edit().clear().apply()
+        Sync.dataChanged(context)
     }
 
     /** Changes whenever any setting changes; screens compare it to know when to redraw. */

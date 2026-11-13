@@ -1,6 +1,8 @@
 package ru.lazytv
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -66,6 +68,13 @@ object Sync {
 
     private fun synced(key: String) = key in SYNCED_KEYS || key.startsWith("service_")
 
+    private val DATA_KEYS = setOf(PREFS_FAVORITES, PREFS_HISTORY, PREFS_WATCHED, Settings.SEARCH_HISTORY, "title_progress")
+    private const val PUSH_DELAY_MS = 1_000L
+    private val pushHandler = Handler(Looper.getMainLooper())
+    private val pushLock = Any()
+    private var pendingPush: Runnable? = null
+    private val applying = ThreadLocal<Boolean>()
+
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, 0)
 
     /** False when the build has no Google client id: the settings section then explains where it comes from. */
@@ -89,6 +98,20 @@ object Sync {
     }
 
     fun lastSync(context: Context): Long = prefs(context).getLong(LAST_AT, 0L)
+
+    /** Queues one upload after a local change that belongs in the shared document. */
+    fun dataChanged(context: Context, key: String? = null) {
+        if (applying.get() == true || (key != null && key !in DATA_KEYS && !synced(key))) return
+        if (!configured(context) || !linked(context)) return
+        val app = context.applicationContext
+        synchronized(pushLock) {
+            pendingPush?.let(pushHandler::removeCallbacks)
+            pendingPush = Runnable {
+                synchronized(pushLock) { pendingPush = null }
+                pushIfChanged(app)
+            }.also { pushHandler.postDelayed(it, PUSH_DELAY_MS) }
+        }
+    }
 
     // ---- sign-in -----------------------------------------------------------------------------------------------
 
@@ -239,20 +262,25 @@ object Sync {
             val text = array.toString()
             if (Settings.string(context, key, "[]") != text) Settings.setString(context, key, text)
         }
-        applyProgress(context, doc.progress)
-        write(PREFS_FAVORITES, doc.favorites)
-        write(PREFS_HISTORY, doc.history)
-        write(Settings.SEARCH_HISTORY, doc.search, plain = true)
-        val watched = if (doc.watched.isEmpty()) "" else "," + doc.watched.joinToString(",") { it.key } + ","
-        if (Settings.string(context, PREFS_WATCHED, "") != watched) Settings.setString(context, PREFS_WATCHED, watched)
-        doc.settings.forEach { (key, encoded) ->
-            val value = runCatching { JSONObject(encoded) }.getOrNull() ?: return@forEach
-            when {
-                value.has("b") && Settings.bool(context, key) != value.optBoolean("b") ->
-                    Settings.setBool(context, key, value.optBoolean("b"))
-                value.has("s") && Settings.string(context, key, "") != value.optString("s") ->
-                    Settings.setString(context, key, value.optString("s"))
+        applying.set(true)
+        try {
+            applyProgress(context, doc.progress)
+            write(PREFS_FAVORITES, doc.favorites)
+            write(PREFS_HISTORY, doc.history)
+            write(Settings.SEARCH_HISTORY, doc.search, plain = true)
+            val watched = if (doc.watched.isEmpty()) "" else "," + doc.watched.joinToString(",") { it.key } + ","
+            if (Settings.string(context, PREFS_WATCHED, "") != watched) Settings.setString(context, PREFS_WATCHED, watched)
+            doc.settings.forEach { (key, encoded) ->
+                val value = runCatching { JSONObject(encoded) }.getOrNull() ?: return@forEach
+                when {
+                    value.has("b") && Settings.bool(context, key) != value.optBoolean("b") ->
+                        Settings.setBool(context, key, value.optBoolean("b"))
+                    value.has("s") && Settings.string(context, key, "") != value.optString("s") ->
+                        Settings.setString(context, key, value.optString("s"))
+                }
             }
+        } finally {
+            applying.remove()
         }
     }
 
