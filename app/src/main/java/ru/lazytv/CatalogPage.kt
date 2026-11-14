@@ -431,7 +431,11 @@ class CatalogPageFragment : Fragment() {
                     message.visibility = View.VISIBLE
                     retryChip.visibility = View.VISIBLE
                     if (activity?.currentFocus == null) retryChip.requestFocus()
-                    // the page asks again by itself: the owner should not have to press the button (a paused TMDB or a late network)
+                    // the page asks again by itself: the owner should not have to press the button (a paused TMDB or a late network);
+                    // the spinner keeps turning under the error so the empty screen does not look dead
+                    skeletons = true
+                    loading.caption("Повторим автоматически…")
+                    loading.visibility = View.VISIBLE
                     autoRetry?.cancel()
                     autoRetry = viewLifecycleOwner.lifecycleScope.launch {
                         kotlinx.coroutines.delay(AUTO_RETRY_MS)
