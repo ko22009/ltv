@@ -273,7 +273,7 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
 
     private fun restAlpha() = if (watched) 0.3f else 1f
 
-    // a watched card is just as dim under the cursor as at rest: the frame is what shows the focus
+    // a watched card is just as dim under the cursor as at rest: the zoom is what shows the focus
     private fun focusAlpha() = restAlpha()
 
     // the poster and the text plate are dimmed, the card itself and the tick badge are not
@@ -283,8 +283,8 @@ class TitleCard(context: Context, private val scale: Float) : LinearLayout(conte
         }
     }
 
-    // the focused card wears a frame (frameOnFocus); a watched one stays as dim as at rest,
-    // and the frame alone tells where the cursor is
+    // the focused card grows instead of wearing a frame; a watched one stays as dim as at rest,
+    // and the growth alone tells where the cursor is
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (gainFocus) { onFocused?.invoke(); applyMarks() }
@@ -379,7 +379,7 @@ private const val GRID_EDGE_BOTTOM = 28
 private const val GRID_TOP_GAP = 2
 
 /**
- * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card wears a frame
+ * The one grid of [TitleCard]s for every page ("весь список", the catalogue, the search): the focused card grows
  * ([list] gets the highlight here, so a new list cannot lose it), the cards scrolled up are cut at the grid's edge
  * under the header instead of running over it. Put it in the page with [titleGridParams], which keeps the cards where
  * the page's edge is.

@@ -98,13 +98,15 @@ class FavoritesPageFragment : Fragment() {
     /** The card or tile that held the focus last: "right" from the menu returns to it, the scroll stays as it was (as in the catalog). */
     private var lastFocus: View? = null
 
-    /** A card or tile wears the frame under the focus, as the cards of the catalog do. */
+    /** A card or tile grows under the focus, as the cards of the catalog do. */
     private fun zoomOnFocus(view: View, onFocused: (() -> Unit)? = null) {
-        frameOnFocus(view) { focused ->
+        view.setOnFocusChangeListener { v, focused ->
             if (focused) {
-                lastFocus = view
+                lastFocus = v
                 onFocused?.invoke()
             }
+            v.animate().scaleX(if (focused) 1.1f else 1f).scaleY(if (focused) 1.1f else 1f)
+                .translationZ(if (focused) 8f else 0f).setDuration(150).start()
         }
     }
 
