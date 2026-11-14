@@ -65,7 +65,8 @@ public final class DpiBypass {
     private static final int DIRECT_TIMEOUT_MS = 3000;
     private static final int DPI_TIMEOUT_MS = 4000;
     private static final long TTL_DIRECT_MS = 20 * 60 * 1000L;
-    private static final long TTL_DPI_MS = 60 * 60 * 1000L;
+    // short: when the direct way opens again (a router setting changed), the app must not stay on the bypass for an hour
+    private static final long TTL_DPI_MS = 10 * 60 * 1000L;
     private static final long TTL_FAILED_MS = 2 * 60 * 1000L;
 
     private static final ExecutorService POOL = Executors.newCachedThreadPool(new ThreadFactory() {
@@ -937,14 +938,34 @@ public final class DpiBypass {
             // a real resource of the app: some networks let the start through and cut or throttle the rest,
             // so the answer must come in full (a stall ends in a timeout and counts as blocked)
             byte[] buf = new byte[4096];
-            int total = 0;
+            java.io.ByteArrayOutputStream all = new java.io.ByteArrayOutputStream();
             for (int n; (n = in.read(buf)) > 0; ) {
-                total += n;
+                all.write(buf, 0, n);
             }
-            if (total < PROBE_MIN_BYTES) {
-                log(host + " probe got only " + total + " bytes (need " + PROBE_MIN_BYTES + ") via " + connectProxy);
+            // the answer is complete when the body is as long as the server said: the size of a changing list
+            // (the catalog shrinks and grows daily) is not a stable bar, a fixed minimum is only the fallback
+            byte[] got = all.toByteArray();
+            int total = got.length;
+            int headEnd = -1;
+            for (int i = 3; i < total && headEnd < 0; i++) {
+                if (got[i] == '\n' && got[i - 1] == '\r' && got[i - 2] == '\n' && got[i - 3] == '\r') {
+                    headEnd = i + 1;
+                }
             }
-            return total >= PROBE_MIN_BYTES ? V_OK : V_BLOCKED;
+            long declared = -1;
+            if (headEnd > 0) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?im)^content-length:\\s*(\\d+)")
+                        .matcher(new String(got, 0, headEnd, "ISO-8859-1"));
+                if (m.find()) {
+                    declared = Long.parseLong(m.group(1));
+                }
+            }
+            long body = headEnd > 0 ? total - headEnd : 0;
+            boolean complete = declared >= 0 ? body >= declared && declared > 0 : total >= PROBE_MIN_BYTES;
+            if (!complete) {
+                log(host + " probe incomplete: body " + body + " of " + declared + " (total " + total + ") via " + connectProxy);
+            }
+            return complete ? V_OK : V_BLOCKED;
         } catch (SSLException e) {
             log(host + " ssl: " + e);
             for (Throwable t = e; t != null; t = t.getCause()) {
