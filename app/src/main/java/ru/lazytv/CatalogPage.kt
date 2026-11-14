@@ -449,6 +449,6 @@ class CatalogPageFragment : Fragment() {
         const val CARD_SCALE = 0.82f
         const val MAX_RETRIES = 3
         const val RETRY_PAUSE_MS = 2000L
-        const val AUTO_RETRY_MS = 20_000L
+        const val AUTO_RETRY_MS = 8_000L
     }
 }
