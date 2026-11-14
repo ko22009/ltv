@@ -307,7 +307,16 @@ class SearchPageFragment : Fragment() {
         val appContext = context?.applicationContext ?: return
         loader.visibility = View.VISIBLE
         Thread {
-            val found = runCatching { Tmdb.search(appContext, phrase) }
+            var found = runCatching { Tmdb.search(appContext, phrase) }
+            // a failed connect drops the cached route (DpiBypass.connectFailed), so one more try goes the route again
+            found.exceptionOrNull()?.let { e ->
+                android.util.Log.w("LazyTvSearch", "search failed: $e")
+                if (Errors.isNetwork(e)) {
+                    Thread.sleep(1500)
+                    found = runCatching { Tmdb.search(appContext, phrase) }
+                    found.exceptionOrNull()?.let { android.util.Log.w("LazyTvSearch", "retry failed: $it") }
+                }
+            }
             activity?.runOnUiThread {
                 if (!isAdded || input.text.toString().trim() != phrase) return@runOnUiThread
                 loader.visibility = View.GONE
