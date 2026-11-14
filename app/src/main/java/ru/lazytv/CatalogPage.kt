@@ -54,14 +54,27 @@ class CatalogPageFragment : Fragment() {
         // the focus goes to the nearest card that stays (next one first) before the removed one fades out, otherwise
         // the platform drops it on the first button of the page
         val held = grid.focusedChild?.let { grid.getChildAdapterPosition(it) } ?: -1
+        var target = -1
         if (held in gone) {
-            val keep = (held + 1 until cards.size()).firstOrNull { it !in gone } ?: (held - 1 downTo 0).firstOrNull { it !in gone }
+            // a neighbour of the same row holds the focus while the card fades (a card of another row would scroll the grid
+            // and the row would jump); the card that takes the removed one's place gets it when the shift is over
+            val row = held / COLUMNS
+            val keep = (held + 1 until cards.size()).firstOrNull { it !in gone && it / COLUMNS == row }
+                ?: (held - 1 downTo 0).firstOrNull { it !in gone && it / COLUMNS == row }
+                ?: (held + 1 until cards.size()).firstOrNull { it !in gone }
+                ?: (held - 1 downTo 0).firstOrNull { it !in gone }
             keep?.let { grid.findViewHolderForAdapterPosition(it)?.itemView?.requestFocus() }
+            target = held - gone.count { it < held }
         }
         // the grid has no item animator (it made the list jump while paging): it is on only for this removal
         grid.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply { supportsChangeAnimations = false }
         for (i in gone.asReversed()) cards.removeAt(i)
-        grid.postDelayed({ grid.itemAnimator = null }, 600)
+        grid.postDelayed({
+            grid.itemAnimator = null
+            if (isAdded && target >= 0 && grid.hasFocus()) {
+                grid.findViewHolderForAdapterPosition(minOf(target, cards.size() - 1))?.itemView?.requestFocus()
+            }
+        }, 600)
     }
     /** True while the spinner covers the page and the first page of cards has not come yet. */
     private var skeletons = false
