@@ -127,12 +127,7 @@ class CatalogPageFragment : Fragment() {
         // shown under the error text when the first page could not be fetched even after the automatic tries
         retryChip = chipButton(requireContext(), scale, "Повторить").apply {
             visibility = View.GONE
-            // a "paused" TMDB (nothing opened it earlier) is asked again for real, not read from the pause
-            setOnClickListener {
-                com.lmd.dpi.DpiBypass.forget("api.themoviedb.org")
-                com.lmd.dpi.DpiBypass.forget("image.tmdb.org")
-                startOver()
-            }
+            setOnClickListener { retryNow() }
         }
         page.addView(retryChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { topMargin = px(12) })
 
@@ -344,10 +339,21 @@ class CatalogPageFragment : Fragment() {
 
     override fun onDestroyView() {
         loadJob?.cancel()
+        autoRetry?.cancel()
         super.onDestroyView()
     }
 
+    private var autoRetry: Job? = null
+
+    /** A "paused" TMDB (nothing opened it earlier) is asked again for real, not read from the pause. */
+    private fun retryNow() {
+        com.lmd.dpi.DpiBypass.forget("api.themoviedb.org")
+        com.lmd.dpi.DpiBypass.forget("image.tmdb.org")
+        startOver()
+    }
+
     private fun startOver() {
+        autoRetry?.cancel()
         loadJob?.cancel()
         cards.clear()
         grid.resetChosen()
@@ -425,6 +431,12 @@ class CatalogPageFragment : Fragment() {
                     message.visibility = View.VISIBLE
                     retryChip.visibility = View.VISIBLE
                     if (activity?.currentFocus == null) retryChip.requestFocus()
+                    // the page asks again by itself: the owner should not have to press the button (a paused TMDB or a late network)
+                    autoRetry?.cancel()
+                    autoRetry = viewLifecycleOwner.lifecycleScope.launch {
+                        kotlinx.coroutines.delay(AUTO_RETRY_MS)
+                        if (isAdded && !isHidden && cards.size() == 0) retryNow()
+                    }
                 }
                 // a later page that failed is asked again on the next move of the cursor near the end
             }
@@ -437,5 +449,6 @@ class CatalogPageFragment : Fragment() {
         const val CARD_SCALE = 0.82f
         const val MAX_RETRIES = 3
         const val RETRY_PAUSE_MS = 2000L
+        const val AUTO_RETRY_MS = 20_000L
     }
 }
