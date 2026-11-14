@@ -39,6 +39,8 @@ class ClassPresenterSelector {
 /** How much the card under the cursor grows, the same for the grids and the pages of cards. */
 const val FOCUS_ZOOM = 1.14f
 
+private val SCROLL_CURVE = android.view.animation.DecelerateInterpolator()
+
 /** The card or tile under the cursor grows and comes over its neighbours: the only focus mark of the cards. */
 fun zoomOnFocus(view: View) {
     view.setOnFocusChangeListener { v, focused ->
@@ -150,8 +152,8 @@ open class CardGridView(context: Context, private val columns: Int, private val 
 
     init {
         layoutManager = object : GridLayoutManager(context, columns) {
-            // RecyclerView asks its layout manager (not its own method) where to scroll for a focused card; the stock smooth
-            // scroll is kept (the earlier own steady-speed scroll and the extra row made in advance gave nothing)
+            // RecyclerView asks its layout manager (not its own method) where to scroll for a focused card; the stock amount
+            // is kept, only the curve of the move is own (see smoothScrollBy below)
             override fun requestChildRectangleOnScreen(
                 parent: RecyclerView, child: View, rect: Rect, immediate: Boolean, focusedChildVisible: Boolean,
             ): Boolean {
@@ -168,6 +170,12 @@ open class CardGridView(context: Context, private val columns: Int, private val 
             }
         })
     }
+
+    /**
+     * The move to the focused card. The stock curve (quintic, about 400 ms for one row) covers nine tenths of the way in the
+     * first third of the time and creeps the rest: on a TV it reads as a scroll and then a second small one.
+     */
+    override fun smoothScrollBy(dx: Int, dy: Int) = smoothScrollBy(dx, dy, SCROLL_CURVE, 200)
 
     override fun requestChildFocus(child: View, focused: View?) {
         super.requestChildFocus(child, focused)
