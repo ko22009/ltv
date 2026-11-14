@@ -584,7 +584,7 @@ class SkeletonPresenter(private val cardScale: Float = CARD_SCALE) : Presenter()
     override fun onUnbindViewHolder(holder: ViewHolder) {}
 }
 
-class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
+class CardPresenter(private val cardScale: Float = CARD_SCALE, private val onMarked: (() -> Unit)? = null) : Presenter() {
     private companion object {
         val runtimePool: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newFixedThreadPool(3)
     }
@@ -602,6 +602,7 @@ class CardPresenter(private val cardScale: Float = CARD_SCALE) : Presenter() {
                 false -> android.widget.Toast.makeText(card.context, "Отметка снята", android.widget.Toast.LENGTH_SHORT).show()
                 null -> Unit
             }
+            onMarked?.invoke()
             true
         }
         val appContext = card.context.applicationContext

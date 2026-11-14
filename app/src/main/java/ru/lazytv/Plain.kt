@@ -87,6 +87,12 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
         notifyItemRangeRemoved(0, count)
     }
 
+    /** The stock item animator fades the removed card out and slides the rest into its place. */
+    fun removeAt(index: Int) {
+        items.removeAt(index)
+        notifyItemRemoved(index)
+    }
+
     fun replace(index: Int, item: Any) {
         items[index] = item
         notifyItemChanged(index)

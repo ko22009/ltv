@@ -42,8 +42,18 @@ class CatalogPageFragment : Fragment() {
 
     private val cards = ItemList(
         ClassPresenterSelector()
-            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE)),
+            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE) { dropWatched() }),
     )
+
+    /** With "hide watched" on (settings or this list's filter) a title just marked leaves the grid with the item animation. */
+    private fun dropWatched() {
+        val ctx = context ?: return
+        if (!CatalogFilter.load(ctx, category.id).hideWatched && !Settings.bool(ctx, Settings.HIDE_WATCHED, false)) return
+        for (i in cards.size() - 1 downTo 0) {
+            val title = cards.get(i) as? Title ?: continue
+            if (Watched.has(ctx, title)) cards.removeAt(i)
+        }
+    }
     /** True while the spinner covers the page and the first page of cards has not come yet. */
     private var skeletons = false
     /** Failed asks in a row: the page is asked again by itself a few times before the error is shown. */
@@ -117,7 +127,12 @@ class CatalogPageFragment : Fragment() {
         // shown under the error text when the first page could not be fetched even after the automatic tries
         retryChip = chipButton(requireContext(), scale, "Повторить").apply {
             visibility = View.GONE
-            setOnClickListener { startOver() }
+            // a "paused" TMDB (nothing opened it earlier) is asked again for real, not read from the pause
+            setOnClickListener {
+                com.lmd.dpi.DpiBypass.forget("api.themoviedb.org")
+                com.lmd.dpi.DpiBypass.forget("image.tmdb.org")
+                startOver()
+            }
         }
         page.addView(retryChip, LinearLayout.LayoutParams(-2, px(CHIP_HEIGHT)).apply { topMargin = px(12) })
 
@@ -308,6 +323,7 @@ class CatalogPageFragment : Fragment() {
         } else if (cards.size() > 0) {
             // a title marked watched on its card comes back dimmed in this grid too
             cards.notifyArrayItemRangeChanged(0, cards.size())
+            dropWatched()
             restoreOpenedFocus()
         }
     }
