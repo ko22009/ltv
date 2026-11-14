@@ -45,7 +45,7 @@ data class MoreTile(val title: String, val category: String = "", val sort: Stri
     companion object {
         /** Watched titles leave the list when the list's own filter or the global switch in the settings asks for it. */
         fun withoutWatched(context: Context, titles: List<Title>, listAsks: Boolean): List<Title> =
-            if (listAsks || Settings.bool(context, Settings.HIDE_WATCHED, false)) titles.filter { !Watched.has(context, it) } else titles
+            if (listAsks) titles.filter { !Watched.has(context, it) } else titles
 
         /** How many pages in a row may hold only watched titles before the row gives up. */
         private const val MAX_SKIPPED_PAGES = 5

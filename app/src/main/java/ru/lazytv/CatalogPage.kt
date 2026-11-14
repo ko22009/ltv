@@ -45,10 +45,10 @@ class CatalogPageFragment : Fragment() {
             .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE) { dropWatched() }),
     )
 
-    /** With "hide watched" on (settings or this list's filter) a title just marked leaves the grid with the item animation. */
+    /** With "hide watched" on in this list's filter a title just marked leaves the grid with the item animation. */
     private fun dropWatched() {
         val ctx = context ?: return
-        if (!CatalogFilter.load(ctx, category.id).hideWatched && !Settings.bool(ctx, Settings.HIDE_WATCHED, false)) return
+        if (!CatalogFilter.load(ctx, category.id).hideWatched) return
         val gone = (0 until cards.size()).filter { (cards.get(it) as? Title)?.let { t -> Watched.has(ctx, t) } == true }
         if (gone.isEmpty()) return
         // the focus goes to the nearest card that stays (next one first) before the removed one fades out, otherwise

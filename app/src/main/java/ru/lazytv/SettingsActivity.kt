@@ -481,7 +481,6 @@ open class SettingsScreen : Fragment() {
         section("Каталог")
         choice("Язык названий и описаний", Settings.LANGUAGE, "ru-RU",
             listOf("ru-RU" to "Русский", "en-US" to "English", "uk-UA" to "Українська"))
-        check("Скрывать просмотренное", "Не показывать в каталоге фильмы и сериалы, отмеченные просмотренными", Settings.HIDE_WATCHED, default = false)
         check("Строка «Популярное» на главном экране TV",
             "Рекомендации в ленте Android TV (если лаунчер их показывает)", Settings.RECOMMENDATIONS)
 
