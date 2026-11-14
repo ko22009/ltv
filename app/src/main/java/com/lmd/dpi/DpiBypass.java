@@ -941,6 +941,9 @@ public final class DpiBypass {
             for (int n; (n = in.read(buf)) > 0; ) {
                 total += n;
             }
+            if (total < PROBE_MIN_BYTES) {
+                log(host + " probe got only " + total + " bytes (need " + PROBE_MIN_BYTES + ") via " + connectProxy);
+            }
             return total >= PROBE_MIN_BYTES ? V_OK : V_BLOCKED;
         } catch (SSLException e) {
             log(host + " ssl: " + e);
@@ -951,8 +954,10 @@ public final class DpiBypass {
             }
             return V_BLOCKED;
         } catch (SocketTimeoutException e) {
+            log(host + " probe timeout via " + connectProxy + ": " + e.getMessage());
             return V_BLOCKED;
         } catch (SocketException e) {
+            log(host + " probe socket error via " + connectProxy + ": " + e);
             String m = String.valueOf(e.getMessage()).toLowerCase();
             // a refusal straight from the provider looks like this too; only the direct way is judged so
             // (a refusing local proxy is not a block)
