@@ -229,6 +229,8 @@ class CatalogPageFragment : Fragment() {
             return false
         }
         wantCardFocus = false
+        // coming from the menu works like the first opening: the first card, not the one left earlier
+        grid.resetChosen()
         claimGrid(force = true)
         return true
     }
