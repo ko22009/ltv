@@ -56,23 +56,19 @@ class CatalogPageFragment : Fragment() {
         val held = grid.focusedChild?.let { grid.getChildAdapterPosition(it) } ?: -1
         var target = -1
         if (held in gone) {
-            // a neighbour of the same row holds the focus while the card fades (a card of another row would scroll the grid
-            // and the row would jump); the card that takes the removed one's place gets it when the shift is over
-            val row = held / COLUMNS
-            val keep = (held + 1 until cards.size()).firstOrNull { it !in gone && it / COLUMNS == row }
-                ?: (held - 1 downTo 0).firstOrNull { it !in gone && it / COLUMNS == row }
-                ?: (held + 1 until cards.size()).firstOrNull { it !in gone }
-                ?: (held - 1 downTo 0).firstOrNull { it !in gone }
-            keep?.let { grid.findViewHolderForAdapterPosition(it)?.itemView?.requestFocus() }
+            // nobody gets the focus while the card fades (the platform would hand it to the first button, and a card of
+            // another row would scroll the grid); the card that takes the removed one's place gets it when the shift is over
             target = held - gone.count { it < held }
+            (view as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         // the grid has no item animator (it made the list jump while paging): it is on only for this removal
         grid.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply { supportsChangeAnimations = false }
         for (i in gone.asReversed()) cards.removeAt(i)
         grid.postDelayed({
             grid.itemAnimator = null
-            if (isAdded && target >= 0 && grid.hasFocus()) {
-                grid.findViewHolderForAdapterPosition(minOf(target, cards.size() - 1))?.itemView?.requestFocus()
+            if (isAdded) {
+                (view as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+                if (target >= 0) grid.findViewHolderForAdapterPosition(minOf(target, cards.size() - 1))?.itemView?.requestFocus()
             }
         }, 600)
     }
