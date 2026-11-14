@@ -511,19 +511,32 @@ object Tmdb {
             Connectivity.check() // a cached answer says nothing about the network: ask the server for real
             return file.readText()
         }
-        val connection = Connectivity.open(address)
-        connection.connectTimeout = 8000
-        connection.readTimeout = 20000
-        val body = try {
-            connection.inputStream.use {
-                ClockCheck.observe(connection.date)
-                it.readBytes().toString(Charsets.UTF_8)
+        var attempt = 0
+        var answer: String? = null
+        while (answer == null) {
+            attempt++
+            val connection = Connectivity.open(address)
+            connection.connectTimeout = 8000
+            connection.readTimeout = 20000
+            try {
+                answer = connection.inputStream.use {
+                    ClockCheck.observe(connection.date)
+                    it.readBytes().toString(Charsets.UTF_8)
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("LazyTvTmdb", "attempt $attempt failed: $e | " + Errors.details(e, java.net.URL(address).host))
+                // a failed connect drops the cached route (DpiBypass.connectFailed): one more try picks the route again,
+                // and the "no internet" plate waits for the last answer
+                if (attempt < 2 && Errors.isNetwork(e)) {
+                    Thread.sleep(1500)
+                    continue
+                }
+                // only a silent server counts (timeout, refused, no address): an HTTP error code is an answer
+                if (Errors.isNetwork(e)) Connectivity.report(false) else Connectivity.report(true)
+                throw e
             }
-        } catch (e: Exception) {
-            // only a silent server counts (timeout, refused, no address): an HTTP error code is an answer
-            if (Errors.isNetwork(e)) Connectivity.report(false) else Connectivity.report(true)
-            throw e
         }
+        val body: String = answer
         Connectivity.report(true)
         runCatching { file.apply { parentFile?.mkdirs(); writeText(body) } }
         return body
