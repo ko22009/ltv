@@ -36,15 +36,26 @@ class ClassPresenterSelector {
         map[item.javaClass] ?: map.entries.first { it.key.isAssignableFrom(item.javaClass) }.value
 }
 
-/** How much the card under the cursor grows, the same for the grids and the pages of cards. */
-const val FOCUS_ZOOM = 1.14f
+/** Width of the frame of the card under the cursor (dp at 1080p). */
+const val FOCUS_FRAME = 4f
 
-/** The card or tile under the cursor grows and comes over its neighbours: the only focus mark of the cards. */
-fun zoomOnFocus(view: View) {
-    view.setOnFocusChangeListener { v, focused ->
-        val to = if (focused) FOCUS_ZOOM else 1f
-        v.animate().scaleX(to).scaleY(to).translationZ(if (focused) 8f else 0f).setDuration(150).start()
+/**
+ * The card or tile under the cursor wears a frame in the cursor colour: the only focus mark of the cards, the same for the grids
+ * and the pages of cards. It is a plain drawable over the card (no zoom: growing a card was heavy for a weak set-top box).
+ * [onChange] is told about every focus change.
+ */
+fun frameOnFocus(view: View, onChange: ((Boolean) -> Unit)? = null) {
+    val scale = view.context.uiScale()
+    val frame = android.graphics.drawable.StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), android.graphics.drawable.GradientDrawable().apply {
+            setColor(android.graphics.Color.TRANSPARENT)
+            cornerRadius = TITLE_CARD_RADIUS * scale * 0.82f
+            setStroke(maxOf(2, (FOCUS_FRAME * scale).toInt()), cursorFill(view.context))
+        })
+        addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
     }
+    view.foreground = frame
+    view.setOnFocusChangeListener { _, focused -> onChange?.invoke(focused) }
 }
 
 /** The items of a list or a grid, shown by the presenters; the methods are the ones the pages used. */
@@ -63,7 +74,7 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
     }
 
     var listener: Listener? = null
-    /** Cards grow under the focus on a TV (a touch screen has no cursor). */
+    /** Cards wear a frame under the focus on a TV (a touch screen has no cursor). */
     var zoom = false
 
     private val items = mutableListOf<Any>()
@@ -107,7 +118,7 @@ class ItemList(private val selector: ClassPresenterSelector) : RecyclerView.Adap
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val presenter = selector.presenters[viewType]
         val holder = Holder(presenter.onCreateViewHolder(parent), presenter)
-        if (zoom) zoomOnFocus(holder.itemView)
+        if (zoom) frameOnFocus(holder.itemView)
         listener?.onCreate(holder)
         return holder
     }
