@@ -58,7 +58,10 @@ class CatalogPageFragment : Fragment() {
             val keep = (held + 1 until cards.size()).firstOrNull { it !in gone } ?: (held - 1 downTo 0).firstOrNull { it !in gone }
             keep?.let { grid.findViewHolderForAdapterPosition(it)?.itemView?.requestFocus() }
         }
+        // the grid has no item animator (it made the list jump while paging): it is on only for this removal
+        grid.itemAnimator = androidx.recyclerview.widget.DefaultItemAnimator().apply { supportsChangeAnimations = false }
         for (i in gone.asReversed()) cards.removeAt(i)
+        grid.postDelayed({ grid.itemAnimator = null }, 600)
     }
     /** True while the spinner covers the page and the first page of cards has not come yet. */
     private var skeletons = false
