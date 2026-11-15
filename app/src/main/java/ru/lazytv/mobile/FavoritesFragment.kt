@@ -17,6 +17,7 @@ import ru.lazytv.EpisodesActivity
 import ru.lazytv.FavoriteTorrents
 import ru.lazytv.Favorites
 import ru.lazytv.R
+import ru.lazytv.chipCaption
 import ru.lazytv.TorrentsPopupActivity
 import ru.lazytv.databinding.FragmentMobileFavoritesBinding
 import ru.lazytv.toExtras
@@ -122,7 +123,10 @@ class FavoritesFragment : Fragment() {
         }
         binding.watchedList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.watchedList.adapter = watched
-        binding.watchedHeader.setOnClickListener { watchedOpen = !watchedOpen; showWatched() }
+        // the same chip as the buttons of the catalog, across the whole width
+        watchedButton = ru.lazytv.chipButton(requireContext(), d, "", ru.lazytv.MenuIcons.CHECK)
+        watchedButton.setOnClickListener { watchedOpen = !watchedOpen; showWatched() }
+        binding.watchedHeader.addView(watchedButton, ViewGroup.LayoutParams(-1, watchedButton.layoutParams.height))
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
         binding.episodesList.adapter = episodeRows
     }
@@ -150,8 +154,10 @@ class FavoritesFragment : Fragment() {
         val has = watched.itemCount > 0
         binding.watchedHeader.visibility = if (has) View.VISIBLE else View.GONE
         binding.watchedList.visibility = if (has && watchedOpen) View.VISIBLE else View.GONE
-        binding.watchedHeader.text = "ПРОСМОТРЕННЫЕ (${watched.itemCount}) " + if (watchedOpen) "▾" else "▸"
+        watchedButton.chipCaption = "Просмотренные (${watched.itemCount}) " + if (watchedOpen) "▾" else "▸"
     }
+
+    private lateinit var watchedButton: View
 
     private fun refresh() {
         val ctx = requireContext()
