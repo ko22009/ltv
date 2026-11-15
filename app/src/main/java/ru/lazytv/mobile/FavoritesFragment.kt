@@ -124,7 +124,7 @@ class FavoritesFragment : Fragment() {
         binding.watchedList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.watchedList.adapter = watched
         // the same chip as the buttons of the catalog, across the whole width
-        watchedButton = ru.lazytv.chipButton(requireContext(), d, "", ru.lazytv.MenuIcons.CHECK)
+        watchedButton = ru.lazytv.chipButton(requireContext(), d, "")
         watchedButton.setOnClickListener { watchedOpen = !watchedOpen; showWatched() }
         binding.watchedHeader.addView(watchedButton, ViewGroup.LayoutParams(-1, watchedButton.layoutParams.height))
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
