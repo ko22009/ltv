@@ -230,27 +230,25 @@ class FavoritesPageFragment : Fragment() {
             clipToPadding = false
             visibility = if (watchedOpen) View.VISIBLE else View.GONE
         }
-        val header = TextView(ctx).apply {
-            setTextColor(TEXT_MUTED)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
-            setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
-            isFocusable = true
-            isClickable = true
-        }
-        fun label() { header.text = "Просмотренные (${views.size}) " + if (watchedOpen) "▾" else "▸" }
+        // a chip like the buttons of the catalog: its own focus state, the same for every button of the app
+        val button = chipButton(ctx, scale, "", MenuIcons.CHECK)
+        fun label() { button.chipCaption = "Просмотренные (${views.size}) " + if (watchedOpen) "▾" else "▸" }
         label()
-        header.setOnClickListener {
+        button.setOnClickListener {
             watchedOpen = !watchedOpen
             box.visibility = if (watchedOpen) View.VISIBLE else View.GONE
             label()
         }
-        header.setOnFocusChangeListener { v, focused ->
-            (v as TextView).setTextColor(if (focused) Color.WHITE else TEXT_MUTED)
+        button.setOnFocusChangeListener { v, focused ->
             if (focused) {
                 lastFocus = v
-                val bottom = v.bottom
+                val bottom = (v.parent as View).bottom
                 if (bottom > scroll.scrollY + scroll.height) scroll.smoothScrollTo(0, bottom - scroll.height)
             }
+        }
+        val header = FrameLayout(ctx).apply {
+            setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
+            addView(button, FrameLayout.LayoutParams(-2, button.layoutParams.height))
         }
         content.addView(header)
         content.addView(box, LinearLayout.LayoutParams(-1, -2))
