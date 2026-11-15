@@ -112,6 +112,17 @@ class FavoritesFragment : Fragment() {
         }
         binding.titlesList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.titlesList.adapter = titles
+        watched = MobileTitleAdapter { title ->
+            startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
+        }
+        watched.onItemLongClick = { title ->
+            Favorites.set(requireContext(), title, null)
+            Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
+            refresh()
+        }
+        binding.watchedList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
+        binding.watchedList.adapter = watched
+        binding.watchedHeader.setOnClickListener { watchedOpen = !watchedOpen; showWatched() }
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
         binding.episodesList.adapter = episodeRows
     }
@@ -130,10 +141,26 @@ class FavoritesFragment : Fragment() {
         )
     }
 
+    private lateinit var watched: MobileTitleAdapter
+
+    /** Kept over redraws: the list stays open if the user opened it. */
+    private var watchedOpen = false
+
+    private fun showWatched() {
+        val has = watched.itemCount > 0
+        binding.watchedHeader.visibility = if (has) View.VISIBLE else View.GONE
+        binding.watchedList.visibility = if (has && watchedOpen) View.VISIBLE else View.GONE
+        binding.watchedHeader.text = "ПРОСМОТРЕННЫЕ (${watched.itemCount}) " + if (watchedOpen) "▾" else "▸"
+    }
+
     private fun refresh() {
         val ctx = requireContext()
         val unfinished = ru.lazytv.TitleProgress.titles(ctx)
-        val saved = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
+        val all = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
+        // titles marked as watched stand in their own collapsed list at the end of the page
+        val (seen, saved) = all.partition { ru.lazytv.Watched.has(ctx, it) }
+        watched.setItems(seen)
+        showWatched()
         val cards = FavoriteTorrents.cards(ctx)
         cardTorrents = cards.associate { (torrent, film) -> film.torrentKey to torrent }
         titles.setItems(saved + cards.map { it.second })
@@ -172,7 +199,7 @@ class FavoritesFragment : Fragment() {
 
         fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
         show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
-        val empty = saved.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && unfinished.isEmpty()
+        val empty = all.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && unfinished.isEmpty()
         binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
         binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }

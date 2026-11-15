@@ -71,6 +71,21 @@
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/watchedHeader"
+                style="@style/MobileSectionTitle"
+                android:background="?attr/selectableItemBackground"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/watchedList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
