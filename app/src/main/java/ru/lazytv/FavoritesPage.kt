@@ -124,11 +124,17 @@ class FavoritesPageFragment : Fragment() {
 
         val unfinished = TitleProgress.titles(ctx)
         // a title left half-way stands in its own block only, not among the bookmarks again
-        titles = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
+        // the watched titles (bookmarked or not) stand in their own collapsed list at the end of the page
+        val seenTitles = Watched.all(ctx)
+        if (Watched.hasMissing(ctx)) {
+            val app = ctx.applicationContext
+            Thread { if (Watched.complete(app)) activity?.runOnUiThread { if (isAdded) fill() } }.start()
+        }
+        titles = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } && !Watched.has(ctx, b) }
         val episodes = EpisodeState.favorites(ctx)
         // torrents saved from a film card stand among the films, as cards with the mark "ТОРРЕНТ"
         val torrentCards = FavoriteTorrents.cards(ctx)
-        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty() && unfinished.isEmpty()) {
+        if (titles.isEmpty() && torrentCards.isEmpty() && episodes.isEmpty() && unfinished.isEmpty() && seenTitles.isEmpty()) {
             content.addView(TextView(ctx).apply {
                 text = "Пока пусто. Добавляйте кнопкой «Закладки» в карточке или «Добавить в избранное» у серии"
                 setTextColor(TEXT_MUTED)
@@ -179,12 +185,9 @@ class FavoritesPageFragment : Fragment() {
                 }
                 holder.view
             }
-            // titles marked as watched go to their own collapsed list at the end of the page
-            val seen = titles.indices.filter { Watched.has(ctx, titles[it]) }.toSet()
-            addGrid(views.filterIndexed { i, _ -> i !in seen }, pad, pitch)
-            watchedViews = views.filterIndexed { i, _ -> i in seen }
+            addGrid(views, pad, pitch)
             fixMissingPosters()
-        } else watchedViews = emptyList()
+        }
         if (episodes.isNotEmpty()) {
             addHeader("Избранные серии", pad, scale)
             val presenter = FavoriteEpisodePresenter()
@@ -203,12 +206,17 @@ class FavoritesPageFragment : Fragment() {
                 holder.view
             }, pad, pitch)
         }
-        if (watchedViews.isNotEmpty()) addWatched(watchedViews, pad, scale, pitch)
+        if (seenTitles.isNotEmpty()) addWatched(seenTitles.map { title ->
+            val holder = cardPresenter.onCreateViewHolder(content)
+            cardPresenter.onBindViewHolder(holder, title)
+            holder.view.setOnClickListener {
+                startActivity(Intent(ctx, DetailsActivity::class.java).putExtras(title.toExtras()))
+            }
+            holder.view
+        }, pad, scale, pitch)
         // room under the last row for the focused card that grows
         content.addView(View(ctx), LinearLayout.LayoutParams(1, (24 * scale).toInt()))
     }
-
-    private var watchedViews = listOf<View>()
 
     /** Kept over redraws: the list stays open if the user opened it. */
     private var watchedOpen = false

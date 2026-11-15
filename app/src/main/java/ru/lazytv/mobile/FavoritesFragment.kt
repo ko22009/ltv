@@ -116,8 +116,8 @@ class FavoritesFragment : Fragment() {
             startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
         watched.onItemLongClick = { title ->
-            Favorites.set(requireContext(), title, null)
-            Toast.makeText(requireContext(), "Убрано из закладок", Toast.LENGTH_SHORT).show()
+            ru.lazytv.Watched.set(requireContext(), title, false)
+            Toast.makeText(requireContext(), "Отметка снята", Toast.LENGTH_SHORT).show()
             refresh()
         }
         binding.watchedList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
@@ -156,11 +156,17 @@ class FavoritesFragment : Fragment() {
     private fun refresh() {
         val ctx = requireContext()
         val unfinished = ru.lazytv.TitleProgress.titles(ctx)
-        val all = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } }
-        // titles marked as watched stand in their own collapsed list at the end of the page
-        val (seen, saved) = all.partition { ru.lazytv.Watched.has(ctx, it) }
+        val saved = Favorites.all(ctx).filter { b -> unfinished.none { it.id == b.id && it.tv == b.tv } && !ru.lazytv.Watched.has(ctx, b) }
+        // titles marked as watched (bookmarked or not) stand in their own collapsed list at the end of the page
+        val seen = ru.lazytv.Watched.all(ctx)
         watched.setItems(seen)
         showWatched()
+        if (ru.lazytv.Watched.hasMissing(ctx)) {
+            val app = ctx.applicationContext
+            Thread {
+                if (ru.lazytv.Watched.complete(app)) activity?.runOnUiThread { if (isAdded && _binding != null) refresh() }
+            }.start()
+        }
         val cards = FavoriteTorrents.cards(ctx)
         cardTorrents = cards.associate { (torrent, film) -> film.torrentKey to torrent }
         titles.setItems(saved + cards.map { it.second })
@@ -199,7 +205,7 @@ class FavoritesFragment : Fragment() {
 
         fun show(has: Boolean, vararg views: View) = views.forEach { it.visibility = if (has) View.VISIBLE else View.GONE }
         show(episodeRows.rows.isNotEmpty(), binding.episodesHeader, binding.episodesList)
-        val empty = all.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && unfinished.isEmpty()
+        val empty = saved.isEmpty() && seen.isEmpty() && cards.isEmpty() && episodeRows.rows.isEmpty() && unfinished.isEmpty()
         binding.emptyText.visibility = if (empty) View.VISIBLE else View.GONE
         binding.favoritesScroll.visibility = if (empty) View.GONE else View.VISIBLE
     }
