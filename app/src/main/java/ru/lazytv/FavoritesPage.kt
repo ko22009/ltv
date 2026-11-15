@@ -22,7 +22,6 @@ class FavoritesPageFragment : Fragment() {
     private lateinit var scroll: JumpScrollView
     private lateinit var content: LinearLayout
     private var signature = ""
-    private var watchedMarks = ""
     private var firstFocus: View? = null
     private val titleHolders = mutableListOf<Presenter.ViewHolder>()
     private var titles = listOf<Title>()
@@ -30,7 +29,7 @@ class FavoritesPageFragment : Fragment() {
 
     private fun state(): String {
         val ctx = requireContext()
-        return Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx) + "|" + Settings.string(ctx, "favorite_torrents", "[]") + "|" + Settings.string(ctx, "title_progress", "[]")
+        return Settings.string(ctx, "favorites", "[]") + "|" + EpisodeState.revision(ctx) + "|" + Settings.string(ctx, "favorite_torrents", "[]") + "|" + Settings.string(ctx, "title_progress", "[]") + "|" + Watched.revision(ctx)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -80,16 +79,8 @@ class FavoritesPageFragment : Fragment() {
 
     private fun refreshIfChanged() {
         if (!::scroll.isInitialized || scroll.width == 0) return
-        if (state() != signature) {
-            fill()
-            return
-        }
-        // marks "watched" are redrawn on the cards that stay, so the focus is not lost
-        val marks = Watched.revision(requireContext())
-        if (marks != watchedMarks) {
-            watchedMarks = marks
-            titleHolders.forEachIndexed { i, holder -> cardPresenter.onBindViewHolder(holder, titles[i]) }
-        }
+        // a changed mark "watched" moves the card between the lists, so it is part of the state
+        if (state() != signature) fill()
     }
 
     /** Puts the focus on the first card (or the first tile when there are no titles); false when the page is empty. */
@@ -113,7 +104,6 @@ class FavoritesPageFragment : Fragment() {
     private fun fill() {
         val ctx = requireContext()
         signature = state()
-        watchedMarks = Watched.revision(ctx)
         content.removeAllViews()
         lastHeader = null
         titleHolders.clear()
@@ -189,9 +179,12 @@ class FavoritesPageFragment : Fragment() {
                 }
                 holder.view
             }
-            addGrid(views, pad, pitch)
+            // titles marked as watched go to their own collapsed list at the end of the page
+            val seen = titles.indices.filter { Watched.has(ctx, titles[it]) }.toSet()
+            addGrid(views.filterIndexed { i, _ -> i !in seen }, pad, pitch)
+            watchedViews = views.filterIndexed { i, _ -> i in seen }
             fixMissingPosters()
-        }
+        } else watchedViews = emptyList()
         if (episodes.isNotEmpty()) {
             addHeader("Избранные серии", pad, scale)
             val presenter = FavoriteEpisodePresenter()
@@ -210,8 +203,51 @@ class FavoritesPageFragment : Fragment() {
                 holder.view
             }, pad, pitch)
         }
+        if (watchedViews.isNotEmpty()) addWatched(watchedViews, pad, scale, pitch)
         // room under the last row for the focused card that grows
         content.addView(View(ctx), LinearLayout.LayoutParams(1, (24 * scale).toInt()))
+    }
+
+    private var watchedViews = listOf<View>()
+
+    /** Kept over redraws: the list stays open if the user opened it. */
+    private var watchedOpen = false
+
+    /** A focusable heading that folds the watched titles; the cards sit in a box that is shown or hidden, so the focus and scroll stay. */
+    private fun addWatched(views: List<View>, pad: Int, scale: Float, pitch: Int) {
+        val ctx = requireContext()
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false
+            clipToPadding = false
+            visibility = if (watchedOpen) View.VISIBLE else View.GONE
+        }
+        val header = TextView(ctx).apply {
+            setTextColor(TEXT_MUTED)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, 26f * scale)
+            setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
+            isFocusable = true
+            isClickable = true
+        }
+        fun label() { header.text = "Просмотренные (${views.size}) " + if (watchedOpen) "▾" else "▸" }
+        label()
+        header.setOnClickListener {
+            watchedOpen = !watchedOpen
+            box.visibility = if (watchedOpen) View.VISIBLE else View.GONE
+            label()
+        }
+        header.setOnFocusChangeListener { v, focused ->
+            (v as TextView).setTextColor(if (focused) Color.WHITE else TEXT_MUTED)
+            if (focused) {
+                lastFocus = v
+                val bottom = v.bottom
+                if (bottom > scroll.scrollY + scroll.height) scroll.smoothScrollTo(0, bottom - scroll.height)
+            }
+        }
+        content.addView(header)
+        content.addView(box, LinearLayout.LayoutParams(-1, -2))
+        lastHeader = header
+        addGrid(views, pad, pitch, target = box)
     }
 
     /** [first]: right under the page title, which already keeps the distance to the first block (as the cards of a plain list). */
@@ -230,7 +266,7 @@ class FavoritesPageFragment : Fragment() {
     }
 
     /** Lays the views out in rows of [perRow] (five by default), each in a cell of the grid pitch. */
-    private fun addGrid(views: List<View>, pad: Int, pitch: Int, perRow: Int = 5) {
+    private fun addGrid(views: List<View>, pad: Int, pitch: Int, perRow: Int = 5, target: LinearLayout = content) {
         // the first row of a block brings its heading into view only when the heading is above the shown part: a page that fits is not moved
         val anchor = lastHeader
         views.chunked(perRow).forEachIndexed { rowIndex, chunk ->
@@ -265,7 +301,7 @@ class FavoritesPageFragment : Fragment() {
                 row.addView(cell, LinearLayout.LayoutParams(pitch, -2))
                 if (firstFocus == null) firstFocus = view
             }
-            content.addView(row, LinearLayout.LayoutParams(-1, -2))
+            target.addView(row, LinearLayout.LayoutParams(-1, -2))
         }
     }
 
