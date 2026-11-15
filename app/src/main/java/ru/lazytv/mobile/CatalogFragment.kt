@@ -46,6 +46,7 @@ class CatalogFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.loadingIndicator.addView(ru.lazytv.Spinner(requireContext(), (ru.lazytv.SPINNER_SCREEN * resources.displayMetrics.density).toInt()))
         val layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.catalogRecyclerView.layoutManager = layoutManager
         adapter = MobileTitleAdapter { title ->
@@ -77,7 +78,7 @@ class CatalogFragment : Fragment() {
     private fun renderButtons() {
         val ctx = requireContext()
         val filter = CatalogFilter.load(ctx, category.id)
-        binding.filterButton.text = if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"
+        binding.filterButton.text = if (filter.count > 0) "Фильтры ${filter.count}" else "Фильтры"
         binding.sortButton.text = CatalogFilter.sort(ctx, category.id).label
         // the basket is always drawn; without filters it is dimmed and does nothing
         binding.resetButton.isEnabled = filter.count > 0
@@ -112,12 +113,13 @@ class CatalogFragment : Fragment() {
         val ctx = requireContext()
         signature = CatalogFilter.signature(ctx, category.id)
         renderButtons()
-        adapter.setItems(emptyList())
+        adapter.showSkeletons()
         nextPage = 1
         busy = false
         finished = false
         binding.messageText.visibility = View.GONE
-        binding.loadingIndicator.visibility = View.VISIBLE
+        // plates in the place of the cards, not a spinner in the middle of an empty screen
+        binding.loadingIndicator.visibility = View.GONE
         loadNext()
     }
 
@@ -132,12 +134,19 @@ class CatalogFragment : Fragment() {
             val result = withContext(Dispatchers.IO) { runCatching { list.loadPage(ctx, page) } }
             val b = _binding ?: return@launch
             busy = false
-            b.loadingIndicator.visibility = View.GONE
+            // the spinner stays put while the next request follows at once (a page of watched titles only, a quiet retry):
+            // hiding and showing it again restarts its animation and it blinks
+            val goesOn = result.fold(
+                { it.titles.isEmpty() && !it.ended },
+                { Errors.isNetwork(it) && adapter.realCount == 0 && quietRetries < 2 },
+            )
+            if (!goesOn) b.loadingIndicator.visibility = View.GONE
             b.swipeRefresh.isRefreshing = false
             result.onSuccess { loaded ->
                 if (loaded.ended) finished = true else nextPage = page + 1
                 adapter.addItems(loaded.titles)
-                if (loaded.ended && adapter.itemCount == 0) {
+                if (loaded.ended && adapter.realCount == 0) {
+                    adapter.setItems(emptyList())
                     b.messageText.text = "Ничего не найдено.\nИзмените или сбросьте фильтры"
                     b.messageText.visibility = View.VISIBLE
                 } else if (loaded.titles.isEmpty() && !loaded.ended) {
@@ -145,15 +154,15 @@ class CatalogFragment : Fragment() {
                 }
             }.onFailure {
                 // the first start: the block bypass is still being picked, the first request may fail; ask again quietly before blaming the network
-                if (Errors.isNetwork(it) && adapter.itemCount == 0 && quietRetries < 2) {
+                if (Errors.isNetwork(it) && adapter.realCount == 0 && quietRetries < 2) {
                     quietRetries++
-                    b.loadingIndicator.visibility = View.VISIBLE
                     kotlinx.coroutines.delay(3000)
                     loadNext()
                     return@onFailure
                 }
                 finished = true
-                if (adapter.itemCount == 0) {
+                if (adapter.realCount == 0) {
+                    adapter.setItems(emptyList())
                     b.messageText.text = Errors.explain(it)
                     b.messageText.visibility = View.VISIBLE
                 }

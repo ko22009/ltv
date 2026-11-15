@@ -42,7 +42,8 @@ class SearchFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        adapter = MobileTitleAdapter { title ->
+        binding.loading.addView(ru.lazytv.Spinner(requireContext(), (ru.lazytv.SPINNER_SCREEN * resources.displayMetrics.density).toInt()))
+        adapter =MobileTitleAdapter { title ->
             startActivity(Intent(requireContext(), DetailsActivity::class.java).putExtras(title.toExtras()))
         }
         binding.recycler.layoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), mobileColumns(resources))

@@ -122,7 +122,8 @@ class TitlesGridActivity : Activity() {
             val result = runCatching { more.loadPage(appContext, page) }
             onUi {
                 busy = false
-                loadingMore.visibility = View.GONE
+                // not hidden when the next page is asked for at once (only watched titles): showing it again restarts the animation
+                if (result.getOrNull()?.let { it.titles.isEmpty() && !it.ended } != true) loadingMore.visibility = View.GONE
                 result.onSuccess { loaded ->
                     // titles already shown are not added twice when TMDB repeats one on the next page
                     val fresh = loaded.titles.filter { t -> (0 until cards.size()).none { (cards.get(it) as? Title)?.id == t.id } }

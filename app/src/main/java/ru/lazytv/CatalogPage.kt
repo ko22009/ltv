@@ -42,8 +42,18 @@ class CatalogPageFragment : Fragment() {
 
     private val cards = ItemList(
         ClassPresenterSelector()
-            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE) { dropWatched() }),
+            .addClassPresenter(Title::class.java, CardPresenter(CARD_SCALE) { dropWatched() })
+            .addClassPresenter(SkeletonCard::class.java, SkeletonPresenter(CARD_SCALE)),
     )
+
+    /** Grey cards stand in the grid until the first page comes (instead of a spinner over an empty page). */
+    private var skeletonCards = false
+
+    private fun clearSkeletonCards() {
+        if (!skeletonCards) return
+        skeletonCards = false
+        cards.clear()
+    }
 
     /** With "hide watched" on in this list's filter a title just marked leaves the grid with the item animation. */
     private fun dropWatched() {
@@ -278,7 +288,7 @@ class CatalogPageFragment : Fragment() {
         if (!CatalogFilter.supports(category.id)) return
         val ctx = requireContext()
         val filter = CatalogFilter.load(ctx, category.id)
-        filterChip.chipCaption = if (filter.count > 0) "Фильтры · ${filter.count}" else "Фильтры"
+        filterChip.chipCaption = if (filter.count > 0) "Фильтры ${filter.count}" else "Фильтры"
         sortChip.chipCaption = "Сортировка · ${CatalogFilter.sort(ctx, category.id).label.replaceFirstChar { it.lowercase() }}"
         // the reset is only useful when something is chosen; the line under the buttons names what is chosen
         resetChip.visibility = if (filter.count > 0) View.VISIBLE else View.GONE
@@ -375,6 +385,7 @@ class CatalogPageFragment : Fragment() {
     private fun startOver() {
         autoRetry?.cancel()
         loadJob?.cancel()
+        skeletonCards = false
         cards.clear()
         grid.resetChosen()
         nextPage = 1
@@ -394,8 +405,9 @@ class CatalogPageFragment : Fragment() {
             nextPage = 2
         } else {
             skeletons = true
-            loading.caption("Загрузка…")
-            loading.visibility = View.VISIBLE
+            loading.visibility = View.GONE
+            skeletonCards = true
+            cards.addAll(0, List(COLUMNS * 3) { SkeletonCard })
         }
         loadNext()
     }
@@ -416,14 +428,23 @@ class CatalogPageFragment : Fragment() {
             if (result.isFailure && failures < MAX_RETRIES) {
                 failures++
                 // the system says "online" even behind a white list, so the page itself tells that the catalogue server is silent
-                if (skeletons) loading.caption("Каталог не отвечает (возможно, ограничен доступ). Повтор $failures из $MAX_RETRIES…")
+                if (skeletons) {
+                    // the plates give way to the words: the owner should see why nothing comes
+                    clearSkeletonCards()
+                    loading.caption("Каталог не отвечает (возможно, ограничен доступ). Повтор $failures из $MAX_RETRIES…")
+                    loading.visibility = View.VISIBLE
+                }
                 kotlinx.coroutines.delay(RETRY_PAUSE_MS)
                 if (isActive && isAdded) loadNext()
                 return@launch
             }
             if (skeletons) {
-                loading.visibility = View.GONE
-                skeletons = false
+                // kept while the next page is asked for at once (only watched titles): hiding it restarts the animation
+                if (result.getOrNull()?.let { it.titles.isEmpty() && !it.ended } != true) {
+                    loading.visibility = View.GONE
+                    skeletons = false
+                    clearSkeletonCards()
+                }
             }
             if (result.isSuccess) failures = 0
             result.onSuccess { loaded ->
