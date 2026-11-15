@@ -199,17 +199,21 @@ class DetailsActivity : Activity() {
         // the way back for a remote with no Back key or a mouse: a round button in the corner, same as the Back key
         // on a phone the touch area is wider than the disc (12 dp all round): a finger that misses the disc still hits Back
         // and does not open the gallery under it
-        val reach = if (mobile) 12 else 0
+        val reach = if (mobile) 8 else 0
+        val backDiscSize = if (mobile) 48 else 56
+        // the arrow is ~0.57 of the disc, as in backButton (32 of 56 dp): 10 dp of padding in the 48 dp disc of a phone
+        val backPadding = if (mobile) 10 + reach else 12
         fun disc(fill: Int): android.graphics.drawable.Drawable =
             if (reach == 0) softDisc(fill) else android.graphics.drawable.InsetDrawable(softDisc(fill), dp(reach))
         val back = ImageView(this).apply {
             setImageDrawable(PathDrawable(MenuIcons.BACK))
             imageTintList = cursorColors(this@DetailsActivity, Color.WHITE)
-            setPadding(dp(12 + reach), dp(12 + reach), dp(12 + reach), dp(12 + reach))
             background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), disc(if (mobile) 0xCC343B47.toInt() else FOCUS_FILL))
                 addState(intArrayOf(), disc(OVERLAY_LIGHT))
             }
+            // after the background: an inset background overwrites the padding with its own (8 dp), and the arrow filled the disc
+            setPadding(dp(backPadding), dp(backPadding), dp(backPadding), dp(backPadding))
             isFocusable = true
             isClickable = true
             id = View.generateViewId()
@@ -217,7 +221,7 @@ class DetailsActivity : Activity() {
             setOnClickListener { finish() }
         }
         // on a phone the back button stands on the banner itself, in its upper left corner
-        stage.addView(back, FrameLayout.LayoutParams(dp(m(56, 48) + 2 * reach), dp(m(56, 48) + 2 * reach), Gravity.START or Gravity.TOP).apply {
+        stage.addView(back, FrameLayout.LayoutParams(dp(backDiscSize + 2 * reach), dp(backDiscSize + 2 * reach), Gravity.START or Gravity.TOP).apply {
             topMargin = dp(m(32, 22) - reach); leftMargin = dp(m(64, 26) - reach)
         })
 

@@ -253,18 +253,25 @@ class PlayerActivity : Activity() {
         root.addView(waitingDots, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.CENTER))
         // on pause with the controls hidden the sign stays, so nobody takes the still picture for a freeze
         pauseBadge = ImageView(this).apply {
-            setImageDrawable(PathDrawable(MenuIcons.PAUSE).apply { setColorFilter(Color.WHITE, android.graphics.PorterDuff.Mode.SRC_IN) })
+            setImageDrawable(PathDrawable(MenuIcons.PAUSE))
+            imageTintList = cursorColors(this@PlayerActivity, Color.WHITE)
             // exactly the size of the sign that flashes after a double tap (PlayerTouchOverlay: 84 dp, padding 16 dp, real dp),
             // so the static sign is the same disc that stays on the screen
             val density = resources.displayMetrics.density
             val pad = (16 * density).toInt()
             setPadding(pad, pad, pad, pad)
-            background = GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL }
+            // the remote reaches the sign from the panel (up from the progress bar, down from Back); a phone has no cursor
+            background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply { setColor(cursorFill(this@PlayerActivity)); shape = GradientDrawable.OVAL })
+                addState(intArrayOf(), GradientDrawable().apply { setColor(OVERLAY_SOFT); shape = GradientDrawable.OVAL })
+            }
+            isFocusable = !isMobileUi()
             visibility = View.GONE
         }
         // the sign is added above the touch layer and the controls (below): it must catch the tap itself, one tap resumes the video
         pauseBadge.isClickable = true
-        pauseBadge.setOnClickListener { togglePlay(); resetHideTimer() }
+        // the sign disappears on play: a focus left on it would be lost, so it goes to the play button
+        pauseBadge.setOnClickListener { if (pauseBadge.isFocused) playPause.requestFocus(); togglePlay(); resetHideTimer() }
         // the window may start under the status bar: the spinner is moved up so it stands in the middle of the screen, not of the window
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val at = IntArray(2)
@@ -497,18 +504,16 @@ class PlayerActivity : Activity() {
         if (!::seek.isInitialized) return
         // the colours of the loading spinner (Loading.kt): white arc on a faint white track, in every state
         val progressColor = Color.WHITE
-        // as the season buttons of the design system: the light plate at rest, the teal of the focus under the cursor
-        // as the season buttons of the design system: the light plate at rest, the dark teal of the focus under the cursor
-        // under the cursor the thumb is a white dot inside a whitish halo (the cursor colour is light and would vanish on the bar)
-        val thumbColor = if (seek.isFocused) Color.WHITE else ACTIVE_PLATE
+        // Match the focused play/pause button: teal under the TV cursor, light at rest.
+        val thumbColor = if (seek.isFocused) cursorFill(this) else ACTIVE_PLATE
         seek.progressTintList = android.content.res.ColorStateList.valueOf(progressColor)
         // own thumb instead of the system one: a dark plate with a thin light rim round the dot under the cursor,
         // the same size at rest (the plate is clear) so the bar does not shift when the focus comes
         val halo = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
-            // under the cursor: the whitish halo round the thumb (the light plate at about 55%); at rest it is clear
+            // A translucent halo in the colour of the cursor, so the thumb stays visible on the white progress line.
             if (SEEK_HALO && seek.isFocused) {
-                setColor(0x8CF1F5F9.toInt())
+                setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(cursorFill(this@PlayerActivity), 0x8C))
             } else setColor(Color.TRANSPARENT)
         }
         val dot = android.graphics.drawable.GradientDrawable().apply {
@@ -1133,15 +1138,24 @@ class PlayerActivity : Activity() {
                 }
                 val focused = currentFocus
                 // the Back button: down returns to the progress bar, the other arrows stay on it (OK leaves the player)
+                // on pause the big pause sign sits between the Back button and the progress bar: the arrows pass through it
+                val signShown = pauseBadge.visibility == View.VISIBLE && pauseBadge.isFocusable
+                if (focused === pauseBadge) {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_UP -> { playerBack.requestFocus(); return true }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { seek.requestFocus(); return true }
+                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> return true
+                    }
+                }
                 if (focused === playerBack) {
                     when (event.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_DOWN -> { seek.requestFocus(); resetHideTimer(); return true }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { (if (signShown) pauseBadge else seek).requestFocus(); resetHideTimer(); return true }
                         KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> { resetHideTimer(); return true }
                     }
                 }
                 // up from the progress bar goes to the Back button; down from the lowest row hides the panel
                 if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && focused === seek) {
-                    playerBack.requestFocus()
+                    (if (signShown) pauseBadge else playerBack).requestFocus()
                     resetHideTimer()
                     return true
                 }
