@@ -14,8 +14,8 @@ android {
         applicationId = "ru.lazytv"
         minSdk = 21
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.0.4"
+        versionCode = 15
+        versionName = "1.0.5"
         buildConfigField("String", "TMDB_KEY", "\"${localProps.getProperty("TMDB_KEY")}\"")
         // Google OAuth client of the sync (docs/sync.md): empty keys switch the sync section off
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${localProps.getProperty("DRIVE_CLIENT_ID") ?: ""}\"")
