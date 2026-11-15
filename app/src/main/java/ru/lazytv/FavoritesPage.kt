@@ -253,6 +253,8 @@ class FavoritesPageFragment : Fragment() {
         content.addView(header)
         content.addView(box, LinearLayout.LayoutParams(-1, -2))
         lastHeader = header
+        // when the page has nothing else, "right" from the menu lands on this button (the cards below it are hidden)
+        if (firstFocus == null) firstFocus = button
         addGrid(views, pad, pitch, target = box)
     }
 
