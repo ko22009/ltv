@@ -161,6 +161,11 @@ fun chipButton(context: Context, scale: Float, caption: String, icon: String? = 
         isFocusableInTouchMode = !context.isMobileUi()
         isClickable = true
         background = focusShape(scale, PLATE_FILL, radius = SMALL_RADIUS)
+        // the touch screen shows a press like the chips of the phone pages (no focus there to show it)
+        if (context.isMobileUi()) foreground = android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(0x33FFFFFF), null,
+            android.graphics.drawable.GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = SMALL_RADIUS * scale }
+        )
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)
         if (icon != null) addView(ImageView(context).apply {
