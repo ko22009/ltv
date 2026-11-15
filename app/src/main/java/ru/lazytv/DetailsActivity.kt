@@ -146,10 +146,10 @@ class DetailsActivity : Activity() {
             // the number of the frame in the corner and the dots at the bottom
             banner.background = GradientDrawable().apply { setColor(PLATE_FILL); cornerRadius = dp(TITLE_CARD_RADIUS.toInt()).toFloat() }
             banner.clipToOutline = true
-            // a tap opens the gallery, a swipe turns the frame
+            // a tap or a swipe turns the frame; the gallery opens only from its button in the corner
             val swipe = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: android.view.MotionEvent) = true
-                override fun onSingleTapUp(e: android.view.MotionEvent): Boolean { openGallery(); return true }
+                override fun onSingleTapUp(e: android.view.MotionEvent): Boolean { stepBackdrop(1); return true }
                 override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
                     val dx = e2.x - (e1?.x ?: return false)
                     if (Math.abs(dx) < dp(50) || Math.abs(vx) < Math.abs(vy)) return false
@@ -172,6 +172,7 @@ class DetailsActivity : Activity() {
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(OVERLAY_LIGHT) }
                 contentDescription = "Галерея"
+                setOnClickListener { openGallery() }
             }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM).apply { rightMargin = dp(12); bottomMargin = dp(12) })
             bannerCounter = text("", 14f).apply {
                 setPadding(dp(12), dp(4), dp(12), dp(4))
