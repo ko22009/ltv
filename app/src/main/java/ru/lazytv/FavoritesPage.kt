@@ -232,12 +232,10 @@ class FavoritesPageFragment : Fragment() {
         }
         // a chip like the buttons of the catalog: its own focus state, the same for every button of the app
         val button = chipButton(ctx, scale, "")
-        fun label() { button.chipCaption = "Просмотренные (${views.size}) " + if (watchedOpen) "▾" else "▸" }
-        label()
+        button.chipCaption = "Просмотренные (${views.size})"
         button.setOnClickListener {
             watchedOpen = !watchedOpen
             box.visibility = if (watchedOpen) View.VISIBLE else View.GONE
-            label()
         }
         button.setOnFocusChangeListener { v, focused ->
             if (focused) {

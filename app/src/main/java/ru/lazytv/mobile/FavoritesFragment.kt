@@ -154,7 +154,7 @@ class FavoritesFragment : Fragment() {
         val has = watched.itemCount > 0
         binding.watchedHeader.visibility = if (has) View.VISIBLE else View.GONE
         binding.watchedList.visibility = if (has && watchedOpen) View.VISIBLE else View.GONE
-        watchedButton.chipCaption = "Просмотренные (${watched.itemCount}) " + if (watchedOpen) "▾" else "▸"
+        watchedButton.chipCaption = "Просмотренные (${watched.itemCount})"
     }
 
     private lateinit var watchedButton: View
