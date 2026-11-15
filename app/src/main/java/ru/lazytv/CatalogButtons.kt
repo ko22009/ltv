@@ -153,18 +153,18 @@ fun styleChoice(view: View, text: TextView?, active: Boolean, scale: Float, radi
     text.setTextColor(cursorColors(view.context, if (active) ACTIVE_TEXT else restText))
 }
 
-fun chipButton(context: Context, scale: Float, caption: String, icon: String? = null): LinearLayout {
+fun chipButton(context: Context, scale: Float, caption: String, icon: String? = null, radius: Float = SMALL_RADIUS): LinearLayout {
     fun px(v: Int) = (v * scale).toInt()
     return LinearLayout(context).apply {
         gravity = Gravity.CENTER
         isFocusable = !context.isMobileUi()
         isFocusableInTouchMode = !context.isMobileUi()
         isClickable = true
-        background = focusShape(scale, PLATE_FILL, radius = SMALL_RADIUS)
+        background = focusShape(scale, PLATE_FILL, radius = radius)
         // the touch screen shows a press like the chips of the phone pages (no focus there to show it)
         if (context.isMobileUi()) foreground = android.graphics.drawable.RippleDrawable(
             android.content.res.ColorStateList.valueOf(0x33FFFFFF), null,
-            android.graphics.drawable.GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = SMALL_RADIUS * scale }
+            android.graphics.drawable.GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = radius * scale }
         )
         layoutParams = ViewGroup.MarginLayoutParams(-2, px(CHIP_HEIGHT))
         setPadding(px(if (icon == null) 22 else 18), 0, px(22), 0)

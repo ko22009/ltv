@@ -124,7 +124,7 @@ class FavoritesFragment : Fragment() {
         binding.watchedList.layoutManager = GridLayoutManager(requireContext(), mobileColumns(resources))
         binding.watchedList.adapter = watched
         // the same chip as the buttons of the catalog, across the whole width
-        watchedButton = ru.lazytv.chipButton(requireContext(), d, "")
+        watchedButton = ru.lazytv.chipButton(requireContext(), d, "", radius = ru.lazytv.TITLE_CARD_RADIUS)
         watchedButton.setOnClickListener { watchedOpen = !watchedOpen; showWatched() }
         binding.watchedHeader.addView(watchedButton, ViewGroup.LayoutParams(-1, watchedButton.layoutParams.height))
         binding.episodesList.layoutManager = LinearLayoutManager(requireContext())
@@ -194,6 +194,12 @@ class FavoritesFragment : Fragment() {
             }.start()
         }
         binding.continueBlock.visibility = if (unfinished.isEmpty()) View.GONE else View.VISIBLE
+        val watchedParams = binding.watchedHeader.layoutParams as ViewGroup.MarginLayoutParams
+        val watchedTopMargin = if (unfinished.isEmpty()) (4 * resources.displayMetrics.density).toInt() else 0
+        if (watchedParams.topMargin != watchedTopMargin) {
+            watchedParams.topMargin = watchedTopMargin
+            binding.watchedHeader.layoutParams = watchedParams
+        }
 
         episodeRows.rows.clear()
         EpisodeState.favorites(ctx).forEach { item ->

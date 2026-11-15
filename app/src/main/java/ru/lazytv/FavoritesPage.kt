@@ -245,7 +245,8 @@ class FavoritesPageFragment : Fragment() {
             }
         }
         val header = FrameLayout(ctx).apply {
-            setPadding(pad, (18 * scale).toInt(), 0, (6 * scale).toInt())
+            // 12 + the 12 under the card above = 24, the gap between two rows of cards (the heading's 18 made it 30)
+            setPadding(pad, (12 * scale).toInt(), 0, (6 * scale).toInt())
             addView(button, FrameLayout.LayoutParams(-2, button.layoutParams.height))
         }
         content.addView(header)
